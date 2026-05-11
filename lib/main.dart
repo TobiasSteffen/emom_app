@@ -6,13 +6,14 @@ import 'package:vibration/vibration.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:volume_controller/volume_controller.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/models/settings.dart';
 import 'core/providers/settings_provider.dart';
 import 'config_screen.dart';
 import 'core/models/workout_history.dart';
+import 'features/history/history_sheet.dart';
+import 'features/history/history_notifier.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -242,7 +243,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
       planMode: _settings.planMode.index,
       intervals: List.from(_completedIntervals),
     );
-    await WorkoutHistory.addOrUpdateRecord(record);
+    await ref.read(historyNotifierProvider.notifier).addOrUpdate(record);
   }
 
   void _confirmInterval() {
@@ -341,13 +342,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
-  String _formatDateTime(DateTime dt) {
-    return DateFormat("EE, d. MMMM yyyy  HH:mm", 'de').format(dt);
-  }
-
-Future<void> _showHistory() async {
-    final records = await WorkoutHistory.load();
-    if (!mounted) return;
+  void _showHistory() {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF0D0D0D),
@@ -355,238 +350,7 @@ Future<void> _showHistory() async {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        maxChildSize: 0.95,
-        minChildSize: 0.3,
-        expand: false,
-        builder: (_, scrollController) => Column(
-          children: [
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 4),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: const Text(
-                  'VERLAUF',
-                  style: TextStyle(
-                    color: Colors.white38,
-                    fontSize: 11,
-                    letterSpacing: 3,
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              child: records.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'Noch keine Trainings gespeichert',
-                        style: TextStyle(color: Colors.white38, fontSize: 14),
-                      ),
-                    )
-                  : ListView.builder(
-                      controller: scrollController,
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-                      itemCount: records.length,
-                      itemBuilder: (ctx, i) => GestureDetector(
-                        onTap: () => _showHistoryDetail(ctx, records[i]),
-                        child: _buildHistoryCard(records[i]),
-                      ),
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showHistoryDetail(BuildContext sheetCtx, WorkoutRecord record) {
-    final dt = DateTime.fromMillisecondsSinceEpoch(record.timestamp);
-    final kbReps = record.kettlebellReps;
-    final smReps = record.steelMaceReps;
-    final totalSecs = record.totalDurationSeconds;
-    final durStr =
-        '${totalSecs ~/ 60}m ${(totalSecs % 60).toString().padLeft(2, '0')}s';
-    final repBreakdown = kbReps > 0 && smReps > 0
-        ? '$kbReps× KB  /  $smReps× SM'
-        : '${record.totalReps} Reps';
-
-    showModalBottomSheet(
-      context: sheetCtx,
-      backgroundColor: const Color(0xFF0D0D0D),
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.85,
-        maxChildSize: 0.95,
-        minChildSize: 0.4,
-        expand: false,
-        builder: (_, scrollController) => Column(
-          children: [
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 4),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _formatDateTime(dt),
-                    style: const TextStyle(color: Colors.white38, fontSize: 11),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${record.intervals.length}/30 Intervalle',
-                        style: const TextStyle(
-                            color: Colors.white, fontSize: 14,
-                            fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        '$repBreakdown  ·  $durStr',
-                        style: const TextStyle(
-                            color: Color(0xFFFF6B00), fontSize: 13),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const Divider(color: Colors.white12, height: 1),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                controller: scrollController,
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-                itemCount: record.intervals.length,
-                itemBuilder: (ctx, i) {
-                  final iv = record.intervals[i];
-                  final color = phaseColorForMinute(i);
-                  final isKb = iv.equipment == 0;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: color,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        SizedBox(
-                          width: 52,
-                          child: Text(
-                            'Min ${i + 1}',
-                            style: const TextStyle(
-                                color: Colors.white38, fontSize: 12),
-                          ),
-                        ),
-                        Image.asset(
-                          isKb
-                              ? 'assets/icon/kettlebell.png'
-                              : 'assets/icon/steelmace.png',
-                          width: 14,
-                          height: 14,
-                          color: Colors.white38,
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          '${iv.reps} Reps',
-                          style: TextStyle(
-                              color: color,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600),
-                        ),
-                        const Spacer(),
-                        Text(
-                          '${iv.durationSeconds}s',
-                          style: const TextStyle(
-                              color: Colors.white24, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHistoryCard(WorkoutRecord record) {
-    final dt = DateTime.fromMillisecondsSinceEpoch(record.timestamp);
-    final dateStr = _formatDateTime(dt);
-    final planModeStr =
-        record.planMode == 0 ? 'Phasenbasiert' : 'Minuten-genau';
-    final completed = record.intervals.length;
-    final kbReps = record.kettlebellReps;
-    final smReps = record.steelMaceReps;
-    final equipStr = kbReps > 0 && smReps > 0
-        ? 'Kettlebell + Steel Mace'
-        : kbReps > 0
-            ? 'Kettlebell'
-            : 'Steel Mace';
-    final totalSecs = record.totalDurationSeconds;
-    final durStr =
-        '${totalSecs ~/ 60}m ${(totalSecs % 60).toString().padLeft(2, '0')}s';
-    final repBreakdown =
-        kbReps > 0 && smReps > 0 ? '  ·  $kbReps× KB  /  $smReps× SM' : '';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            dateStr,
-            style: const TextStyle(color: Colors.white38, fontSize: 11),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '$equipStr · $planModeStr · $completed/30 Intervalle',
-            style: const TextStyle(color: Colors.white, fontSize: 13),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${record.totalReps} Reps  ·  $durStr$repBreakdown',
-            style: const TextStyle(color: Color(0xFFFF6B00), fontSize: 13),
-          ),
-        ],
-      ),
+      builder: (_) => const HistorySheet(),
     );
   }
 
