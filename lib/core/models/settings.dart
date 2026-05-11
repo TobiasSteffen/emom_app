@@ -61,6 +61,18 @@ class AppSettings {
         10, 10, 10, 10, 10,
       ];
 
+  String get planKey => [
+    planMode.index,
+    equipment.index,
+    warmUpReps,
+    peakReps,
+    coolDownReps,
+    ...phaseDurations,
+    ...customPlan,
+    ...customDurations,
+    ...customEquipment,
+  ].join(',');
+
   List<int> buildPlan() {
     if (planMode == PlanMode.minuteExact) return List<int>.from(customPlan);
     return _buildPhasePlan();

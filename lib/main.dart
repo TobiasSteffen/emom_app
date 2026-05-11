@@ -9,9 +9,9 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'settings.dart';
+import 'core/models/settings.dart';
 import 'config_screen.dart';
-import 'workout_history.dart';
+import 'core/models/workout_history.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
