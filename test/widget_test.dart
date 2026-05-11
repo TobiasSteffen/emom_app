@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:emom_app/main.dart';
+import 'package:emom_app/app.dart';
 
 void main() {
   testWidgets('App renders smoke test', (WidgetTester tester) async {
