@@ -25,6 +25,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _s = ref.read(settingsNotifierProvider).requireValue;
   }
 
   @override
@@ -39,6 +40,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen>
     if (old.visitCount != widget.visitCount) {
       _tabController.animateTo(0);
       _selectedMinuteRow = null;
+      _s = ref.read(settingsNotifierProvider).requireValue;
     }
   }
 
@@ -101,9 +103,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen>
   @override
   Widget build(BuildContext context) {
     final settingsAsync = ref.watch(settingsNotifierProvider);
-    final s = settingsAsync.valueOrNull;
-    if (s == null) return const SizedBox();
-    _s = s;
+    if (settingsAsync.valueOrNull == null) return const SizedBox();
     return Scaffold(
       backgroundColor: const Color(0xFF000000),
       appBar: AppBar(
