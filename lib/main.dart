@@ -8,6 +8,7 @@ import 'package:volume_controller/volume_controller.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'settings.dart';
 import 'config_screen.dart';
 import 'workout_history.dart';
@@ -16,7 +17,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('de');
   final settings = await AppSettings.load();
-  runApp(KettlebellApp(settings: settings));
+  runApp(ProviderScope(child: KettlebellApp(settings: settings)));
 }
 
 class KettlebellApp extends StatelessWidget {
