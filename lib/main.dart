@@ -7,6 +7,13 @@ import 'core/providers/settings_provider.dart';
 import 'config_screen.dart';
 import 'features/history/history_sheet.dart';
 import 'features/workout/workout_notifier.dart';
+import 'features/workout/widgets/workout_header.dart';
+import 'features/workout/widgets/overall_progress.dart';
+import 'features/workout/widgets/reps_card.dart';
+import 'features/workout/widgets/timer_display.dart';
+import 'features/workout/widgets/next_minute_preview.dart';
+import 'features/workout/widgets/confirmation_overlay.dart';
+import 'features/workout/widgets/finished_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -124,12 +131,6 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     if (doReset) ref.read(workoutNotifierProvider.notifier).reset(newSettings);
   }
 
-  String _formatTime(int seconds) {
-    final m = seconds ~/ 60;
-    final s = seconds % 60;
-    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
-  }
-
   void _showHistory() {
     showModalBottomSheet(
       context: context,
@@ -215,211 +216,54 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   }
 
   Widget _buildWorkoutScreen(WorkoutState state, AppSettings settings) {
-    final phaseColor = phaseColorForMinute(state.currentMinute);
     final notifier = ref.read(workoutNotifierProvider.notifier);
+    final phaseColor = phaseColorForMinute(state.currentMinute);
     final exerciseLabel = notifier.exerciseLabelForMinute(state.currentMinute);
     final iconPath = notifier.equipmentForMinute(state.currentMinute) == Equipment.kettlebell
         ? 'assets/icon/kettlebell.png'
         : 'assets/icon/steelmace.png';
-    final isWarning = state.secondsLeft <= 5 && state.secondsLeft > 0 && state.isRunning;
-    final progress = state.currentMinute / state.totalMinutes;
-    final secondProgress = (state.currentDuration - state.secondsLeft) / state.currentDuration;
-
-    String phaseLabel;
-    if (state.currentMinute < 5) {
-      phaseLabel = 'Warm Up';
-    } else if (state.currentMinute < 15) {
-      phaseLabel = 'Aufbau ↑';
-    } else if (state.currentMinute < 20) {
-      phaseLabel = 'Peak';
-    } else if (state.currentMinute < 25) {
-      phaseLabel = 'Abbau ↓';
-    } else {
-      phaseLabel = 'Cool Down';
-    }
 
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'EMOM 30',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white.withValues(alpha: 0.6),
-                  letterSpacing: 3,
-                ),
-              ),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: phaseColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                          color: phaseColor.withValues(alpha: 0.5)),
-                    ),
-                    child: Text(
-                      phaseLabel,
-                      style: TextStyle(
-                          color: phaseColor, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  GestureDetector(
-                    onTap: _showHistory,
-                    child: const Icon(Icons.history,
-                        color: Colors.white24, size: 22),
-                  ),
-                  const SizedBox(width: 10),
-                  GestureDetector(
-                    onTap: _openConfig,
-                    child: const Icon(Icons.settings,
-                        color: Colors.white24, size: 22),
-                  ),
-                ],
-              ),
-            ],
+          WorkoutHeader(
+            currentMinute: state.currentMinute,
+            onHistory: _showHistory,
+            onSettings: _openConfig,
           ),
-
           const SizedBox(height: 32),
-
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Minute ${state.currentMinute + 1} / ${state.totalMinutes}',
-                    style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.5),
-                        fontSize: 13),
-                  ),
-                  Text(
-                    '${state.totalRepsDone} / ${state.totalReps} $exerciseLabel',
-                    style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.5),
-                        fontSize: 13),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  backgroundColor: Colors.white.withValues(alpha: 0.1),
-                  valueColor: AlwaysStoppedAnimation<Color>(phaseColor),
-                  minHeight: 6,
-                ),
-              ),
-            ],
+          OverallProgress(
+            currentMinute: state.currentMinute,
+            totalMinutes: state.totalMinutes,
+            totalRepsDone: state.totalRepsDone,
+            totalReps: state.totalReps,
+            exerciseLabel: exerciseLabel,
           ),
-
           const SizedBox(height: 48),
-
-          ScaleTransition(
-            scale: _pulseAnimation,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 40),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A),
-                borderRadius: BorderRadius.circular(32),
-                border: Border.all(
-                    color: phaseColor.withValues(alpha: 0.3), width: 2),
-              ),
-              child: Column(
-                children: [
-                  Image.asset(
-                    iconPath,
-                    width: 48,
-                    height: 48,
-                    color: phaseColor,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'REPS',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.4),
-                      fontSize: 14,
-                      letterSpacing: 4,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${state.currentReps}',
-                    style: TextStyle(
-                      fontSize: 120,
-                      fontWeight: FontWeight.w900,
-                      color: phaseColor,
-                      height: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    exerciseLabel,
-                    style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.5),
-                        fontSize: 16),
-                  ),
-                ],
-              ),
-            ),
+          RepsCard(
+            currentMinute: state.currentMinute,
+            currentReps: state.currentReps,
+            exerciseLabel: exerciseLabel,
+            iconPath: iconPath,
+            pulseAnimation: _pulseAnimation,
           ),
-
           const SizedBox(height: 32),
-
-          Column(
-            children: [
-              Text(
-                _formatTime(state.secondsLeft),
-                style: TextStyle(
-                  fontSize: 52,
-                  fontWeight: FontWeight.w300,
-                  color: isWarning ? const Color(0xFFFF4444) : Colors.white,
-                  letterSpacing: 4,
-                ),
-              ),
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: secondProgress,
-                  backgroundColor: Colors.white.withValues(alpha: 0.1),
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    isWarning ? const Color(0xFFFF4444) : Colors.white24,
-                  ),
-                  minHeight: 4,
-                ),
-              ),
-            ],
+          TimerDisplay(
+            secondsLeft: state.secondsLeft,
+            currentDuration: state.currentDuration,
+            isRunning: state.isRunning,
           ),
-
           if (state.currentMinute < state.totalMinutes - 1) ...[
             const SizedBox(height: 16),
-            Text(
-              'Nächste Minute: ${state.plan[state.currentMinute + 1]} Reps',
-              style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.35), fontSize: 14),
-            ),
+            NextMinutePreview(nextReps: state.plan[state.currentMinute + 1]),
           ],
-
           const Spacer(),
-
           Row(
             children: [
               IconButton(
-                onPressed: () => ref.read(workoutNotifierProvider.notifier).reset(),
-                icon: const Icon(Icons.refresh,
-                    color: Colors.white38, size: 28),
+                onPressed: () => notifier.reset(),
+                icon: const Icon(Icons.refresh, color: Colors.white38, size: 28),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -432,17 +276,14 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: phaseColor.withValues(alpha: 0.4),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        ),
+                            color: phaseColor.withValues(alpha: 0.4),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8)),
                       ],
                     ),
                     child: Center(
                       child: Icon(
-                        state.isRunning
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
+                        state.isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
                         color: Colors.white,
                         size: 36,
                       ),
@@ -460,131 +301,24 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   Widget _buildConfirmationOverlay(WorkoutState state) {
     final notifier = ref.read(workoutNotifierProvider.notifier);
     final nextMinute = state.currentMinute + 1;
-    final nextReps = state.plan[nextMinute];
-    final nextColor = phaseColorForMinute(nextMinute);
-    final nextLabel = notifier.exerciseLabelForMinute(nextMinute);
-
-    return GestureDetector(
-      onTap: () {
+    return ConfirmationOverlay(
+      nextReps: state.plan[nextMinute],
+      nextColor: phaseColorForMinute(nextMinute),
+      nextLabel: notifier.exerciseLabelForMinute(nextMinute),
+      nextMinuteNumber: nextMinute + 1,
+      onConfirm: () {
         _pulseController.forward().then((_) => _pulseController.reverse());
         notifier.confirmInterval();
       },
-      child: Container(
-        color: Colors.black.withValues(alpha: 0.88),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'INTERVALL BEENDET',
-                style: TextStyle(
-                  color: Colors.white24,
-                  fontSize: 11,
-                  letterSpacing: 4,
-                ),
-              ),
-              const SizedBox(height: 32),
-              Text(
-                '$nextReps',
-                style: TextStyle(
-                  fontSize: 96,
-                  fontWeight: FontWeight.w900,
-                  color: nextColor,
-                  height: 1,
-                ),
-              ),
-              Text(
-                nextLabel,
-                style: const TextStyle(color: Colors.white38, fontSize: 16),
-              ),
-              Text(
-                'Minute ${nextMinute + 1}',
-                style: const TextStyle(color: Colors.white24, fontSize: 13),
-              ),
-              const SizedBox(height: 48),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 40, vertical: 16),
-                decoration: BoxDecoration(
-                  color: nextColor,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: nextColor.withValues(alpha: 0.4),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: const Text(
-                  'WEITER',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 3,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'oder irgendwo tippen',
-                style: TextStyle(color: Colors.white12, fontSize: 11),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
   Widget _buildFinishedScreen(WorkoutState state) {
     final notifier = ref.read(workoutNotifierProvider.notifier);
-    final exerciseLabel = notifier.exerciseLabelForMinute(state.currentMinute);
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('🏆', style: TextStyle(fontSize: 80)),
-            const SizedBox(height: 24),
-            const Text(
-              'WORKOUT DONE!',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFFFF6B00),
-                letterSpacing: 4,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '${state.totalReps} $exerciseLabel',
-              style: TextStyle(
-                  fontSize: 20, color: Colors.white.withValues(alpha: 0.7)),
-            ),
-            const SizedBox(height: 48),
-            GestureDetector(
-              onTap: () => notifier.reset(),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 48, vertical: 16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFF6B00),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Text(
-                  'Nochmal',
-                  style:
-                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return FinishedScreen(
+      totalReps: state.totalReps,
+      exerciseLabel: notifier.exerciseLabelForMinute(state.currentMinute),
+      onReset: () => notifier.reset(),
     );
   }
 }
