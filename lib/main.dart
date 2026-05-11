@@ -10,19 +10,18 @@ import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/models/settings.dart';
+import 'core/providers/settings_provider.dart';
 import 'config_screen.dart';
 import 'core/models/workout_history.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('de');
-  final settings = await AppSettings.load();
-  runApp(ProviderScope(child: KettlebellApp(settings: settings)));
+  runApp(const ProviderScope(child: KettlebellApp()));
 }
 
 class KettlebellApp extends StatelessWidget {
-  final AppSettings settings;
-  const KettlebellApp({super.key, required this.settings});
+  const KettlebellApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -36,20 +35,19 @@ class KettlebellApp extends StatelessWidget {
           secondary: Color(0xFFFF6B00),
         ),
       ),
-      home: WorkoutScreen(settings: settings),
+      home: const WorkoutScreen(),
     );
   }
 }
 
-class WorkoutScreen extends StatefulWidget {
-  final AppSettings settings;
-  const WorkoutScreen({super.key, required this.settings});
+class WorkoutScreen extends ConsumerStatefulWidget {
+  const WorkoutScreen({super.key});
 
   @override
-  State<WorkoutScreen> createState() => _WorkoutScreenState();
+  ConsumerState<WorkoutScreen> createState() => _WorkoutScreenState();
 }
 
-class _WorkoutScreenState extends State<WorkoutScreen>
+class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     with TickerProviderStateMixin {
   late AppSettings _settings;
   late List<int> _plan;
@@ -76,6 +74,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   String _planKeySnapshot = '';
   int _configVisitCount = 0;
 
+  bool _planInitialized = false;
   final List<IntervalRecord> _completedIntervals = [];
   DateTime? _workoutStartTime;
 
@@ -114,10 +113,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   @override
   void initState() {
     super.initState();
-    _settings = widget.settings;
-    _plan = _settings.buildPlan();
-    _durations = _settings.buildDurations();
-    _secondsLeft = _durations[0];
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -305,18 +300,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
     await playOnce();
   }
-
-  String _planKey() => [
-        _settings.planMode.index,
-        _settings.equipment.index,
-        _settings.warmUpReps,
-        _settings.peakReps,
-        _settings.coolDownReps,
-        ..._settings.phaseDurations,
-        ..._settings.customPlan,
-        ..._settings.customDurations,
-        ..._settings.customEquipment,
-      ].join(',');
 
   Future<void> _showResetConfirmDialog() async {
     final doReset = await showDialog<bool>(
@@ -609,72 +592,73 @@ Future<void> _showHistory() async {
 
   @override
   Widget build(BuildContext context) {
-    return PageView(
-      controller: _pageController,
-      physics: const BouncingScrollPhysics(parent: PageScrollPhysics()),
-      dragStartBehavior: DragStartBehavior.down,
-      onPageChanged: (page) {
-        if (page == 1) {
-          setState(() {
-            _configWasOpened = true;
-            _wasRunningBeforeConfig = _isRunning || _waitingForConfirmation;
-            _planKeySnapshot = _planKey();
-            _configVisitCount++;
-          });
-          if (_isRunning) _pause();
-        }
-        if (page == 0 && _configWasOpened) {
-          _configWasOpened = false;
-          _settings.save();
-          final changed = _planKey() != _planKeySnapshot;
-          if (!changed) {
-            if (_wasRunningBeforeConfig && !_isFinished) _start();
-          } else {
-            final wasActive = _wasRunningBeforeConfig || _currentMinute > 0;
-            if (wasActive) {
-              _showResetConfirmDialog();
-            } else {
-              _reset();
-            }
-          }
-        }
-      },
-      children: [
-        Scaffold(
-          body: SafeArea(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                _isFinished ? _buildFinishedScreen() : _buildWorkoutScreen(),
-                if (_waitingForConfirmation) _buildConfirmationOverlay(),
-              ],
-            ),
-          ),
+    final settingsAsync = ref.watch(settingsNotifierProvider);
+    return settingsAsync.when(
+      loading: () => const Scaffold(
+        backgroundColor: Color(0xFF000000),
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFFFF6B00)),
         ),
-        ConfigScreen(
-          visitCount: _configVisitCount,
-          settings: _settings,
-          onSave: (settings) {
-            setState(() => _settings = settings);
-            _pageController.animateToPage(
-              0,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-            );
-          },
-          onPlanChanged: () {
-            if (!_isRunning && !_waitingForConfirmation) {
-              final newPlan = _settings.buildPlan();
-              final newDurations = _settings.buildDurations();
+      ),
+      error: (e, s) => Scaffold(body: Center(child: Text('$e'))),
+      data: (settings) {
+        _settings = settings;
+        // Initialize plan/durations on the very first data load only.
+        // Subsequent rebuilds (timer ticks, state changes) must not overwrite
+        // _plan/_durations/_secondsLeft — _reset() handles that explicitly.
+        if (!_planInitialized) {
+          _planInitialized = true;
+          _plan = _settings.buildPlan();
+          _durations = _settings.buildDurations();
+          _secondsLeft = _durations[0];
+        }
+        return PageView(
+          controller: _pageController,
+          physics: const BouncingScrollPhysics(parent: PageScrollPhysics()),
+          dragStartBehavior: DragStartBehavior.down,
+          onPageChanged: (page) {
+            if (page == 1) {
               setState(() {
-                _plan = newPlan;
-                _durations = newDurations;
-                _secondsLeft = newDurations[_currentMinute];
+                _configWasOpened = true;
+                _wasRunningBeforeConfig = _isRunning || _waitingForConfirmation;
+                _planKeySnapshot = ref.read(settingsNotifierProvider).requireValue.planKey;
+                _configVisitCount++;
               });
+              if (_isRunning) _pause();
+            }
+            if (page == 0 && _configWasOpened) {
+              _configWasOpened = false;
+              ref.read(settingsNotifierProvider.notifier).save();
+              final currentPlanKey = ref.read(settingsNotifierProvider).requireValue.planKey;
+              final changed = currentPlanKey != _planKeySnapshot;
+              if (!changed) {
+                if (_wasRunningBeforeConfig && !_isFinished) _start();
+              } else {
+                final wasActive = _wasRunningBeforeConfig || _currentMinute > 0;
+                if (wasActive) {
+                  _showResetConfirmDialog();
+                } else {
+                  _reset();
+                }
+              }
             }
           },
-        ),
-      ],
+          children: [
+            Scaffold(
+              body: SafeArea(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    _isFinished ? _buildFinishedScreen() : _buildWorkoutScreen(),
+                    if (_waitingForConfirmation) _buildConfirmationOverlay(),
+                  ],
+                ),
+              ),
+            ),
+            ConfigScreen(visitCount: _configVisitCount),
+          ],
+        );
+      },
     );
   }
 

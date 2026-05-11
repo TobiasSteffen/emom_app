@@ -1,22 +1,21 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'core/models/settings.dart';
+import 'core/providers/settings_provider.dart';
 
-class ConfigScreen extends StatefulWidget {
-  final AppSettings settings;
-  final void Function(AppSettings) onSave;
-  final VoidCallback? onPlanChanged;
+class ConfigScreen extends ConsumerStatefulWidget {
   final int visitCount;
-  const ConfigScreen({super.key, required this.settings, required this.onSave, this.onPlanChanged, this.visitCount = 0});
+  const ConfigScreen({super.key, this.visitCount = 0});
 
   @override
-  State<ConfigScreen> createState() => _ConfigScreenState();
+  ConsumerState<ConfigScreen> createState() => _ConfigScreenState();
 }
 
-class _ConfigScreenState extends State<ConfigScreen>
+class _ConfigScreenState extends ConsumerState<ConfigScreen>
     with SingleTickerProviderStateMixin {
   late AppSettings _s;
   late TabController _tabController;
@@ -25,7 +24,6 @@ class _ConfigScreenState extends State<ConfigScreen>
   @override
   void initState() {
     super.initState();
-    _s = widget.settings;
     _tabController = TabController(length: 2, vsync: this);
   }
 
@@ -45,12 +43,11 @@ class _ConfigScreenState extends State<ConfigScreen>
   }
 
   void _save() {
-    widget.onSave(_s);
+    ref.read(settingsNotifierProvider.notifier).replace(_s);
   }
 
   void _setPlan(VoidCallback fn) {
     setState(fn);
-    widget.onPlanChanged?.call();
   }
 
   int get _minuteTotal => _s.customPlan.fold(0, (sum, v) => sum + v);
@@ -103,6 +100,10 @@ class _ConfigScreenState extends State<ConfigScreen>
 
   @override
   Widget build(BuildContext context) {
+    final settingsAsync = ref.watch(settingsNotifierProvider);
+    final s = settingsAsync.valueOrNull;
+    if (s == null) return const SizedBox();
+    _s = s;
     return Scaffold(
       backgroundColor: const Color(0xFF000000),
       appBar: AppBar(
@@ -573,7 +574,6 @@ class _ConfigScreenState extends State<ConfigScreen>
               }),
               onChanged: () {
                 setState(() {});
-                widget.onPlanChanged?.call();
               },
             ),
           ),
