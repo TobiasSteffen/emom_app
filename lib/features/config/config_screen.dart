@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'core/models/settings.dart';
-import 'core/providers/settings_provider.dart';
-import 'features/config/widgets/plan_mode_selector.dart';
-import 'features/config/widgets/equipment_selector.dart';
-import 'features/config/widgets/phase_based_editor.dart';
-import 'features/config/widgets/minute_exact_editor.dart';
-import 'features/config/widgets/feedback_tab.dart';
+import '../../core/models/settings.dart';
+import '../../core/providers/settings_provider.dart';
+import 'widgets/plan_mode_selector.dart';
+import 'widgets/equipment_selector.dart';
+import 'widgets/phase_based_editor.dart';
+import 'widgets/minute_exact_editor.dart';
+import 'widgets/feedback_tab.dart';
 
 class ConfigScreen extends ConsumerStatefulWidget {
   final int visitCount;
