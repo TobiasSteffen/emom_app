@@ -1,19 +1,12 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/services.dart';
-import 'package:vibration/vibration.dart';
-import 'package:wakelock_plus/wakelock_plus.dart';
-import 'package:volume_controller/volume_controller.dart';
-import 'package:audioplayers/audioplayers.dart';
-import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'core/models/settings.dart';
 import 'core/providers/settings_provider.dart';
 import 'config_screen.dart';
-import 'core/models/workout_history.dart';
 import 'features/history/history_sheet.dart';
-import 'features/history/history_notifier.dart';
+import 'features/workout/workout_notifier.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,23 +43,6 @@ class WorkoutScreen extends ConsumerStatefulWidget {
 
 class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     with TickerProviderStateMixin {
-  late AppSettings _settings;
-  late List<int> _plan;
-  late List<int> _durations;
-
-  final AudioPlayer _tickPlayer = AudioPlayer();
-  final AudioPlayer _alarmPlayer = AudioPlayer();
-  StreamSubscription? _alarmLoopSub;
-  bool? _hasVibrator;
-
-  Timer? _timer;
-  int _currentMinute = 0;
-  int _secondsLeft = 60;
-  bool _isRunning = false;
-  bool _isFinished = false;
-  bool _waitingForConfirmation = false;
-  int _totalRepsDone = 0;
-
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
   late PageController _pageController;
@@ -74,42 +50,6 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   bool _wasRunningBeforeConfig = false;
   String _planKeySnapshot = '';
   int _configVisitCount = 0;
-
-  bool _planInitialized = false;
-  final List<IntervalRecord> _completedIntervals = [];
-  DateTime? _workoutStartTime;
-
-  int get totalMinutes => _plan.length;
-  int get currentReps => _plan[_currentMinute];
-  int get currentDuration => _durations[_currentMinute];
-  int get totalReps => _plan.fold(0, (a, b) => a + b);
-
-  Color get phaseColor => phaseColorForMinute(_currentMinute);
-
-  Equipment _equipmentForMinute(int minute) {
-    if (_settings.planMode == PlanMode.minuteExact) {
-      return Equipment.values[_settings.customEquipment[minute]];
-    }
-    return _settings.equipment;
-  }
-
-  String _exerciseLabelForMinute(int minute) =>
-      _equipmentForMinute(minute) == Equipment.kettlebell ? 'Swings' : '360s';
-
-  String get exerciseLabel => _exerciseLabelForMinute(_currentMinute);
-
-  String get iconPath =>
-      _equipmentForMinute(_currentMinute) == Equipment.kettlebell
-          ? 'assets/icon/kettlebell.png'
-          : 'assets/icon/steelmace.png';
-
-  String get phaseLabel {
-    if (_currentMinute < 5) return 'Warm Up';
-    if (_currentMinute < 15) return 'Aufbau ↑';
-    if (_currentMinute < 20) return 'Peak';
-    if (_currentMinute < 25) return 'Abbau ↓';
-    return 'Cool Down';
-  }
 
   @override
   void initState() {
@@ -122,17 +62,12 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeOut),
     );
     _pageController = PageController();
-    Vibration.hasVibrator().then((v) => _hasVibrator = v);
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
-    _alarmLoopSub?.cancel();
     _pulseController.dispose();
     _pageController.dispose();
-    _tickPlayer.dispose();
-    _alarmPlayer.dispose();
     super.dispose();
   }
 
@@ -144,165 +79,21 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     );
   }
 
-  void _startStop() {
-    if (_isFinished) {
-      _reset();
+  void _startStop(WorkoutState state) {
+    final notifier = ref.read(workoutNotifierProvider.notifier);
+    if (state.isFinished) {
+      notifier.reset();
       return;
     }
-    if (_waitingForConfirmation) {
-      _confirmInterval();
+    if (state.waitingForConfirmation) {
+      _pulseController.forward().then((_) => _pulseController.reverse());
+      notifier.confirmInterval();
       return;
     }
-    _isRunning ? _pause() : _start();
+    state.isRunning ? notifier.pause() : notifier.start();
   }
 
-  void _start() {
-    _workoutStartTime ??= DateTime.now();
-    setState(() => _isRunning = true);
-    WakelockPlus.enable();
-    _timer = Timer.periodic(const Duration(seconds: 1), _tick);
-  }
-
-  void _pause() {
-    _timer?.cancel();
-    WakelockPlus.disable();
-    setState(() => _isRunning = false);
-  }
-
-  void _reset() {
-    _timer?.cancel();
-    _alarmLoopSub?.cancel();
-    _alarmLoopSub = null;
-    _alarmPlayer.stop();
-    final newPlan = _settings.buildPlan();
-    final newDurations = _settings.buildDurations();
-    _completedIntervals.clear();
-    _workoutStartTime = null;
-    setState(() {
-      _plan = newPlan;
-      _durations = newDurations;
-      _currentMinute = 0;
-      _secondsLeft = newDurations[0];
-      _isRunning = false;
-      _isFinished = false;
-      _waitingForConfirmation = false;
-      _totalRepsDone = 0;
-    });
-  }
-
-  void _tick(Timer timer) {
-    setState(() {
-      _secondsLeft--;
-      if (_secondsLeft <= 0) {
-        _onMinuteComplete();
-      } else if (_secondsLeft <= 5 && _settings.warningTonesEnabled) {
-        if (_secondsLeft == 5) _raiseVolume();
-        _playTickSound();
-      }
-    });
-  }
-
-  Future<void> _raiseVolume() async {
-    if (!_settings.volumeBoostEnabled || _settings.volumeBoostLevel <= 0) return;
-    try {
-      final current = await VolumeController().getVolume();
-      if (current < _settings.volumeBoostLevel) {
-        VolumeController().setVolume(_settings.volumeBoostLevel, showSystemUI: false);
-      }
-    } catch (_) {}
-  }
-
-  void _onMinuteComplete() {
-    _timer?.cancel();
-    _totalRepsDone += currentReps;
-
-    _completedIntervals.add(IntervalRecord(
-      reps: currentReps,
-      durationSeconds: currentDuration,
-      equipment: _equipmentForMinute(_currentMinute).index,
-    ));
-
-    if (_currentMinute >= totalMinutes - 1) {
-      _isFinished = true;
-      _isRunning = false;
-      WakelockPlus.disable();
-      _vibrate(600);
-      _saveHistoryIfEligible();
-      return;
-    }
-
-    _isRunning = false;
-    _waitingForConfirmation = true;
-    _playAlarm();
-  }
-
-  Future<void> _saveHistoryIfEligible() async {
-    if (_completedIntervals.length < 2 || _workoutStartTime == null) return;
-    final record = WorkoutRecord(
-      timestamp: _workoutStartTime!.millisecondsSinceEpoch,
-      planMode: _settings.planMode.index,
-      intervals: List.from(_completedIntervals),
-    );
-    await ref.read(historyNotifierProvider.notifier).addOrUpdate(record);
-  }
-
-  void _confirmInterval() {
-    _alarmLoopSub?.cancel();
-    _alarmLoopSub = null;
-    _alarmPlayer.stop();
-    setState(() {
-      _waitingForConfirmation = false;
-      _currentMinute++;
-      _secondsLeft = _durations[_currentMinute];
-    });
-    _pulseController.forward().then((_) => _pulseController.reverse());
-    _vibrate(400);
-    _saveHistoryIfEligible();
-    _start();
-  }
-
-  Source _soundSource(String f) =>
-      f.startsWith('/') ? DeviceFileSource(f) : AssetSource('sounds/$f');
-
-  Future<void> _vibrate(int durationMs) async {
-    if (!_settings.vibrationEnabled || _hasVibrator != true) return;
-    Vibration.vibrate(duration: durationMs);
-  }
-
-  Future<void> _playTickSound() async {
-    try {
-      await _tickPlayer.play(_soundSource(_settings.countdownSoundFile));
-    } catch (_) {}
-  }
-
-  Future<void> _playAlarm() async {
-    if (_settings.vibrationEnabled && _hasVibrator == true) {
-      Vibration.vibrate(duration: 800);
-    }
-
-    if (!_settings.alarmEnabled) return;
-
-    Future<void> playOnce() async {
-      try {
-        final f = _settings.alarmSoundFile;
-        await _alarmPlayer.setReleaseMode(ReleaseMode.release);
-        await _alarmPlayer.play(_soundSource(f));
-      } catch (_) {
-        SystemSound.play(SystemSoundType.click);
-      }
-    }
-
-    await _alarmLoopSub?.cancel();
-    _alarmLoopSub = _alarmPlayer.onPlayerComplete.listen((_) async {
-      if (!_waitingForConfirmation || !mounted) return;
-      await Future.delayed(const Duration(milliseconds: 800));
-      if (_waitingForConfirmation && mounted) await playOnce();
-    });
-
-    await playOnce();
-  }
-
-  Future<void> _showResetConfirmDialog() async {
+  Future<void> _showResetConfirmDialog(AppSettings newSettings) async {
     final doReset = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -330,10 +121,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
         ],
       ),
     ) ?? false;
-
-    if (doReset) {
-      _reset();
-    }
+    if (doReset) ref.read(workoutNotifierProvider.notifier).reset(newSettings);
   }
 
   String _formatTime(int seconds) {
@@ -356,80 +144,99 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
 
   @override
   Widget build(BuildContext context) {
-    final settingsAsync = ref.watch(settingsNotifierProvider);
-    return settingsAsync.when(
-      loading: () => const Scaffold(
+    final workoutAsync = ref.watch(workoutNotifierProvider);
+    final settings = ref.watch(settingsNotifierProvider).valueOrNull;
+
+    if (workoutAsync.isLoading || settings == null) {
+      return const Scaffold(
         backgroundColor: Color(0xFF000000),
-        body: Center(
-          child: CircularProgressIndicator(color: Color(0xFFFF6B00)),
-        ),
-      ),
-      error: (e, s) => Scaffold(body: Center(child: Text('$e'))),
-      data: (settings) {
-        _settings = settings;
-        // Initialize plan/durations on the very first data load only.
-        // Subsequent rebuilds (timer ticks, state changes) must not overwrite
-        // _plan/_durations/_secondsLeft — _reset() handles that explicitly.
-        if (!_planInitialized) {
-          _planInitialized = true;
-          _plan = _settings.buildPlan();
-          _durations = _settings.buildDurations();
-          _secondsLeft = _durations[0];
+        body: Center(child: CircularProgressIndicator(color: Color(0xFFFF6B00))),
+      );
+    }
+    if (workoutAsync.hasError) {
+      return Scaffold(body: Center(child: Text('${workoutAsync.error}')));
+    }
+
+    return _buildPageView(workoutAsync.requireValue, settings);
+  }
+
+  Widget _buildPageView(WorkoutState state, AppSettings settings) {
+    final notifier = ref.read(workoutNotifierProvider.notifier);
+
+    return PageView(
+      controller: _pageController,
+      physics: const BouncingScrollPhysics(parent: PageScrollPhysics()),
+      dragStartBehavior: DragStartBehavior.down,
+      onPageChanged: (page) {
+        if (page == 1) {
+          setState(() {
+            _configWasOpened = true;
+            _wasRunningBeforeConfig = state.isRunning || state.waitingForConfirmation;
+            _planKeySnapshot = ref.read(settingsNotifierProvider).requireValue.planKey;
+            _configVisitCount++;
+          });
+          if (state.isRunning) notifier.pause();
         }
-        return PageView(
-          controller: _pageController,
-          physics: const BouncingScrollPhysics(parent: PageScrollPhysics()),
-          dragStartBehavior: DragStartBehavior.down,
-          onPageChanged: (page) {
-            if (page == 1) {
-              setState(() {
-                _configWasOpened = true;
-                _wasRunningBeforeConfig = _isRunning || _waitingForConfirmation;
-                _planKeySnapshot = ref.read(settingsNotifierProvider).requireValue.planKey;
-                _configVisitCount++;
-              });
-              if (_isRunning) _pause();
+        if (page == 0 && _configWasOpened) {
+          _configWasOpened = false;
+          final newSettings = ref.read(settingsNotifierProvider).requireValue;
+          ref.read(settingsNotifierProvider.notifier).save();
+          final changed = newSettings.planKey != _planKeySnapshot;
+          if (!changed) {
+            notifier.updateSettings(newSettings);
+            if (_wasRunningBeforeConfig && !state.isFinished) notifier.start();
+          } else {
+            final wasActive = _wasRunningBeforeConfig || state.currentMinute > 0;
+            if (wasActive) {
+              _showResetConfirmDialog(newSettings);
+            } else {
+              notifier.reset(newSettings);
             }
-            if (page == 0 && _configWasOpened) {
-              _configWasOpened = false;
-              ref.read(settingsNotifierProvider.notifier).save();
-              final currentPlanKey = ref.read(settingsNotifierProvider).requireValue.planKey;
-              final changed = currentPlanKey != _planKeySnapshot;
-              if (!changed) {
-                if (_wasRunningBeforeConfig && !_isFinished) _start();
-              } else {
-                final wasActive = _wasRunningBeforeConfig || _currentMinute > 0;
-                if (wasActive) {
-                  _showResetConfirmDialog();
-                } else {
-                  _reset();
-                }
-              }
-            }
-          },
-          children: [
-            Scaffold(
-              body: SafeArea(
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    _isFinished ? _buildFinishedScreen() : _buildWorkoutScreen(),
-                    if (_waitingForConfirmation) _buildConfirmationOverlay(),
-                  ],
-                ),
-              ),
-            ),
-            ConfigScreen(visitCount: _configVisitCount),
-          ],
-        );
+          }
+        }
       },
+      children: [
+        Scaffold(
+          body: SafeArea(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                state.isFinished
+                    ? _buildFinishedScreen(state)
+                    : _buildWorkoutScreen(state, settings),
+                if (state.waitingForConfirmation) _buildConfirmationOverlay(state),
+              ],
+            ),
+          ),
+        ),
+        ConfigScreen(visitCount: _configVisitCount),
+      ],
     );
   }
 
-  Widget _buildWorkoutScreen() {
-    final progress = _currentMinute / totalMinutes;
-    final secondProgress = (currentDuration - _secondsLeft) / currentDuration;
-    final isWarning = _secondsLeft <= 5 && _secondsLeft > 0 && _isRunning;
+  Widget _buildWorkoutScreen(WorkoutState state, AppSettings settings) {
+    final phaseColor = phaseColorForMinute(state.currentMinute);
+    final notifier = ref.read(workoutNotifierProvider.notifier);
+    final exerciseLabel = notifier.exerciseLabelForMinute(state.currentMinute);
+    final iconPath = notifier.equipmentForMinute(state.currentMinute) == Equipment.kettlebell
+        ? 'assets/icon/kettlebell.png'
+        : 'assets/icon/steelmace.png';
+    final isWarning = state.secondsLeft <= 5 && state.secondsLeft > 0 && state.isRunning;
+    final progress = state.currentMinute / state.totalMinutes;
+    final secondProgress = (state.currentDuration - state.secondsLeft) / state.currentDuration;
+
+    String phaseLabel;
+    if (state.currentMinute < 5) {
+      phaseLabel = 'Warm Up';
+    } else if (state.currentMinute < 15) {
+      phaseLabel = 'Aufbau ↑';
+    } else if (state.currentMinute < 20) {
+      phaseLabel = 'Peak';
+    } else if (state.currentMinute < 25) {
+      phaseLabel = 'Abbau ↓';
+    } else {
+      phaseLabel = 'Cool Down';
+    }
 
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -490,13 +297,13 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Minute ${_currentMinute + 1} / $totalMinutes',
+                    'Minute ${state.currentMinute + 1} / ${state.totalMinutes}',
                     style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.5),
                         fontSize: 13),
                   ),
                   Text(
-                    '$_totalRepsDone / $totalReps $exerciseLabel',
+                    '${state.totalRepsDone} / ${state.totalReps} $exerciseLabel',
                     style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.5),
                         fontSize: 13),
@@ -548,7 +355,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '$currentReps',
+                    '${state.currentReps}',
                     style: TextStyle(
                       fontSize: 120,
                       fontWeight: FontWeight.w900,
@@ -573,7 +380,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
           Column(
             children: [
               Text(
-                _formatTime(_secondsLeft),
+                _formatTime(state.secondsLeft),
                 style: TextStyle(
                   fontSize: 52,
                   fontWeight: FontWeight.w300,
@@ -596,10 +403,10 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
             ],
           ),
 
-          if (_currentMinute < totalMinutes - 1) ...[
+          if (state.currentMinute < state.totalMinutes - 1) ...[
             const SizedBox(height: 16),
             Text(
-              'Nächste Minute: ${_plan[_currentMinute + 1]} Reps',
+              'Nächste Minute: ${state.plan[state.currentMinute + 1]} Reps',
               style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.35), fontSize: 14),
             ),
@@ -610,14 +417,14 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
           Row(
             children: [
               IconButton(
-                onPressed: _reset,
+                onPressed: () => ref.read(workoutNotifierProvider.notifier).reset(),
                 icon: const Icon(Icons.refresh,
                     color: Colors.white38, size: 28),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: GestureDetector(
-                  onTap: _startStop,
+                  onTap: () => _startStop(state),
                   child: Container(
                     height: 64,
                     decoration: BoxDecoration(
@@ -633,7 +440,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
                     ),
                     child: Center(
                       child: Icon(
-                        _isRunning
+                        state.isRunning
                             ? Icons.pause_rounded
                             : Icons.play_arrow_rounded,
                         color: Colors.white,
@@ -650,14 +457,18 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     );
   }
 
-  Widget _buildConfirmationOverlay() {
-    final nextMinute = _currentMinute + 1;
-    final nextReps = _plan[nextMinute];
+  Widget _buildConfirmationOverlay(WorkoutState state) {
+    final notifier = ref.read(workoutNotifierProvider.notifier);
+    final nextMinute = state.currentMinute + 1;
+    final nextReps = state.plan[nextMinute];
     final nextColor = phaseColorForMinute(nextMinute);
-    final nextLabel = _exerciseLabelForMinute(nextMinute);
+    final nextLabel = notifier.exerciseLabelForMinute(nextMinute);
 
     return GestureDetector(
-      onTap: _confirmInterval,
+      onTap: () {
+        _pulseController.forward().then((_) => _pulseController.reverse());
+        notifier.confirmInterval();
+      },
       child: Container(
         color: Colors.black.withValues(alpha: 0.88),
         child: Center(
@@ -727,7 +538,10 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     );
   }
 
-  Widget _buildFinishedScreen() {
+  Widget _buildFinishedScreen(WorkoutState state) {
+    final notifier = ref.read(workoutNotifierProvider.notifier);
+    final exerciseLabel = notifier.exerciseLabelForMinute(state.currentMinute);
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -747,13 +561,13 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              '$totalReps $exerciseLabel',
+              '${state.totalReps} $exerciseLabel',
               style: TextStyle(
                   fontSize: 20, color: Colors.white.withValues(alpha: 0.7)),
             ),
             const SizedBox(height: 48),
             GestureDetector(
-              onTap: _reset,
+              onTap: () => notifier.reset(),
               child: Container(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 48, vertical: 16),
