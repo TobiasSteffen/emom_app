@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EMOM App Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --border: #222;
+    --orange: #FF6B00;
+    --red: #FF2D2D;
+    --green: #2DFF8F;
+    --white: #F0EDE8;
+    --muted: #444;
+  }
+
+  body {
+    background: #1a1a2e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'DM Mono', monospace;
+    gap: 48px;
+    flex-wrap: wrap;
+    padding: 72px 20px 40px;
+  }
+
+  /* Phone frame */
+  .phone {
+    width: 360px;
+    height: 720px;
+    background: var(--bg);
+    border-radius: 44px;
+    border: 2px solid #2a2a2a;
+    overflow: hidden;
+    position: relative;
+    box-shadow:
+      0 0 0 1px #111,
+      0 40px 80px rgba(0,0,0,0.8),
+      inset 0 1px 0 #333;
+    flex-shrink: 0;
+  }
+
+  .phone::before {
+    content: '';
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 6px;
+    background: #222;
+    border-radius: 3px;
+    z-index: 10;
+  }
+
+  .screen {
+    width: 100%;
+    height: 100%;
+    padding: 36px 24px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 22px;
+    margin-top: 8px;
+  }
+
+  .app-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 4px;
+    color: var(--muted);
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .gear-icon {
+    font-size: 16px;
+    color: #333;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .phase-badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .phase-peak {
+    background: rgba(255, 45, 45, 0.12);
+    border: 1px solid rgba(255, 45, 45, 0.4);
+    color: var(--red);
+  }
+
+  .phase-warmup {
+    background: rgba(45, 255, 143, 0.12);
+    border: 1px solid rgba(45, 255, 143, 0.4);
+    color: var(--green);
+  }
+
+  .phase-build {
+    background: rgba(255, 107, 0, 0.12);
+    border: 1px solid rgba(255, 107, 0, 0.4);
+    color: var(--orange);
+  }
+
+  /* Progress bar */
+  .progress-section {
+    margin-bottom: 28px;
+  }
+
+  .progress-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+
+  .progress-bar {
+    height: 3px;
+    background: #1e1e1e;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  /* Main reps display */
+  .reps-card {
+    background: var(--surface);
+    border-radius: 28px;
+    border: 1px solid var(--border);
+    padding: 28px 24px 24px;
+    text-align: center;
+    margin-bottom: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .reps-card::after {
+    content: '';
+    position: absolute;
+    top: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    opacity: 0.04;
+    pointer-events: none;
+  }
+
+  .reps-label {
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .reps-number {
+    font-family: 'Bebas Neue', sans-serif;
+    line-height: 0.9;
+    margin-bottom: 8px;
+  }
+
+  .reps-subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  /* Timer */
+  .timer-section {
+    text-align: center;
+    margin-bottom: 14px;
+  }
+
+  .timer-display {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 56px;
+    letter-spacing: 6px;
+    color: var(--white);
+    line-height: 1;
+    margin-bottom: 10px;
+  }
+
+  .timer-bar {
+    height: 3px;
+    background: #1e1e1e;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .timer-fill {
+    height: 100%;
+    background: rgba(255,255,255,0.15);
+    border-radius: 2px;
+  }
+
+  .next-label {
+    font-size: 11px;
+    color: #333;
+    letter-spacing: 1px;
+    margin-top: 10px;
+    text-align: center;
+  }
+
+  /* Buttons */
+  .buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 8px;
+  }
+
+  .btn-reset {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: #1a1a1a;
+    border: 1px solid #222;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #444;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .btn-play {
+    flex: 1;
+    height: 56px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    font-weight: bold;
+  }
+
+  /* Label under phone */
+  .phone-label {
+    text-align: center;
+    margin-top: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #444;
+  }
+
+  .phone-wrapper {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── SCREEN 1: PEAK (red) ── */
+  #s1 .reps-card::after { background: var(--red); }
+  #s1 .reps-number { font-size: 110px; color: var(--red); }
+  #s1 .progress-fill { background: var(--red); width: 58%; }
+  #s1 .btn-play { background: var(--red); box-shadow: 0 8px 24px rgba(255,45,45,0.35); color: #fff; }
+  #s1 .reps-card { border-color: rgba(255,45,45,0.2); }
+
+  /* ── SCREEN 2: BUILD (orange) ── */
+  #s2 .reps-card::after { background: var(--orange); }
+  #s2 .reps-number { font-size: 110px; color: var(--orange); }
+  #s2 .progress-fill { background: var(--orange); width: 32%; }
+  #s2 .btn-play { background: var(--orange); box-shadow: 0 8px 24px rgba(255,107,0,0.35); color: #fff; }
+  #s2 .reps-card { border-color: rgba(255,107,0,0.2); }
+
+  /* ── SCREEN 3: WARMUP (green) ── */
+  #s3 .reps-card::after { background: var(--green); }
+  #s3 .reps-number { font-size: 110px; color: var(--green); }
+  #s3 .progress-fill { background: var(--green); width: 10%; }
+  #s3 .btn-play { background: var(--green); box-shadow: 0 8px 24px rgba(45,255,143,0.3); color: #000; }
+  #s3 .reps-card { border-color: rgba(45,255,143,0.2); }
+
+  /* ── CONFIG SCREEN shared styles ── */
+  .config-screen {
+    width: 100%;
+    height: 100%;
+    padding: 36px 24px 28px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .config-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+    margin-top: 8px;
+  }
+
+  .back-btn {
+    color: #555;
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .config-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 4px;
+    color: var(--muted);
+  }
+
+  .config-section-label {
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #333;
+    margin-bottom: 10px;
+    margin-top: 20px;
+  }
+
+  .config-section-label:first-of-type {
+    margin-top: 0;
+  }
+
+  .config-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 13px 0;
+    border-bottom: 1px solid #181818;
+  }
+
+  .config-row-label {
+    font-size: 13px;
+    color: #888;
+    letter-spacing: 0.5px;
+  }
+
+  .config-row-value {
+    font-size: 11px;
+    color: #444;
+    letter-spacing: 1px;
+  }
+
+  /* Toggle */
+  .toggle {
+    width: 40px;
+    height: 22px;
+    border-radius: 11px;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .toggle-on {
+    background: #2DFF8F;
+    box-shadow: 0 0 8px rgba(45,255,143,0.3);
+  }
+
+  .toggle-off {
+    background: #222;
+    border: 1px solid #333;
+  }
+
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+  }
+
+  .toggle-on::after { right: 3px; }
+  .toggle-off::after { left: 3px; background: #555; }
+
+  /* Radio group */
+  .radio-group {
+    display: flex;
+    gap: 8px;
+    margin: 12px 0 16px;
+  }
+
+  .radio-option {
+    flex: 1;
+    padding: 8px 0;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: 1px;
+    cursor: pointer;
+  }
+
+  .radio-active {
+    background: #1e1e1e;
+    border: 1px solid #333;
+    color: #aaa;
+  }
+
+  .radio-inactive {
+    background: transparent;
+    border: 1px solid #1a1a1a;
+    color: #333;
+  }
+
+  /* Number input */
+  .input-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 11px 0;
+    border-bottom: 1px solid #181818;
+  }
+
+  .input-label {
+    font-size: 12px;
+    color: #666;
+    letter-spacing: 0.5px;
+  }
+
+  .number-input {
+    width: 52px;
+    height: 30px;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    text-align: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    color: #aaa;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .config-hint {
+    font-size: 10px;
+    color: #2a2a2a;
+    letter-spacing: 0.5px;
+    margin-top: 12px;
+    line-height: 1.6;
+  }
+
+  /* Equipment selector */
+  .equip-group {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0 4px;
+  }
+  .equip-btn {
+    flex: 1;
+    padding: 10px 0 8px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+  .equip-btn-active {
+    background: #1e1e1e;
+    border: 1px solid #333;
+  }
+  .equip-btn-inactive {
+    background: transparent;
+    border: 1px solid #1a1a1a;
+  }
+  .equip-icon {
+    font-size: 20px;
+    line-height: 1;
+  }
+  .equip-label {
+    font-size: 10px;
+    letter-spacing: 0.5px;
+  }
+  .equip-btn-active .equip-icon  { filter: none; }
+  .equip-btn-active .equip-label { color: #888; }
+  .equip-btn-inactive .equip-icon  { opacity: 0.15; }
+  .equip-btn-inactive .equip-label { color: #2a2a2a; }
+
+  /* Phase | Dauer | Reps table */
+  .phase-table-header {
+    display: grid;
+    grid-template-columns: 1fr 72px 72px;
+    gap: 6px;
+    padding: 6px 0 4px;
+    border-bottom: 1px solid #1a1a1a;
+    margin-bottom: 4px;
+  }
+  .phase-table-header span {
+    font-size: 8px;
+    letter-spacing: 2px;
+    color: #2a2a2a;
+    text-transform: uppercase;
+    text-align: center;
+  }
+  .phase-table-header span:first-child { text-align: left; }
+
+  .phase-table-row {
+    display: grid;
+    grid-template-columns: 1fr 72px 72px;
+    gap: 6px;
+    align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid #111;
+  }
+
+  .phase-name {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .phase-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .phase-name-text {
+    font-size: 11px;
+    letter-spacing: 0.5px;
+  }
+
+  .stepper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+  }
+  .stepper-btn {
+    width: 20px;
+    height: 20px;
+    background: #1a1a1a;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: #444;
+    flex-shrink: 0;
+  }
+  .stepper-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 15px;
+    color: #888;
+    width: 22px;
+    text-align: center;
+  }
+  .stepper-auto {
+    font-size: 9px;
+    color: #2a2a2a;
+    letter-spacing: 0.5px;
+    text-align: center;
+    width: 72px;
+  }
+
+  /* Minute list */
+  .minute-list {
+    overflow-y: auto;
+    flex: 1;
+    margin-top: 4px;
+  }
+
+  .minute-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 0;
+    border-bottom: 1px solid #111;
+  }
+
+  .minute-label {
+    font-size: 11px;
+    color: #3a3a3a;
+    letter-spacing: 1px;
+    width: 52px;
+  }
+
+  .minute-input {
+    width: 44px;
+    height: 26px;
+    background: #141414;
+    border: 1px solid #222;
+    border-radius: 6px;
+    text-align: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    color: #888;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .minute-phase-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .swings-preview {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: #111;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .swings-preview-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: #333;
+    text-transform: uppercase;
+  }
+
+  .swings-preview-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    color: #555;
+    letter-spacing: 2px;
+  }
+
+  /* title */
+  .page-title {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px;
+    letter-spacing: 6px;
+    color: #333;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-title">Kettlebell EMOM — App Mockup</div>
+
+<!-- SCREEN 1: PEAK -->
+<div class="phone-wrapper">
+  <div class="phone" id="s1">
+    <div class="screen">
+      <div class="header">
+        <span class="app-title">EMOM 30</span>
+        <div class="header-right">
+          <span class="phase-badge phase-peak">Peak</span>
+          <span class="gear-icon">⚙</span>
+        </div>
+      </div>
+
+      <div class="progress-section">
+        <div class="progress-meta">
+          <span>Minute 18 / 30</span>
+          <span>225 / 315 Swings</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill"></div>
+        </div>
+      </div>
+
+      <div class="reps-card">
+        <div class="reps-label">Reps</div>
+        <div class="reps-number">15</div>
+        <div class="reps-subtitle">Kettlebell Swings</div>
+      </div>
+
+      <div class="timer-section">
+        <div class="timer-display">00:38</div>
+        <div class="timer-bar">
+          <div class="timer-fill" style="width: 37%"></div>
+        </div>
+        <div class="next-label">Nächste Minute: 15 Reps</div>
+      </div>
+
+      <div class="buttons">
+        <div class="btn-reset">↺</div>
+        <div class="btn-play">⏸</div>
+      </div>
+    </div>
+  </div>
+  <div class="phone-label">Peak Phase</div>
+</div>
+
+<!-- SCREEN 2: AUFBAU -->
+<div class="phone-wrapper">
+  <div class="phone" id="s2">
+    <div class="screen">
+      <div class="header">
+        <span class="app-title">EMOM 30</span>
+        <div class="header-right">
+          <span class="phase-badge phase-build">Aufbau ↑</span>
+          <span class="gear-icon">⚙</span>
+        </div>
+      </div>
+
+      <div class="progress-section">
+        <div class="progress-meta">
+          <span>Minute 9 / 30</span>
+          <span>72 / 315 Swings</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill"></div>
+        </div>
+      </div>
+
+      <div class="reps-card">
+        <div class="reps-label">Reps</div>
+        <div class="reps-number">9</div>
+        <div class="reps-subtitle">Kettlebell Swings</div>
+      </div>
+
+      <div class="timer-section">
+        <div class="timer-display">00:51</div>
+        <div class="timer-bar">
+          <div class="timer-fill" style="width: 15%"></div>
+        </div>
+        <div class="next-label">Nächste Minute: 10 Reps</div>
+      </div>
+
+      <div class="buttons">
+        <div class="btn-reset">↺</div>
+        <div class="btn-play">⏸</div>
+      </div>
+    </div>
+  </div>
+  <div class="phone-label">Aufbau Phase</div>
+</div>
+
+<!-- SCREEN 3: WARM UP -->
+<div class="phone-wrapper">
+  <div class="phone" id="s3">
+    <div class="screen">
+      <div class="header">
+        <span class="app-title">EMOM 30</span>
+        <div class="header-right">
+          <span class="phase-badge phase-warmup">Warm Up</span>
+          <span class="gear-icon">⚙</span>
+        </div>
+      </div>
+
+      <div class="progress-section">
+        <div class="progress-meta">
+          <span>Minute 3 / 30</span>
+          <span>10 / 315 Swings</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill"></div>
+        </div>
+      </div>
+
+      <div class="reps-card">
+        <div class="reps-label">Reps</div>
+        <div class="reps-number">5</div>
+        <div class="reps-subtitle">Kettlebell Swings</div>
+      </div>
+
+      <div class="timer-section">
+        <div class="timer-display">00:44</div>
+        <div class="timer-bar">
+          <div class="timer-fill" style="width: 27%"></div>
+        </div>
+        <div class="next-label">Nächste Minute: 5 Reps</div>
+      </div>
+
+      <div class="buttons">
+        <div class="btn-reset">↺</div>
+        <div class="btn-play">⏸</div>
+      </div>
+    </div>
+  </div>
+  <div class="phone-label">Warm Up Phase</div>
+</div>
+
+<!-- SCREEN 4: CONFIG – Phasen-basiert (Phase | Dauer | Reps) -->
+<div class="phone-wrapper">
+  <div class="phone" id="s4">
+    <div class="config-screen">
+      <div class="config-header">
+        <span class="back-btn">←</span>
+        <span class="config-title">Einstellungen</span>
+      </div>
+
+      <div class="config-section-label">Workout-Plan</div>
+
+      <div class="radio-group">
+        <div class="radio-option radio-active">● Phasen-basiert</div>
+        <div class="radio-option radio-inactive">○ Minuten-genau</div>
+      </div>
+
+      <!-- Sportgerät (nur bei Phasen-basiert, ohne eigene Überschrift) -->
+      <div class="equip-group" style="margin-top:0; margin-bottom:10px;">
+        <div class="equip-btn equip-btn-active">
+          <span class="equip-icon">🏋</span>
+          <span class="equip-label">● Kettlebell</span>
+        </div>
+        <div class="equip-btn equip-btn-inactive">
+          <span class="equip-icon">🪃</span>
+          <span class="equip-label">○ Steel Mace</span>
+        </div>
+      </div>
+
+      <!-- Phase | Dauer | Reps table -->
+      <div class="phase-table-header">
+        <span>Phase</span>
+        <span>Dauer (s)</span>
+        <span>Reps</span>
+      </div>
+
+      <!-- Warm Up -->
+      <div class="phase-table-row">
+        <div class="phase-name">
+          <div class="phase-dot" style="background:#2DFF8F"></div>
+          <span class="phase-name-text" style="color:#2DFF8F99">Warm Up</span>
+        </div>
+        <div class="stepper">
+          <div class="stepper-btn">−</div>
+          <div class="stepper-val">60</div>
+          <div class="stepper-btn">+</div>
+        </div>
+        <div class="stepper">
+          <div class="stepper-btn">−</div>
+          <div class="stepper-val">5</div>
+          <div class="stepper-btn">+</div>
+        </div>
+      </div>
+
+      <!-- Aufbau -->
+      <div class="phase-table-row">
+        <div class="phase-name">
+          <div class="phase-dot" style="background:#FF6B00"></div>
+          <span class="phase-name-text" style="color:#FF6B0099">Aufbau</span>
+        </div>
+        <div class="stepper">
+          <div class="stepper-btn">−</div>
+          <div class="stepper-val">60</div>
+          <div class="stepper-btn">+</div>
+        </div>
+        <div class="stepper-auto">auto</div>
+      </div>
+
+      <!-- Peak -->
+      <div class="phase-table-row">
+        <div class="phase-name">
+          <div class="phase-dot" style="background:#FF2D2D"></div>
+          <span class="phase-name-text" style="color:#FF2D2D99">Peak</span>
+        </div>
+        <div class="stepper">
+          <div class="stepper-btn">−</div>
+          <div class="stepper-val">60</div>
+          <div class="stepper-btn">+</div>
+        </div>
+        <div class="stepper">
+          <div class="stepper-btn">−</div>
+          <div class="stepper-val">15</div>
+          <div class="stepper-btn">+</div>
+        </div>
+      </div>
+
+      <!-- Abbau -->
+      <div class="phase-table-row">
+        <div class="phase-name">
+          <div class="phase-dot" style="background:#FF6B00"></div>
+          <span class="phase-name-text" style="color:#FF6B0099">Abbau</span>
+        </div>
+        <div class="stepper">
+          <div class="stepper-btn">−</div>
+          <div class="stepper-val">60</div>
+          <div class="stepper-btn">+</div>
+        </div>
+        <div class="stepper-auto">auto</div>
+      </div>
+
+      <!-- Cool Down -->
+      <div class="phase-table-row" style="border-bottom:none">
+        <div class="phase-name">
+          <div class="phase-dot" style="background:#2DFF8F"></div>
+          <span class="phase-name-text" style="color:#2DFF8F99">Cool Down</span>
+        </div>
+        <div class="stepper">
+          <div class="stepper-btn">−</div>
+          <div class="stepper-val">60</div>
+          <div class="stepper-btn">+</div>
+        </div>
+        <div class="stepper">
+          <div class="stepper-btn">−</div>
+          <div class="stepper-val">10</div>
+          <div class="stepper-btn">+</div>
+        </div>
+      </div>
+
+      <div class="config-hint" style="margin-top:14px">Aufbau & Abbau Reps werden automatisch<br>interpoliert (+1 / −1 Rep pro Minute)</div>
+    </div>
+  </div>
+  <div class="phone-label">Config — Phasen-basiert</div>
+</div>
+
+<!-- SCREEN 5: CONFIG – Minuten-genau -->
+<div class="phone-wrapper">
+  <div class="phone" id="s5">
+    <div class="config-screen">
+      <div class="config-header">
+        <span class="back-btn">←</span>
+        <span class="config-title">Einstellungen</span>
+      </div>
+
+      <div class="config-section-label">Workout-Plan</div>
+
+      <div class="radio-group">
+        <div class="radio-option radio-inactive">○ Phasen-basiert</div>
+        <div class="radio-option radio-active">● Minuten-genau</div>
+      </div>
+
+      <div class="minute-list">
+        <!-- Spalten-Header -->
+        <div class="minute-row" style="border-bottom:1px solid #1a1a1a; padding-bottom:4px; margin-bottom:2px;">
+          <span class="minute-label" style="color:#1e1e1e">Phase</span>
+          <div class="minute-phase-dot" style="background:transparent"></div>
+          <div style="flex:1"></div>
+          <span style="font-size:8px;color:#222;letter-spacing:1px;width:22px;text-align:center">🏋</span>
+          <span style="font-size:8px;color:#222;letter-spacing:1px;width:8px"></span>
+          <span style="font-size:8px;color:#222;letter-spacing:2px;width:68px;text-align:center">R</span>
+          <span style="font-size:8px;color:#222;letter-spacing:2px;width:8px"></span>
+          <span style="font-size:8px;color:#222;letter-spacing:2px;width:72px;text-align:center">S</span>
+        </div>
+        <div class="minute-row">
+          <div class="minute-phase-dot" style="background:#2DFF8F;margin-right:6px"></div>
+          <span class="minute-label">Min 1</span>
+          <div style="flex:1"></div>
+          <span style="font-size:13px;color:#444;width:22px;text-align:center">🏋</span>
+          <span style="width:8px"></span>
+          <div class="minute-input" style="width:68px">− 5 +</div>
+          <span style="width:8px"></span>
+          <div class="minute-input" style="width:72px">− 60 +</div>
+        </div>
+        <div class="minute-row">
+          <div class="minute-phase-dot" style="background:#2DFF8F;margin-right:6px"></div>
+          <span class="minute-label">Min 2</span>
+          <div style="flex:1"></div>
+          <span style="font-size:13px;color:#444;width:22px;text-align:center">🪃</span>
+          <span style="width:8px"></span>
+          <div class="minute-input" style="width:68px">− 5 +</div>
+          <span style="width:8px"></span>
+          <div class="minute-input" style="width:72px">− 45 +</div>
+        </div>
+        <div class="minute-row">
+          <div class="minute-phase-dot" style="background:#FF6B00;margin-right:6px"></div>
+          <span class="minute-label">Min 6</span>
+          <div style="flex:1"></div>
+          <span style="font-size:13px;color:#444;width:22px;text-align:center">🏋</span>
+          <span style="width:8px"></span>
+          <div class="minute-input" style="width:68px">− 6 +</div>
+          <span style="width:8px"></span>
+          <div class="minute-input" style="width:72px">− 60 +</div>
+        </div>
+        <div class="minute-row">
+          <div class="minute-phase-dot" style="background:#FF2D2D;margin-right:6px"></div>
+          <span class="minute-label">Min 16</span>
+          <div style="flex:1"></div>
+          <span style="font-size:13px;color:#444;width:22px;text-align:center">🪃</span>
+          <span style="width:8px"></span>
+          <div class="minute-input" style="width:68px">− 15 +</div>
+          <span style="width:8px"></span>
+          <div class="minute-input" style="width:72px">− 60 +</div>
+        </div>
+        <div class="minute-row" style="border-bottom:none; color:#222; font-size:10px; justify-content:center; padding-top:6px; letter-spacing:1px;">
+          ··· 26 weitere Minuten ···
+        </div>
+      </div>
+
+      <div class="swings-preview">
+        <span class="swings-preview-label">Gesamt</span>
+        <span class="swings-preview-value">315 Reps · 30m</span>
+      </div>
+    </div>
+  </div>
+  <div class="phone-label">Config — Minuten-genau</div>
+</div>
+
+</body>
+</html>
