@@ -3,7 +3,7 @@ import '../models/settings.dart';
 
 part 'settings_provider.g.dart';
 
-@riverpod
+@Riverpod(keepAlive: true)
 class SettingsNotifier extends _$SettingsNotifier {
   @override
   Future<AppSettings> build() => AppSettings.load();
