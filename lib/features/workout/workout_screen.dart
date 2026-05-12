@@ -72,37 +72,6 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     state.isRunning ? notifier.pause() : notifier.start();
   }
 
-  Future<void> _showResetConfirmDialog() async {
-    final doReset = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text(
-          'Training zurücksetzen?',
-          style: TextStyle(
-              color: Colors.white54, fontSize: 15, letterSpacing: 1),
-        ),
-        content: const Text(
-          'Die Einstellungen wurden geändert. Das laufende Training zurücksetzen?',
-          style: TextStyle(color: Colors.white38, fontSize: 13),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Weiter',
-                style: TextStyle(color: Colors.white38)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Zurücksetzen',
-                style: TextStyle(color: Color(0xFFFF6B00))),
-          ),
-        ],
-      ),
-    ) ?? false;
-    if (doReset) ref.read(workoutNotifierProvider.notifier).reset();
-  }
-
   void _showHistory() {
     showModalBottomSheet(
       context: context,
