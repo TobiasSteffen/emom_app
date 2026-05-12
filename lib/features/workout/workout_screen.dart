@@ -28,7 +28,6 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   late PageController _pageController;
   bool _configWasOpened = false;
   bool _wasRunningBeforeConfig = false;
-  String _planKeySnapshot = '';
   int _configVisitCount = 0;
 
   @override
@@ -73,37 +72,6 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     state.isRunning ? notifier.pause() : notifier.start();
   }
 
-  Future<void> _showResetConfirmDialog(AppSettings newSettings) async {
-    final doReset = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text(
-          'Training zurücksetzen?',
-          style: TextStyle(
-              color: Colors.white54, fontSize: 15, letterSpacing: 1),
-        ),
-        content: const Text(
-          'Die Einstellungen wurden geändert. Das laufende Training zurücksetzen?',
-          style: TextStyle(color: Colors.white38, fontSize: 13),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Weiter',
-                style: TextStyle(color: Colors.white38)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Zurücksetzen',
-                style: TextStyle(color: Color(0xFFFF6B00))),
-          ),
-        ],
-      ),
-    ) ?? false;
-    if (doReset) ref.read(workoutNotifierProvider.notifier).reset(newSettings);
-  }
-
   void _showHistory() {
     showModalBottomSheet(
       context: context,
@@ -146,7 +114,6 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
           setState(() {
             _configWasOpened = true;
             _wasRunningBeforeConfig = state.isRunning || state.waitingForConfirmation;
-            _planKeySnapshot = ref.read(settingsNotifierProvider).requireValue.planKey;
             _configVisitCount++;
           });
           if (state.isRunning) notifier.pause();
@@ -155,18 +122,8 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
           _configWasOpened = false;
           final newSettings = ref.read(settingsNotifierProvider).requireValue;
           ref.read(settingsNotifierProvider.notifier).save();
-          final changed = newSettings.planKey != _planKeySnapshot;
-          if (!changed) {
-            notifier.updateSettings(newSettings);
-            if (_wasRunningBeforeConfig && !state.isFinished) notifier.start();
-          } else {
-            final wasActive = _wasRunningBeforeConfig || state.currentMinute > 0;
-            if (wasActive) {
-              _showResetConfirmDialog(newSettings);
-            } else {
-              notifier.reset(newSettings);
-            }
-          }
+          notifier.updateSettings(newSettings);
+          if (_wasRunningBeforeConfig && !state.isFinished) notifier.start();
         }
       },
       children: [
@@ -229,7 +186,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
           ),
           if (state.currentMinute < state.totalMinutes - 1) ...[
             const SizedBox(height: 16),
-            NextMinutePreview(nextReps: state.plan[state.currentMinute + 1]),
+            NextMinutePreview(nextReps: state.intervals[state.currentMinute + 1].reps),
           ],
           const Spacer(),
           Row(
@@ -275,7 +232,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     final notifier = ref.read(workoutNotifierProvider.notifier);
     final nextMinute = state.currentMinute + 1;
     return ConfirmationOverlay(
-      nextReps: state.plan[nextMinute],
+      nextReps: state.intervals[nextMinute].reps,
       nextColor: phaseColorForMinute(nextMinute),
       nextLabel: notifier.exerciseLabelForMinute(nextMinute),
       nextMinuteNumber: nextMinute + 1,

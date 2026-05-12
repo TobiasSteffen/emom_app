@@ -6,7 +6,7 @@ part of 'workout_notifier.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$workoutNotifierHash() => r'46a3457e2d0021e93f1c700a58461fb1154f9f43';
+String _$workoutNotifierHash() => r'12a0a3bfe0de92f778b0c45596c4a110566866db';
 
 /// See also [WorkoutNotifier].
 @ProviderFor(WorkoutNotifier)

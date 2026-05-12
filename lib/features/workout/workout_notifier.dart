@@ -7,16 +7,17 @@ import 'package:vibration/vibration.dart';
 import 'package:volume_controller/volume_controller.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../core/models/settings.dart';
+import '../../core/models/training_plan.dart';
 import '../../core/models/workout_history.dart';
 import '../../core/providers/settings_provider.dart';
+import '../../core/providers/plan_library_notifier.dart';
 import '../history/history_notifier.dart';
 
 part 'workout_notifier.g.dart';
 
 @immutable
 class WorkoutState {
-  final List<int> plan;
-  final List<int> durations;
+  final List<IntervalConfig> intervals;
   final int currentMinute;
   final int secondsLeft;
   final bool isRunning;
@@ -27,8 +28,7 @@ class WorkoutState {
   final DateTime? workoutStartTime;
 
   const WorkoutState({
-    required this.plan,
-    required this.durations,
+    required this.intervals,
     required this.currentMinute,
     required this.secondsLeft,
     required this.isRunning,
@@ -39,14 +39,13 @@ class WorkoutState {
     this.workoutStartTime,
   });
 
-  int get totalMinutes => plan.length;
-  int get currentReps => plan[currentMinute];
-  int get currentDuration => durations[currentMinute];
-  int get totalReps => plan.fold(0, (a, b) => a + b);
+  int get totalMinutes => intervals.length;
+  int get currentReps => intervals[currentMinute].reps;
+  int get currentDuration => intervals[currentMinute].durationSeconds;
+  int get totalReps => intervals.fold(0, (a, iv) => a + iv.reps);
 
   WorkoutState copyWith({
-    List<int>? plan,
-    List<int>? durations,
+    List<IntervalConfig>? intervals,
     int? currentMinute,
     int? secondsLeft,
     bool? isRunning,
@@ -58,16 +57,18 @@ class WorkoutState {
     bool clearWorkoutStartTime = false,
   }) =>
       WorkoutState(
-        plan: plan ?? this.plan,
-        durations: durations ?? this.durations,
+        intervals: intervals ?? this.intervals,
         currentMinute: currentMinute ?? this.currentMinute,
         secondsLeft: secondsLeft ?? this.secondsLeft,
         isRunning: isRunning ?? this.isRunning,
         isFinished: isFinished ?? this.isFinished,
-        waitingForConfirmation: waitingForConfirmation ?? this.waitingForConfirmation,
+        waitingForConfirmation:
+            waitingForConfirmation ?? this.waitingForConfirmation,
         totalRepsDone: totalRepsDone ?? this.totalRepsDone,
         completedIntervals: completedIntervals ?? this.completedIntervals,
-        workoutStartTime: clearWorkoutStartTime ? null : (workoutStartTime ?? this.workoutStartTime),
+        workoutStartTime: clearWorkoutStartTime
+            ? null
+            : (workoutStartTime ?? this.workoutStartTime),
       );
 }
 
@@ -79,10 +80,13 @@ class WorkoutNotifier extends _$WorkoutNotifier {
   StreamSubscription? _alarmLoopSub;
   bool? _hasVibrator;
   late AppSettings _settings;
+  late TrainingPlan _activePlan;
 
   @override
   Future<WorkoutState> build() async {
     _settings = await ref.read(settingsNotifierProvider.future);
+    final library = await ref.read(planLibraryNotifierProvider.future);
+    _activePlan = library.activePlan;
     _hasVibrator = await Vibration.hasVibrator();
 
     ref.onDispose(() {
@@ -93,13 +97,10 @@ class WorkoutNotifier extends _$WorkoutNotifier {
       WakelockPlus.disable();
     });
 
-    final plan = _settings.buildPlan();
-    final durations = _settings.buildDurations();
     return WorkoutState(
-      plan: plan,
-      durations: durations,
+      intervals: _activePlan.intervals,
       currentMinute: 0,
-      secondsLeft: durations[0],
+      secondsLeft: _activePlan.intervals[0].durationSeconds,
       isRunning: false,
       isFinished: false,
       waitingForConfirmation: false,
@@ -112,10 +113,7 @@ class WorkoutNotifier extends _$WorkoutNotifier {
 
   void start() {
     final now = _s.workoutStartTime == null ? DateTime.now() : null;
-    state = AsyncData(_s.copyWith(
-      isRunning: true,
-      workoutStartTime: now,
-    ));
+    state = AsyncData(_s.copyWith(isRunning: true, workoutStartTime: now));
     WakelockPlus.enable();
     _timer = Timer.periodic(const Duration(seconds: 1), _tick);
   }
@@ -126,20 +124,18 @@ class WorkoutNotifier extends _$WorkoutNotifier {
     state = AsyncData(_s.copyWith(isRunning: false));
   }
 
-  void reset([AppSettings? newSettings]) {
+  Future<void> reset() async {
     _timer?.cancel();
     _alarmLoopSub?.cancel();
     _alarmLoopSub = null;
     _alarmPlayer.stop();
     WakelockPlus.disable();
-    if (newSettings != null) _settings = newSettings;
-    final plan = _settings.buildPlan();
-    final durations = _settings.buildDurations();
+    final library = await ref.read(planLibraryNotifierProvider.future);
+    _activePlan = library.activePlan;
     state = AsyncData(WorkoutState(
-      plan: plan,
-      durations: durations,
+      intervals: _activePlan.intervals,
       currentMinute: 0,
-      secondsLeft: durations[0],
+      secondsLeft: _activePlan.intervals[0].durationSeconds,
       isRunning: false,
       isFinished: false,
       waitingForConfirmation: false,
@@ -156,7 +152,7 @@ class WorkoutNotifier extends _$WorkoutNotifier {
     state = AsyncData(_s.copyWith(
       waitingForConfirmation: false,
       currentMinute: nextMinute,
-      secondsLeft: _s.durations[nextMinute],
+      secondsLeft: _s.intervals[nextMinute].durationSeconds,
     ));
     _vibrate(400);
     _saveHistory();
@@ -165,22 +161,10 @@ class WorkoutNotifier extends _$WorkoutNotifier {
 
   void updateSettings(AppSettings newSettings) {
     _settings = newSettings;
-    if (_s.isRunning || _s.waitingForConfirmation) return;
-    final plan = newSettings.buildPlan();
-    final durations = newSettings.buildDurations();
-    state = AsyncData(_s.copyWith(
-      plan: plan,
-      durations: durations,
-      secondsLeft: durations[_s.currentMinute],
-    ));
   }
 
-  Equipment equipmentForMinute(int minute) {
-    if (_settings.planMode == PlanMode.minuteExact) {
-      return Equipment.values[_settings.customEquipment[minute]];
-    }
-    return _settings.equipment;
-  }
+  Equipment equipmentForMinute(int minute) =>
+      _activePlan.intervals[minute].equipment;
 
   String exerciseLabelForMinute(int minute) =>
       equipmentForMinute(minute) == Equipment.kettlebell ? 'Swings' : '360s';
@@ -290,7 +274,7 @@ class WorkoutNotifier extends _$WorkoutNotifier {
     if (ivs.length < 2 || t == null) return;
     final record = WorkoutRecord(
       timestamp: t.millisecondsSinceEpoch,
-      planMode: _settings.planMode.index,
+      planMode: 1,
       intervals: List.from(ivs),
     );
     await ref.read(historyNotifierProvider.notifier).addOrUpdate(record);
