@@ -466,3 +466,11 @@ Kopfzeile der Detailansicht: Datum, `X/30 Intervalle`, Gesamtreps-Aufschlüsselu
   **Persistierung:**
   - Alle Pläne werden in `shared_preferences` als JSON gespeichert (Liste von Plänen, je mit Name, `customPlan`, `customDurations`, `customEquipment`).
   - Der aktive Plan-Index wird ebenfalls gespeichert und beim App-Start wiederhergestellt.
+
+- **Mehrere Sportarten & Icons**: Neben Kettlebell und Steel Mace sollen weitere Sportarten hinzufügbar sein, jeweils mit eigenem Icon. In einem Plan können beliebig viele Sportarten gemischt auftreten (pro Intervall wählbar).
+
+- **Plan-Kommentare**: Einzelne Phasen oder Intervalle innerhalb eines Plans sollen mit Freitext-Kommentaren versehbar sein (z.B. Technikhinweise, Intensitätsvorgaben).
+
+- **Kalenderplanung**: Trainingspläne sollen an konkreten Tagen im Kalender geplant werden können. Pro geplantem Trainingstag sind Ernährungshinweise für den Tag vor und den Tag nach dem Training erfassbar und anzeigbar.
+
+- **Langfristige Architektur**: Mit wachsender Datenkomplexität (Kalender, Ernährung, mehrere Sportarten) ist eine Migration der Persistenzschicht auf eine lokale SQLite-Datenbank (`drift`-Paket) zu evaluieren.
