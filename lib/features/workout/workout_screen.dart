@@ -3,9 +3,12 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/settings.dart';
 import '../../core/providers/settings_provider.dart';
+import '../../core/providers/plan_library_notifier.dart';
 import '../history/history_sheet.dart';
 import '../config/config_screen.dart';
+import '../plans/plan_library_screen.dart';
 import 'workout_notifier.dart';
+import 'widgets/plan_indicator.dart';
 import 'widgets/workout_header.dart';
 import 'widgets/overall_progress.dart';
 import 'widgets/reps_card.dart';
@@ -29,6 +32,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   bool _configWasOpened = false;
   bool _wasRunningBeforeConfig = false;
   int _configVisitCount = 0;
+  String _planKeySnapshot = '';
 
   @override
   void initState() {
@@ -70,6 +74,64 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
       return;
     }
     state.isRunning ? notifier.pause() : notifier.start();
+  }
+
+  Future<void> _showResetConfirmDialog() async {
+    final doReset = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text(
+          'Training zurücksetzen?',
+          style: TextStyle(
+              color: Colors.white54, fontSize: 15, letterSpacing: 1),
+        ),
+        content: const Text(
+          'Die Einstellungen wurden geändert. Das laufende Training zurücksetzen?',
+          style: TextStyle(color: Colors.white38, fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Weiter',
+                style: TextStyle(color: Colors.white38)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Zurücksetzen',
+                style: TextStyle(color: Color(0xFFFF6B00))),
+          ),
+        ],
+      ),
+    ) ?? false;
+    if (doReset) ref.read(workoutNotifierProvider.notifier).reset();
+  }
+
+  Future<void> _openPlanLibrary(WorkoutState state) async {
+    final lib = ref.read(planLibraryNotifierProvider).requireValue;
+    _planKeySnapshot = lib.activePlan.planKey;
+    final wasRunning = state.isRunning;
+    if (wasRunning) ref.read(workoutNotifierProvider.notifier).pause();
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const PlanLibraryScreen()),
+    );
+
+    if (!mounted) return;
+    final newLib = ref.read(planLibraryNotifierProvider).requireValue;
+    final planChanged = newLib.activePlan.planKey != _planKeySnapshot;
+
+    if (planChanged) {
+      final wasActive = wasRunning || state.currentMinute > 0;
+      if (wasActive) {
+        _showResetConfirmDialog();
+      } else {
+        ref.read(workoutNotifierProvider.notifier).reset();
+      }
+    } else if (wasRunning && !state.isFinished) {
+      ref.read(workoutNotifierProvider.notifier).start();
+    }
   }
 
   void _showHistory() {
@@ -170,7 +232,12 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
             totalReps: state.totalReps,
             exerciseLabel: exerciseLabel,
           ),
-          const SizedBox(height: 48),
+          const SizedBox(height: 8),
+          PlanIndicator(
+            planName: ref.watch(planLibraryNotifierProvider).valueOrNull?.activePlan.name ?? '',
+            onTap: () => _openPlanLibrary(state),
+          ),
+          const SizedBox(height: 40),
           RepsCard(
             currentMinute: state.currentMinute,
             currentReps: state.currentReps,
