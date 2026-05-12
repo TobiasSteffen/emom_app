@@ -14,10 +14,10 @@ class PlanLibraryScreen extends ConsumerWidget {
   }
 
   Future<void> _addPlan(BuildContext context, WidgetRef ref, int planCount) async {
+    final controller = TextEditingController(text: 'Plan ${planCount + 1}');
     final name = await showDialog<String>(
       context: context,
       builder: (ctx) {
-        final controller = TextEditingController(text: 'Plan ${planCount + 1}');
         return AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
           title: const Text('Neuer Plan',
@@ -48,6 +48,7 @@ class PlanLibraryScreen extends ConsumerWidget {
         );
       },
     );
+    controller.dispose();
     if (name == null || name.isEmpty) return;
     final plan = TrainingPlan.pyramid(name);
     await ref.read(planLibraryNotifierProvider.notifier).addPlan(plan);
@@ -58,10 +59,10 @@ class PlanLibraryScreen extends ConsumerWidget {
 
   Future<void> _renamePlan(
       BuildContext context, WidgetRef ref, TrainingPlan plan) async {
+    final controller = TextEditingController(text: plan.name);
     final name = await showDialog<String>(
       context: context,
       builder: (ctx) {
-        final controller = TextEditingController(text: plan.name);
         return AlertDialog(
           backgroundColor: const Color(0xFF1A1A1A),
           title: const Text('Plan umbenennen',
@@ -92,6 +93,7 @@ class PlanLibraryScreen extends ConsumerWidget {
         );
       },
     );
+    controller.dispose();
     if (name == null || name.isEmpty) return;
     await ref.read(planLibraryNotifierProvider.notifier).renamePlan(plan.id, name);
   }
