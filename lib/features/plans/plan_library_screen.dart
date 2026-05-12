@@ -231,12 +231,6 @@ class PlanLibraryScreen extends ConsumerWidget {
                           await ref
                               .read(planLibraryNotifierProvider.notifier)
                               .setActivePlan(plan.id);
-                          if (!context.mounted) return;
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => PlanEditorScreen(plan: plan)),
-                          );
                         },
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 12),
@@ -284,8 +278,18 @@ class PlanLibraryScreen extends ConsumerWidget {
                                   ],
                                 ),
                               ),
-                              const Icon(Icons.chevron_right,
-                                  color: Colors.white24, size: 20),
+                              GestureDetector(
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => PlanEditorScreen(plan: plan)),
+                                ),
+                                child: const Padding(
+                                  padding: EdgeInsets.all(4),
+                                  child: Icon(Icons.chevron_right,
+                                      color: Colors.white24, size: 20),
+                                ),
+                              ),
                             ],
                           ),
                         ),
