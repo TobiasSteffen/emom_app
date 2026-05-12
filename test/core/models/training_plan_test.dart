@@ -71,5 +71,11 @@ void main() {
       expect(restored.activePlanId, lib.activePlanId);
       expect(restored.activePlan.name, 'Standard');
     });
+
+    test('activePlan falls back to first plan when activePlanId unknown', () {
+      final plan = TrainingPlan.pyramid('Test');
+      final lib = PlanLibrary(plans: [plan], activePlanId: 'unknown-id');
+      expect(lib.activePlan.id, plan.id); // fällt auf plans.first zurück
+    });
   });
 }
