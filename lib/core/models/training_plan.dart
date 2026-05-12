@@ -24,7 +24,7 @@ class IntervalConfig {
   factory IntervalConfig.fromJson(Map<String, dynamic> j) => IntervalConfig(
     reps: j['r'] as int,
     durationSeconds: j['d'] as int,
-    equipment: Equipment.values[j['e'] as int],
+    equipment: Equipment.values.elementAtOrNull(j['e'] as int) ?? Equipment.kettlebell,
   );
 
   IntervalConfig copyWith({int? reps, int? durationSeconds, Equipment? equipment}) =>
@@ -96,8 +96,10 @@ class PlanLibrary {
 
   const PlanLibrary({required this.plans, required this.activePlanId});
 
-  TrainingPlan get activePlan =>
-      plans.firstWhere((p) => p.id == activePlanId, orElse: () => plans.first);
+  TrainingPlan get activePlan {
+    if (plans.isEmpty) throw StateError('PlanLibrary has no plans');
+    return plans.firstWhere((p) => p.id == activePlanId, orElse: () => plans.first);
+  }
 
   Map<String, dynamic> toJson() => {
     'plans': plans.map((p) => p.toJson()).toList(),
@@ -138,7 +140,9 @@ class PlanLibraryStorage {
   }
 
   static Future<void> save(PlanLibrary library) async {
-    final file = await _file();
-    await file.writeAsString(jsonEncode(library.toJson()));
+    try {
+      final file = await _file();
+      await file.writeAsString(jsonEncode(library.toJson()));
+    } catch (_) {}
   }
 }
