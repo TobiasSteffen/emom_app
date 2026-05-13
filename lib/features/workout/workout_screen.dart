@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/settings.dart';
-import '../../core/providers/settings_provider.dart';
 import '../../core/providers/plan_library_notifier.dart';
 import '../history/history_sheet.dart';
 import '../config/config_screen.dart';
@@ -124,9 +123,8 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   @override
   Widget build(BuildContext context) {
     final workoutAsync = ref.watch(workoutNotifierProvider);
-    final settings = ref.watch(settingsNotifierProvider).valueOrNull;
 
-    if (workoutAsync.isLoading || settings == null) {
+    if (workoutAsync.isLoading) {
       return const Scaffold(
         backgroundColor: Color(0xFF000000),
         body: Center(child: CircularProgressIndicator(color: Color(0xFFFF6B00))),
@@ -136,10 +134,10 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
       return Scaffold(body: Center(child: Text('${workoutAsync.error}')));
     }
 
-    return _buildPageView(workoutAsync.requireValue, settings);
+    return _buildPageView(workoutAsync.requireValue);
   }
 
-  Widget _buildPageView(WorkoutState state, AppSettings settings) {
+  Widget _buildPageView(WorkoutState state) {
     final notifier = ref.read(workoutNotifierProvider.notifier);
 
     return PageView(
@@ -180,7 +178,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
               children: [
                 state.isFinished
                     ? _buildFinishedScreen(state)
-                    : _buildWorkoutScreen(state, settings),
+                    : _buildWorkoutScreen(state),
                 if (state.waitingForConfirmation) _buildConfirmationOverlay(state),
               ],
             ),
@@ -197,7 +195,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     );
   }
 
-  Widget _buildWorkoutScreen(WorkoutState state, AppSettings settings) {
+  Widget _buildWorkoutScreen(WorkoutState state) {
     final notifier = ref.read(workoutNotifierProvider.notifier);
     final phaseColor = phaseColorForMinute(state.currentMinute);
     final exerciseLabel = notifier.exerciseLabelForMinute(state.currentMinute);
