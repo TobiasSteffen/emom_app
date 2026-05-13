@@ -1,7 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum Equipment { kettlebell, steelmace }
+enum Equipment { kb16, kb20, kb24, sm8, sm12 }
+
+enum Exercise { swingBeidarmig, swingEinarmig, snatch, pushPress, mace360 }
+
+extension EquipmentX on Equipment {
+  bool get isKettlebell => index < 3;
+
+  String get label {
+    switch (this) {
+      case Equipment.kb16: return 'KB 16kg';
+      case Equipment.kb20: return 'KB 20kg';
+      case Equipment.kb24: return 'KB 24kg';
+      case Equipment.sm8:  return 'SM 8kg';
+      case Equipment.sm12: return 'SM 12kg';
+    }
+  }
+
+  String get iconPath =>
+      isKettlebell ? 'assets/icon/kettlebell.png' : 'assets/icon/steelmace.png';
+
+  Exercise get defaultExercise =>
+      isKettlebell ? Exercise.swingBeidarmig : Exercise.mace360;
+
+  List<Exercise> get validExercises => isKettlebell
+      ? [Exercise.swingBeidarmig, Exercise.swingEinarmig, Exercise.snatch, Exercise.pushPress]
+      : [Exercise.mace360];
+}
+
+extension ExerciseX on Exercise {
+  String get label {
+    switch (this) {
+      case Exercise.swingBeidarmig: return 'Swing beidarmig';
+      case Exercise.swingEinarmig:  return 'Swing einarmig';
+      case Exercise.snatch:         return 'Snatch';
+      case Exercise.pushPress:      return 'Push Press';
+      case Exercise.mace360:        return '360s';
+    }
+  }
+}
 
 Color phaseColorForMinute(int minute) {
   if (minute < 5) return const Color(0xFF4CAF50);

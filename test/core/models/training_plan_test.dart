@@ -5,19 +5,64 @@ import 'package:emom_app/core/models/settings.dart';
 void main() {
   group('IntervalConfig', () {
     test('serializes and deserializes correctly', () {
-      final iv = IntervalConfig(reps: 10, durationSeconds: 45, equipment: Equipment.steelmace);
+      final iv = IntervalConfig(
+        reps: 10,
+        durationSeconds: 45,
+        equipment: Equipment.sm12,
+        exercise: Exercise.mace360,
+      );
       final restored = IntervalConfig.fromJson(iv.toJson());
       expect(restored.reps, 10);
       expect(restored.durationSeconds, 45);
-      expect(restored.equipment, Equipment.steelmace);
+      expect(restored.equipment, Equipment.sm12);
+      expect(restored.exercise, Exercise.mace360);
     });
 
     test('copyWith overrides only specified fields', () {
-      final iv = IntervalConfig(reps: 5, durationSeconds: 60, equipment: Equipment.kettlebell);
+      final iv = IntervalConfig(
+        reps: 5,
+        durationSeconds: 60,
+        equipment: Equipment.kb24,
+        exercise: Exercise.swingBeidarmig,
+      );
       final copy = iv.copyWith(reps: 8);
       expect(copy.reps, 8);
       expect(copy.durationSeconds, 60);
-      expect(copy.equipment, Equipment.kettlebell);
+      expect(copy.equipment, Equipment.kb24);
+      expect(copy.exercise, Exercise.swingBeidarmig);
+    });
+
+    test('copyWith can override exercise', () {
+      final iv = IntervalConfig(
+        reps: 5,
+        durationSeconds: 60,
+        equipment: Equipment.kb24,
+        exercise: Exercise.swingBeidarmig,
+      );
+      final copy = iv.copyWith(exercise: Exercise.snatch);
+      expect(copy.exercise, Exercise.snatch);
+      expect(copy.equipment, Equipment.kb24);
+    });
+
+    test('migration: old e=0 (kettlebell) → kb24 + swingBeidarmig', () {
+      final json = {'r': 12, 'd': 60, 'e': 0}; // old format, no 'x' key
+      final iv = IntervalConfig.fromJson(json);
+      expect(iv.equipment, Equipment.kb24);
+      expect(iv.exercise, Exercise.swingBeidarmig);
+    });
+
+    test('migration: old e=1 (steelmace) → sm12 + mace360', () {
+      final json = {'r': 8, 'd': 60, 'e': 1}; // old format, no 'x' key
+      final iv = IntervalConfig.fromJson(json);
+      expect(iv.equipment, Equipment.sm12);
+      expect(iv.exercise, Exercise.mace360);
+    });
+
+    test('new format with x key reads equipment and exercise correctly', () {
+      final json = {'r': 15, 'd': 45, 'e': 1, 'x': 2}; // kb20, snatch
+      final iv = IntervalConfig.fromJson(json);
+      expect(iv.equipment, Equipment.kb20);
+      expect(iv.exercise, Exercise.snatch);
     });
   });
 
@@ -28,6 +73,12 @@ void main() {
       expect(plan.intervals[0].reps, 5);
       expect(plan.intervals[14].reps, 15);
       expect(plan.intervals[29].reps, 10);
+    });
+
+    test('pyramid() uses kb24 + swingBeidarmig as default', () {
+      final plan = TrainingPlan.pyramid('Test');
+      expect(plan.intervals[0].equipment, Equipment.kb24);
+      expect(plan.intervals[0].exercise, Exercise.swingBeidarmig);
     });
 
     test('totalReps sums all interval reps', () {
@@ -48,6 +99,13 @@ void main() {
       expect(plan.planKey, isNot(key1));
     });
 
+    test('planKey changes when exercise changes', () {
+      final plan = TrainingPlan.pyramid('Test');
+      final key1 = plan.planKey;
+      plan.intervals[0].exercise = Exercise.snatch;
+      expect(plan.planKey, isNot(key1));
+    });
+
     test('serializes and deserializes correctly', () {
       final plan = TrainingPlan.pyramid('Mein Plan');
       final restored = TrainingPlan.fromJson(plan.toJson());
@@ -55,6 +113,7 @@ void main() {
       expect(restored.name, 'Mein Plan');
       expect(restored.intervals.length, 30);
       expect(restored.intervals[0].reps, plan.intervals[0].reps);
+      expect(restored.intervals[0].exercise, Exercise.swingBeidarmig);
     });
   });
 
@@ -75,7 +134,7 @@ void main() {
     test('activePlan falls back to first plan when activePlanId unknown', () {
       final plan = TrainingPlan.pyramid('Test');
       final lib = PlanLibrary(plans: [plan], activePlanId: 'unknown-id');
-      expect(lib.activePlan.id, plan.id); // fällt auf plans.first zurück
+      expect(lib.activePlan.id, plan.id);
     });
   });
 }
