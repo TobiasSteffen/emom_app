@@ -61,10 +61,8 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
         children: [
           FeedbackTab(
             settings: _s,
-            onChanged: () {
-              setState(() {});
-              _save();
-            },
+            onChanged: () => setState(() {}),
+            onSaved: _save,
           ),
         ],
       ),
