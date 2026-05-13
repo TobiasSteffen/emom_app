@@ -7,11 +7,13 @@ import 'sound_picker_dialog.dart';
 class FeedbackTab extends StatelessWidget {
   final AppSettings settings;
   final VoidCallback onChanged;
+  final VoidCallback? onSaved;
 
   const FeedbackTab({
     super.key,
     required this.settings,
     required this.onChanged,
+    this.onSaved,
   });
 
   Future<List<String>> _getImportedSounds() async {
@@ -47,6 +49,7 @@ class FeedbackTab extends StatelessWidget {
     if (result != null) {
       onSelected(result);
       onChanged();
+      onSaved?.call();
     }
   }
 
@@ -96,6 +99,9 @@ class FeedbackTab extends StatelessWidget {
                     settings.volumeBoostLevel = v;
                     if (v <= 0) settings.volumeBoostEnabled = false;
                     onChanged();
+                  },
+                  onChangeEnd: (v) {
+                    onSaved?.call();
                   },
                 ),
               ),
@@ -167,11 +173,13 @@ class FeedbackTab extends StatelessWidget {
         _toggleRow('Lautstärke erhöhen', s.volumeBoostEnabled, (v) {
           s.volumeBoostEnabled = v;
           onChanged();
+          onSaved?.call();
         }),
         if (s.volumeBoostEnabled) _volumeSliderRow(context),
         _toggleRow('Warntöne (letzte 5s)', s.warningTonesEnabled, (v) {
           s.warningTonesEnabled = v;
           onChanged();
+          onSaved?.call();
         }),
         if (s.warningTonesEnabled)
           _indentedGroup([
@@ -189,6 +197,7 @@ class FeedbackTab extends StatelessWidget {
         _toggleRow('Wecker-Signal', s.alarmEnabled, (v) {
           s.alarmEnabled = v;
           onChanged();
+          onSaved?.call();
         }),
         if (s.alarmEnabled)
           _indentedGroup([
@@ -206,6 +215,7 @@ class FeedbackTab extends StatelessWidget {
         _toggleRow('Vibration', s.vibrationEnabled, (v) {
           s.vibrationEnabled = v;
           onChanged();
+          onSaved?.call();
         }),
       ],
     );

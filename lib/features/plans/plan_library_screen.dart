@@ -286,7 +286,7 @@ class PlanLibraryScreen extends ConsumerWidget {
                                       builder: (_) => PlanEditorScreen(plan: plan)),
                                 ),
                                 child: const Padding(
-                                  padding: EdgeInsets.all(4),
+                                  padding: EdgeInsets.all(12),
                                   child: Icon(Icons.chevron_right,
                                       color: Colors.white24, size: 20),
                                 ),

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
     <include domain="sharedpref" path="."/>
+    <!-- file domain includes plans.json and user-imported custom sounds -->
     <include domain="file" path="."/>
 </full-backup-content>

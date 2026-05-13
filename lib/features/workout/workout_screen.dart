@@ -183,7 +183,6 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
         if (page == 0 && _configWasOpened) {
           _configWasOpened = false;
           final newSettings = ref.read(settingsNotifierProvider).requireValue;
-          ref.read(settingsNotifierProvider.notifier).save();
           notifier.updateSettings(newSettings);
           if (_wasRunningBeforeConfig && !state.isFinished) notifier.start();
         }
