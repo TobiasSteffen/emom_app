@@ -5,7 +5,8 @@ import '../../core/providers/plan_library_notifier.dart';
 import 'plan_editor_screen.dart';
 
 class PlanLibraryScreen extends ConsumerWidget {
-  const PlanLibraryScreen({super.key});
+  final VoidCallback? onBack;
+  const PlanLibraryScreen({super.key, this.onBack});
 
   String _formatDuration(int seconds) {
     final m = seconds ~/ 60;
@@ -160,7 +161,7 @@ class PlanLibraryScreen extends ConsumerWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white38),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: onBack ?? () => Navigator.of(context).pop(),
         ),
         title: const Text('TRAININGSPLÄNE',
             style: TextStyle(fontSize: 15, letterSpacing: 4, color: Colors.white38)),
