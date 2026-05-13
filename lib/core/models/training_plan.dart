@@ -8,30 +8,54 @@ class IntervalConfig {
   int reps;
   int durationSeconds;
   Equipment equipment;
+  Exercise exercise;
 
   IntervalConfig({
     required this.reps,
     required this.durationSeconds,
     required this.equipment,
+    required this.exercise,
   });
 
   Map<String, dynamic> toJson() => {
     'r': reps,
     'd': durationSeconds,
     'e': equipment.index,
+    'x': exercise.index,
   };
 
-  factory IntervalConfig.fromJson(Map<String, dynamic> j) => IntervalConfig(
-    reps: j['r'] as int,
-    durationSeconds: j['d'] as int,
-    equipment: Equipment.values.elementAtOrNull(j['e'] as int) ?? Equipment.kb24,
-  );
+  factory IntervalConfig.fromJson(Map<String, dynamic> j) {
+    final Equipment eq;
+    final Exercise ex;
+    if (j.containsKey('x')) {
+      // New format: e = new Equipment index, x = Exercise index
+      eq = Equipment.values.elementAtOrNull(j['e'] as int) ?? Equipment.kb24;
+      ex = Exercise.values.elementAtOrNull(j['x'] as int) ?? eq.defaultExercise;
+    } else {
+      // Old format migration: e=0 → kb24+swingBeidarmig, e=1 → sm12+mace360
+      final oldE = j['e'] as int;
+      eq = oldE == 0 ? Equipment.kb24 : Equipment.sm12;
+      ex = eq.defaultExercise;
+    }
+    return IntervalConfig(
+      reps: j['r'] as int,
+      durationSeconds: j['d'] as int,
+      equipment: eq,
+      exercise: ex,
+    );
+  }
 
-  IntervalConfig copyWith({int? reps, int? durationSeconds, Equipment? equipment}) =>
+  IntervalConfig copyWith({
+    int? reps,
+    int? durationSeconds,
+    Equipment? equipment,
+    Exercise? exercise,
+  }) =>
       IntervalConfig(
         reps: reps ?? this.reps,
         durationSeconds: durationSeconds ?? this.durationSeconds,
         equipment: equipment ?? this.equipment,
+        exercise: exercise ?? this.exercise,
       );
 }
 
@@ -50,7 +74,7 @@ class TrainingPlan {
   int get totalDurationSeconds => intervals.fold(0, (s, iv) => s + iv.durationSeconds);
 
   String get planKey => intervals
-      .map((iv) => '${iv.reps},${iv.durationSeconds},${iv.equipment.index}')
+      .map((iv) => '${iv.reps},${iv.durationSeconds},${iv.equipment.index},${iv.exercise.index}')
       .join('|');
 
   static String _newId() {
@@ -71,6 +95,7 @@ class TrainingPlan {
         reps: reps[i],
         durationSeconds: 60,
         equipment: Equipment.kb24,
+        exercise: Exercise.swingBeidarmig,
       )),
     );
   }
