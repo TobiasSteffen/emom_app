@@ -227,8 +227,8 @@ class PlanLibraryScreen extends ConsumerWidget {
                         child: const Icon(Icons.delete_outline, color: Colors.red),
                       ),
                       child: GestureDetector(
-                        onTap: () async {
-                          await ref
+                        onTap: () {
+                          ref
                               .read(planLibraryNotifierProvider.notifier)
                               .setActivePlan(plan.id);
                         },
@@ -279,6 +279,7 @@ class PlanLibraryScreen extends ConsumerWidget {
                                 ),
                               ),
                               GestureDetector(
+                                behavior: HitTestBehavior.opaque,
                                 onTap: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
