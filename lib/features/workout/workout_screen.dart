@@ -202,7 +202,14 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
             ),
           ),
         ),
-        ConfigScreen(visitCount: _configVisitCount),
+        ConfigScreen(
+          visitCount: _configVisitCount,
+          onBack: () => _pageController.animateToPage(
+            0,
+            duration: const Duration(milliseconds: 380),
+            curve: Curves.easeInOutCubic,
+          ),
+        ),
       ],
     );
   }
