@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/settings.dart';
 import '../../core/providers/plan_library_notifier.dart';
+import '../../core/providers/settings_provider.dart';
 import '../history/history_sheet.dart';
 import '../config/config_screen.dart';
 import '../plans/plan_library_screen.dart';
@@ -52,14 +53,18 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     super.dispose();
   }
 
-  void _openConfig() {
-    Navigator.push(
+  Future<void> _openConfig() async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ConfigScreen(
           onBack: () => Navigator.pop(context),
         ),
       ),
+    );
+    if (!mounted) return;
+    ref.read(workoutNotifierProvider.notifier).updateSettings(
+      ref.read(settingsNotifierProvider).requireValue,
     );
   }
 
