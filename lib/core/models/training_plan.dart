@@ -24,7 +24,7 @@ class IntervalConfig {
   factory IntervalConfig.fromJson(Map<String, dynamic> j) => IntervalConfig(
     reps: j['r'] as int,
     durationSeconds: j['d'] as int,
-    equipment: Equipment.values.elementAtOrNull(j['e'] as int) ?? Equipment.kettlebell,
+    equipment: Equipment.values.elementAtOrNull(j['e'] as int) ?? Equipment.kb24,
   );
 
   IntervalConfig copyWith({int? reps, int? durationSeconds, Equipment? equipment}) =>
@@ -70,7 +70,7 @@ class TrainingPlan {
       intervals: List.generate(30, (i) => IntervalConfig(
         reps: reps[i],
         durationSeconds: 60,
-        equipment: Equipment.kettlebell,
+        equipment: Equipment.kb24,
       )),
     );
   }
