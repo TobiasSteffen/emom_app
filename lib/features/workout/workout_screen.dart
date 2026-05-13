@@ -29,9 +29,8 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
   late PageController _pageController;
-  bool _configWasOpened = false;
-  bool _wasRunningBeforeConfig = false;
-  int _configVisitCount = 0;
+  bool _planLibWasOpened = false;
+  bool _wasRunningBeforePlanLib = false;
   String _planKeySnapshot = '';
 
   @override
@@ -55,10 +54,13 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   }
 
   void _openConfig() {
-    _pageController.animateToPage(
-      1,
-      duration: const Duration(milliseconds: 380),
-      curve: Curves.easeInOutCubic,
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ConfigScreen(
+          onBack: () => Navigator.pop(context),
+        ),
+      ),
     );
   }
 
@@ -107,33 +109,6 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     if (doReset) ref.read(workoutNotifierProvider.notifier).reset();
   }
 
-  Future<void> _openPlanLibrary(WorkoutState state) async {
-    final lib = ref.read(planLibraryNotifierProvider).requireValue;
-    _planKeySnapshot = lib.activePlan.planKey;
-    final wasRunning = state.isRunning;
-    if (wasRunning) ref.read(workoutNotifierProvider.notifier).pause();
-
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const PlanLibraryScreen()),
-    );
-
-    if (!mounted) return;
-    final newLib = ref.read(planLibraryNotifierProvider).requireValue;
-    final planChanged = newLib.activePlan.planKey != _planKeySnapshot;
-
-    if (planChanged) {
-      final wasActive = wasRunning || state.currentMinute > 0;
-      if (wasActive) {
-        _showResetConfirmDialog();
-      } else {
-        ref.read(workoutNotifierProvider.notifier).reset();
-      }
-    } else if (wasRunning && !state.isFinished) {
-      ref.read(workoutNotifierProvider.notifier).start();
-    }
-  }
-
   void _showHistory() {
     showModalBottomSheet(
       context: context,
@@ -173,18 +148,28 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
       dragStartBehavior: DragStartBehavior.down,
       onPageChanged: (page) {
         if (page == 1) {
+          final lib = ref.read(planLibraryNotifierProvider).requireValue;
           setState(() {
-            _configWasOpened = true;
-            _wasRunningBeforeConfig = state.isRunning || state.waitingForConfirmation;
-            _configVisitCount++;
+            _planLibWasOpened = true;
+            _wasRunningBeforePlanLib = state.isRunning || state.waitingForConfirmation;
+            _planKeySnapshot = lib.activePlan.planKey;
           });
           if (state.isRunning) notifier.pause();
         }
-        if (page == 0 && _configWasOpened) {
-          _configWasOpened = false;
-          final newSettings = ref.read(settingsNotifierProvider).requireValue;
-          notifier.updateSettings(newSettings);
-          if (_wasRunningBeforeConfig && !state.isFinished) notifier.start();
+        if (page == 0 && _planLibWasOpened) {
+          setState(() => _planLibWasOpened = false);
+          final newLib = ref.read(planLibraryNotifierProvider).requireValue;
+          final planChanged = newLib.activePlan.planKey != _planKeySnapshot;
+          if (planChanged) {
+            final wasActive = _wasRunningBeforePlanLib || state.currentMinute > 0;
+            if (wasActive) {
+              _showResetConfirmDialog();
+            } else {
+              ref.read(workoutNotifierProvider.notifier).reset();
+            }
+          } else if (_wasRunningBeforePlanLib && !state.isFinished) {
+            notifier.start();
+          }
         }
       },
       children: [
@@ -201,8 +186,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
             ),
           ),
         ),
-        ConfigScreen(
-          visitCount: _configVisitCount,
+        PlanLibraryScreen(
           onBack: () => _pageController.animateToPage(
             0,
             duration: const Duration(milliseconds: 380),
@@ -241,7 +225,11 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
           const SizedBox(height: 8),
           PlanIndicator(
             planName: ref.watch(planLibraryNotifierProvider).valueOrNull?.activePlan.name ?? '',
-            onTap: () => _openPlanLibrary(state),
+            onTap: () => _pageController.animateToPage(
+              1,
+              duration: const Duration(milliseconds: 380),
+              curve: Curves.easeInOutCubic,
+            ),
           ),
           const SizedBox(height: 40),
           RepsCard(
