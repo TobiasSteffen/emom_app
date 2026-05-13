@@ -4,21 +4,29 @@ import 'package:shared_preferences/shared_preferences.dart';
 class IntervalRecord {
   final int reps;
   final int durationSeconds;
-  final int equipment; // 0 = kettlebell, 1 = steelmace
+  final int equipment; // Equipment enum index
+  final int exercise;  // Exercise enum index, 0 = swingBeidarmig
 
   IntervalRecord({
     required this.reps,
     required this.durationSeconds,
     required this.equipment,
+    this.exercise = 0,
   });
 
-  Map<String, dynamic> toJson() => {'r': reps, 'd': durationSeconds, 'e': equipment};
+  Map<String, dynamic> toJson() => {
+    'r': reps,
+    'd': durationSeconds,
+    'e': equipment,
+    'x': exercise,
+  };
 
   factory IntervalRecord.fromJson(Map<String, dynamic> j) => IntervalRecord(
-        reps: j['r'] as int,
-        durationSeconds: j['d'] as int,
-        equipment: j['e'] as int,
-      );
+    reps: j['r'] as int,
+    durationSeconds: j['d'] as int,
+    equipment: j['e'] as int,
+    exercise: (j['x'] as int?) ?? 0,
+  );
 }
 
 class WorkoutRecord {
@@ -34,8 +42,8 @@ class WorkoutRecord {
 
   int get totalReps => intervals.fold(0, (a, b) => a + b.reps);
   int get totalDurationSeconds => intervals.fold(0, (a, b) => a + b.durationSeconds);
-  int get kettlebellReps => intervals.where((i) => i.equipment == 0).fold(0, (a, b) => a + b.reps);
-  int get steelMaceReps => intervals.where((i) => i.equipment == 1).fold(0, (a, b) => a + b.reps);
+  int get kettlebellReps => intervals.where((i) => i.equipment < 3).fold(0, (a, b) => a + b.reps);
+  int get steelMaceReps => intervals.where((i) => i.equipment >= 3).fold(0, (a, b) => a + b.reps);
 
   Map<String, dynamic> toJson() => {
         't': timestamp,
