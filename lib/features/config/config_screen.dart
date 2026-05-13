@@ -6,7 +6,8 @@ import 'widgets/feedback_tab.dart';
 
 class ConfigScreen extends ConsumerStatefulWidget {
   final int visitCount;
-  const ConfigScreen({super.key, this.visitCount = 0});
+  final VoidCallback? onBack;
+  const ConfigScreen({super.key, this.visitCount = 0, this.onBack});
 
   @override
   ConsumerState<ConfigScreen> createState() => _ConfigScreenState();
@@ -31,6 +32,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
 
   void _save() {
     ref.read(settingsNotifierProvider.notifier).replace(_s);
+    ref.read(settingsNotifierProvider.notifier).save();
   }
 
   @override
@@ -44,7 +46,10 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white38),
-          onPressed: _save,
+          onPressed: () {
+            _save();
+            widget.onBack?.call();
+          },
         ),
         title: const Text(
           'EINSTELLUNGEN',
@@ -56,7 +61,10 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
         children: [
           FeedbackTab(
             settings: _s,
-            onChanged: () => setState(() {}),
+            onChanged: () {
+              setState(() {});
+              _save();
+            },
           ),
         ],
       ),
