@@ -40,9 +40,11 @@ class WorkoutState {
   });
 
   int get totalMinutes => intervals.length;
-  int get currentReps => intervals[currentMinute].reps;
+  int get currentReps =>
+      intervals[currentMinute].isPause ? 0 : intervals[currentMinute].reps;
   int get currentDuration => intervals[currentMinute].durationSeconds;
-  int get totalReps => intervals.fold(0, (a, iv) => a + iv.reps);
+  int get totalReps =>
+      intervals.fold(0, (a, iv) => a + (iv.isPause ? 0 : iv.reps));
 
   WorkoutState copyWith({
     List<IntervalConfig>? intervals,
@@ -168,6 +170,7 @@ class WorkoutNotifier extends _$WorkoutNotifier {
 
   String workoutLabelForMinute(int minute) {
     final iv = _activePlan.intervals[minute];
+    if (iv.isPause) return 'Pause';
     final sideStr = (iv.exercise.isOneArm && iv.side != null)
         ? ' · ${iv.side!.label}'
         : '';
