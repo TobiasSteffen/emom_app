@@ -64,6 +64,59 @@ void main() {
       expect(iv.equipment, Equipment.kb20);
       expect(iv.exercise, Exercise.snatch);
     });
+
+    test('side is null by default', () {
+      final iv = IntervalConfig(
+        reps: 5,
+        durationSeconds: 60,
+        equipment: Equipment.kb24,
+        exercise: Exercise.swingBeidarmig,
+      );
+      expect(iv.side, isNull);
+    });
+
+    test('side serializes and deserializes correctly', () {
+      final iv = IntervalConfig(
+        reps: 8,
+        durationSeconds: 45,
+        equipment: Equipment.kb24,
+        exercise: Exercise.swingEinarmig,
+        side: ExerciseSide.rechts,
+      );
+      final restored = IntervalConfig.fromJson(iv.toJson());
+      expect(restored.side, ExerciseSide.rechts);
+    });
+
+    test('fromJson without side key gives null side', () {
+      final json = {'r': 10, 'd': 60, 'e': 2, 'x': 1};
+      final iv = IntervalConfig.fromJson(json);
+      expect(iv.side, isNull);
+    });
+
+    test('copyWith can set side', () {
+      final iv = IntervalConfig(
+        reps: 5,
+        durationSeconds: 60,
+        equipment: Equipment.kb24,
+        exercise: Exercise.swingEinarmig,
+        side: ExerciseSide.links,
+      );
+      final copy = iv.copyWith(side: ExerciseSide.rechts);
+      expect(copy.side, ExerciseSide.rechts);
+      expect(copy.reps, 5);
+    });
+
+    test('copyWith clearSide removes side', () {
+      final iv = IntervalConfig(
+        reps: 5,
+        durationSeconds: 60,
+        equipment: Equipment.kb24,
+        exercise: Exercise.swingEinarmig,
+        side: ExerciseSide.links,
+      );
+      final copy = iv.copyWith(clearSide: true);
+      expect(copy.side, isNull);
+    });
   });
 
   group('TrainingPlan', () {
@@ -103,6 +156,13 @@ void main() {
       final plan = TrainingPlan.pyramid('Test');
       final key1 = plan.planKey;
       plan.intervals[0].exercise = Exercise.snatch;
+      expect(plan.planKey, isNot(key1));
+    });
+
+    test('planKey changes when side changes', () {
+      final plan = TrainingPlan.pyramid('Test');
+      final key1 = plan.planKey;
+      plan.intervals[0].side = ExerciseSide.links;
       expect(plan.planKey, isNot(key1));
     });
 
