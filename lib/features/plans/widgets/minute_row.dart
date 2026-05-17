@@ -128,7 +128,6 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
       );
 
   Widget _stepper({
-    required int value,
     required String display,
     required VoidCallback onInc,
     VoidCallback? onDec,
@@ -230,7 +229,6 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
           _formRow(
             'Repetitionen',
             _stepper(
-              value: iv.reps,
               display: '${iv.reps}',
               onDec: iv.reps > 1 ? () => _update(() => iv.reps--) : null,
               onInc: () => _update(() => iv.reps++),
@@ -240,7 +238,6 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
           _formRow(
             'Sekunden',
             _stepper(
-              value: iv.durationSeconds,
               display: '${iv.durationSeconds}',
               onDec: iv.durationSeconds > 30
                   ? () => _update(() => iv.durationSeconds =
