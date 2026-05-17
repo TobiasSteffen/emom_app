@@ -42,6 +42,46 @@ void main() {
       ]);
       expect(Equipment.sm8.validExercises, [Exercise.mace360]);
     });
+
+    test('isPezziball: pb0/pb2_5/pb5/pb7_5/pb10 → true; KB/SM → false', () {
+      expect(Equipment.pb0.isPezziball, isTrue);
+      expect(Equipment.pb2_5.isPezziball, isTrue);
+      expect(Equipment.pb5.isPezziball, isTrue);
+      expect(Equipment.pb7_5.isPezziball, isTrue);
+      expect(Equipment.pb10.isPezziball, isTrue);
+      expect(Equipment.kb24.isPezziball, isFalse);
+      expect(Equipment.sm12.isPezziball, isFalse);
+    });
+
+    test('label returns correct string for PB variants', () {
+      expect(Equipment.pb0.label,   'Pezziball');
+      expect(Equipment.pb2_5.label, 'PB 2,5kg');
+      expect(Equipment.pb5.label,   'PB 5kg');
+      expect(Equipment.pb7_5.label, 'PB 7,5kg');
+      expect(Equipment.pb10.label,  'PB 10kg');
+    });
+
+    test('shortLabel returns weight-only for PB variants', () {
+      expect(Equipment.pb0.shortLabel,   'ohne');
+      expect(Equipment.pb2_5.shortLabel, '2,5 kg');
+      expect(Equipment.pb5.shortLabel,   '5 kg');
+      expect(Equipment.pb7_5.shortLabel, '7,5 kg');
+      expect(Equipment.pb10.shortLabel,  '10 kg');
+    });
+
+    test('iconPath returns pezziball.png for PB variants', () {
+      expect(Equipment.pb0.iconPath,  'assets/icon/pezziball.png');
+      expect(Equipment.pb10.iconPath, 'assets/icon/pezziball.png');
+    });
+
+    test('defaultExercise: PB → myotatischerCrunch', () {
+      expect(Equipment.pb0.defaultExercise,  Exercise.myotatischerCrunch);
+      expect(Equipment.pb10.defaultExercise, Exercise.myotatischerCrunch);
+    });
+
+    test('validExercises: PB has exactly [myotatischerCrunch]', () {
+      expect(Equipment.pb5.validExercises, [Exercise.myotatischerCrunch]);
+    });
   });
 
   group('ExerciseX', () {
@@ -51,6 +91,10 @@ void main() {
       expect(Exercise.snatch.label, 'Snatch');
       expect(Exercise.pushPress.label, 'Push Press');
       expect(Exercise.mace360.label, '360s');
+    });
+
+    test('label: myotatischerCrunch returns correct string', () {
+      expect(Exercise.myotatischerCrunch.label, 'Myotatischer Crunch');
     });
   });
 }
