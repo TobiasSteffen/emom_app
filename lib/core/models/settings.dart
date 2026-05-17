@@ -19,16 +19,16 @@ extension EquipmentX on Equipment {
 
   String get label {
     switch (this) {
-      case Equipment.kb16:  return 'KB 16kg';
-      case Equipment.kb20:  return 'KB 20kg';
-      case Equipment.kb24:  return 'KB 24kg';
-      case Equipment.sm8:   return 'SM 8kg';
-      case Equipment.sm12:  return 'SM 12kg';
+      case Equipment.kb16:  return 'Kettlebell 16kg';
+      case Equipment.kb20:  return 'Kettlebell 20kg';
+      case Equipment.kb24:  return 'Kettlebell 24kg';
+      case Equipment.sm8:   return 'Steel Mace 8kg';
+      case Equipment.sm12:  return 'Steel Mace 12kg';
       case Equipment.pb0:   return 'Pezziball';
-      case Equipment.pb2_5: return 'PB 2,5kg';
-      case Equipment.pb5:   return 'PB 5kg';
-      case Equipment.pb7_5: return 'PB 7,5kg';
-      case Equipment.pb10:  return 'PB 10kg';
+      case Equipment.pb2_5: return 'Pezziball + 2,5kg';
+      case Equipment.pb5:   return 'Pezziball + 5kg';
+      case Equipment.pb7_5: return 'Pezziball + 7,5kg';
+      case Equipment.pb10:  return 'Pezziball + 10kg';
     }
   }
 
