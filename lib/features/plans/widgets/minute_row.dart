@@ -182,6 +182,22 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
           if (!eq.validExercises.contains(iv.exercise)) {
             iv.exercise = eq.defaultExercise;
           }
+          if (iv.exercise.isOneArm && iv.side == null) {
+            iv.side = widget.index % 2 == 0 ? ExerciseSide.links : ExerciseSide.rechts;
+          }
+          if (!iv.exercise.isOneArm) {
+            iv.side = null;
+          }
+        });
+
+    void selectExercise(Exercise ex) => _update(() {
+          iv.exercise = ex;
+          if (ex.isOneArm && iv.side == null) {
+            iv.side = widget.index % 2 == 0 ? ExerciseSide.links : ExerciseSide.rechts;
+          }
+          if (!ex.isOneArm) {
+            iv.side = null;
+          }
         });
 
     return Container(
@@ -233,7 +249,22 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
                 children: [
                   for (final ex in iv.equipment.validExercises)
                     _pickerChip(ex.label, iv.exercise == ex,
-                        () => _update(() => iv.exercise = ex)),
+                        () => selectExercise(ex)),
+                ],
+              ),
+            ),
+          ],
+          if (iv.exercise.isOneArm) ...[
+            const Divider(color: Colors.white12, height: 1),
+            _formRow(
+              'Seite',
+              Row(
+                children: [
+                  _pickerChip('Links', iv.side == ExerciseSide.links,
+                      () => _update(() => iv.side = ExerciseSide.links)),
+                  const SizedBox(width: 6),
+                  _pickerChip('Rechts', iv.side == ExerciseSide.rechts,
+                      () => _update(() => iv.side = ExerciseSide.rechts)),
                 ],
               ),
             ),
