@@ -96,5 +96,26 @@ void main() {
     test('label: myotatischerCrunch returns correct string', () {
       expect(Exercise.myotatischerCrunch.label, 'Myotatischer Crunch');
     });
+
+    test('isOneArm: swingEinarmig/snatch/pushPress → true; swingBeidarmig/mace360/myotatischerCrunch → false', () {
+      expect(Exercise.swingEinarmig.isOneArm, isTrue);
+      expect(Exercise.snatch.isOneArm, isTrue);
+      expect(Exercise.pushPress.isOneArm, isTrue);
+      expect(Exercise.swingBeidarmig.isOneArm, isFalse);
+      expect(Exercise.mace360.isOneArm, isFalse);
+      expect(Exercise.myotatischerCrunch.isOneArm, isFalse);
+    });
+  });
+
+  group('ExerciseSideX', () {
+    test('label returns Links/Rechts', () {
+      expect(ExerciseSide.links.label, 'Links');
+      expect(ExerciseSide.rechts.label, 'Rechts');
+    });
+
+    test('shortLabel returns L/R', () {
+      expect(ExerciseSide.links.shortLabel, 'L');
+      expect(ExerciseSide.rechts.shortLabel, 'R');
+    });
   });
 }
