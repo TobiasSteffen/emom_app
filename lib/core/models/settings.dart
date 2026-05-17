@@ -6,7 +6,11 @@ enum Equipment { kb16, kb20, kb24, sm8, sm12 }
 enum Exercise { swingBeidarmig, swingEinarmig, snatch, pushPress, mace360 }
 
 extension EquipmentX on Equipment {
-  bool get isKettlebell => index < 3;
+  bool get isKettlebell =>
+      this == Equipment.kb16 || this == Equipment.kb20 || this == Equipment.kb24;
+
+  bool get isSteelMace =>
+      this == Equipment.sm8 || this == Equipment.sm12;
 
   String get label {
     switch (this) {
@@ -18,15 +22,33 @@ extension EquipmentX on Equipment {
     }
   }
 
-  String get iconPath =>
-      isKettlebell ? 'assets/icon/kettlebell.png' : 'assets/icon/steelmace.png';
+  String get shortLabel {
+    switch (this) {
+      case Equipment.kb16: return '16 kg';
+      case Equipment.kb20: return '20 kg';
+      case Equipment.kb24: return '24 kg';
+      case Equipment.sm8:  return '8 kg';
+      case Equipment.sm12: return '12 kg';
+    }
+  }
 
-  Exercise get defaultExercise =>
-      isKettlebell ? Exercise.swingBeidarmig : Exercise.mace360;
+  String get iconPath {
+    if (isKettlebell) return 'assets/icon/kettlebell.png';
+    if (isSteelMace)  return 'assets/icon/steelmace.png';
+    return 'assets/icon/kettlebell.png';
+  }
 
-  List<Exercise> get validExercises => isKettlebell
-      ? [Exercise.swingBeidarmig, Exercise.swingEinarmig, Exercise.snatch, Exercise.pushPress]
-      : [Exercise.mace360];
+  Exercise get defaultExercise {
+    if (isKettlebell) return Exercise.swingBeidarmig;
+    if (isSteelMace)  return Exercise.mace360;
+    return Exercise.swingBeidarmig;
+  }
+
+  List<Exercise> get validExercises {
+    if (isKettlebell) return [Exercise.swingBeidarmig, Exercise.swingEinarmig, Exercise.snatch, Exercise.pushPress];
+    if (isSteelMace)  return [Exercise.mace360];
+    return [];
+  }
 }
 
 extension ExerciseX on Exercise {
