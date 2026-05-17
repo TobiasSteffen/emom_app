@@ -253,7 +253,9 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
           if (state.currentMinute < state.totalMinutes - 1) ...[
             const SizedBox(height: 16),
             NextMinutePreview(
-              nextReps: state.intervals[state.currentMinute + 1].reps,
+              nextReps: state.intervals[state.currentMinute + 1].isPause
+                  ? 0
+                  : state.intervals[state.currentMinute + 1].reps,
               nextIsPause: state.intervals[state.currentMinute + 1].isPause,
             ),
           ],
@@ -302,10 +304,10 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     final nextMinute = state.currentMinute + 1;
     final nextInterval = state.intervals[nextMinute];
     final nextColor = nextInterval.isPause
-        ? Colors.white24
+        ? const Color(0xFF555555)
         : phaseColorForMinute(nextMinute);
     return ConfirmationOverlay(
-      nextReps: nextInterval.reps,
+      nextReps: nextInterval.isPause ? 0 : nextInterval.reps,
       nextColor: nextColor,
       nextLabel: notifier.workoutLabelForMinute(nextMinute),
       nextMinuteNumber: nextMinute + 1,
