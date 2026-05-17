@@ -9,20 +9,26 @@ class IntervalConfig {
   int durationSeconds;
   Equipment equipment;
   Exercise exercise;
+  ExerciseSide? side;
 
   IntervalConfig({
     required this.reps,
     required this.durationSeconds,
     required this.equipment,
     required this.exercise,
+    this.side,
   });
 
-  Map<String, dynamic> toJson() => {
-    'r': reps,
-    'd': durationSeconds,
-    'e': equipment.index,
-    'x': exercise.index,
-  };
+  Map<String, dynamic> toJson() {
+    final m = <String, dynamic>{
+      'r': reps,
+      'd': durationSeconds,
+      'e': equipment.index,
+      'x': exercise.index,
+    };
+    if (side != null) m['s'] = side!.index;
+    return m;
+  }
 
   factory IntervalConfig.fromJson(Map<String, dynamic> j) {
     final Equipment eq;
@@ -37,11 +43,13 @@ class IntervalConfig {
       eq = oldE == 0 ? Equipment.kb24 : Equipment.sm12;
       ex = eq.defaultExercise;
     }
+    final sideIndex = j['s'] as int?;
     return IntervalConfig(
       reps: j['r'] as int,
       durationSeconds: j['d'] as int,
       equipment: eq,
       exercise: ex,
+      side: sideIndex != null ? ExerciseSide.values.elementAtOrNull(sideIndex) : null,
     );
   }
 
@@ -50,12 +58,15 @@ class IntervalConfig {
     int? durationSeconds,
     Equipment? equipment,
     Exercise? exercise,
+    ExerciseSide? side,
+    bool clearSide = false,
   }) =>
       IntervalConfig(
         reps: reps ?? this.reps,
         durationSeconds: durationSeconds ?? this.durationSeconds,
         equipment: equipment ?? this.equipment,
         exercise: exercise ?? this.exercise,
+        side: clearSide ? null : (side ?? this.side),
       );
 }
 
@@ -74,7 +85,7 @@ class TrainingPlan {
   int get totalDurationSeconds => intervals.fold(0, (s, iv) => s + iv.durationSeconds);
 
   String get planKey => intervals
-      .map((iv) => '${iv.reps},${iv.durationSeconds},${iv.equipment.index},${iv.exercise.index}')
+      .map((iv) => '${iv.reps},${iv.durationSeconds},${iv.equipment.index},${iv.exercise.index},${iv.side?.index ?? -1}')
       .join('|');
 
   static String _newId() {
