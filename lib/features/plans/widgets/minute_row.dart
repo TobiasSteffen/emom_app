@@ -248,76 +248,87 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
               ),
             ),
           ),
-          if (!iv.isPause) ...[
-            const Divider(color: Colors.white12, height: 1),
-            _formSectionHeader('Gerät', iv.equipment.label, 'equipment'),
-            if (_openPicker == 'equipment') ...[
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _equipmentGroup(
-                      'assets/icon/kettlebell.png',
-                      Equipment.values.where((e) => e.isKettlebell).toList(),
-                      iv.equipment,
-                      selectEquipment,
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 220),
+            sizeCurve: Curves.easeInOut,
+            crossFadeState: iv.isPause
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            firstChild: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Divider(color: Colors.white12, height: 1),
+                _formSectionHeader('Gerät', iv.equipment.label, 'equipment'),
+                if (_openPicker == 'equipment') ...[
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _equipmentGroup(
+                          'assets/icon/kettlebell.png',
+                          Equipment.values.where((e) => e.isKettlebell).toList(),
+                          iv.equipment,
+                          selectEquipment,
+                        ),
+                        _equipmentGroup(
+                          'assets/icon/steelmace.png',
+                          Equipment.values.where((e) => e.isSteelMace).toList(),
+                          iv.equipment,
+                          selectEquipment,
+                        ),
+                        _equipmentGroup(
+                          'assets/icon/pezziball.png',
+                          Equipment.values.where((e) => e.isPezziball).toList(),
+                          iv.equipment,
+                          selectEquipment,
+                        ),
+                      ],
                     ),
-                    _equipmentGroup(
-                      'assets/icon/steelmace.png',
-                      Equipment.values.where((e) => e.isSteelMace).toList(),
-                      iv.equipment,
-                      selectEquipment,
+                  ),
+                ],
+                const Divider(color: Colors.white12, height: 1),
+                _formSectionHeader('Übung', iv.exercise.label, 'exercise'),
+                if (_openPicker == 'exercise') ...[
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Wrap(
+                      children: [
+                        for (final ex in iv.equipment.validExercises)
+                          _pickerChip(ex.label, iv.exercise == ex,
+                              () => selectExercise(ex)),
+                      ],
                     ),
-                    _equipmentGroup(
-                      'assets/icon/pezziball.png',
-                      Equipment.values.where((e) => e.isPezziball).toList(),
-                      iv.equipment,
-                      selectEquipment,
+                  ),
+                ],
+                if (iv.exercise.isOneArm) ...[
+                  const Divider(color: Colors.white12, height: 1),
+                  _formRow(
+                    'Seite',
+                    Row(
+                      children: [
+                        _pickerChip('Links', iv.side == ExerciseSide.links,
+                            () => _update(() => iv.side = ExerciseSide.links)),
+                        const SizedBox(width: 6),
+                        _pickerChip('Rechts', iv.side == ExerciseSide.rechts,
+                            () => _update(() => iv.side = ExerciseSide.rechts)),
+                      ],
                     ),
-                  ],
+                  ),
+                ],
+                const Divider(color: Colors.white12, height: 1),
+                _formRow(
+                  'Wiederholungen',
+                  _stepper(
+                    display: '${iv.reps}',
+                    onDec: iv.reps > 1 ? () => _update(() => iv.reps--) : null,
+                    onInc: () => _update(() => iv.reps++),
+                  ),
                 ),
-              ),
-            ],
-            const Divider(color: Colors.white12, height: 1),
-            _formSectionHeader('Übung', iv.exercise.label, 'exercise'),
-            if (_openPicker == 'exercise') ...[
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Wrap(
-                  children: [
-                    for (final ex in iv.equipment.validExercises)
-                      _pickerChip(ex.label, iv.exercise == ex,
-                          () => selectExercise(ex)),
-                  ],
-                ),
-              ),
-            ],
-            if (iv.exercise.isOneArm) ...[
-              const Divider(color: Colors.white12, height: 1),
-              _formRow(
-                'Seite',
-                Row(
-                  children: [
-                    _pickerChip('Links', iv.side == ExerciseSide.links,
-                        () => _update(() => iv.side = ExerciseSide.links)),
-                    const SizedBox(width: 6),
-                    _pickerChip('Rechts', iv.side == ExerciseSide.rechts,
-                        () => _update(() => iv.side = ExerciseSide.rechts)),
-                  ],
-                ),
-              ),
-            ],
-            const Divider(color: Colors.white12, height: 1),
-            _formRow(
-              'Wiederholungen',
-              _stepper(
-                display: '${iv.reps}',
-                onDec: iv.reps > 1 ? () => _update(() => iv.reps--) : null,
-                onInc: () => _update(() => iv.reps++),
-              ),
+              ],
             ),
-          ],
+            secondChild: const SizedBox(width: double.infinity),
+          ),
           const Divider(color: Colors.white12, height: 1),
           _formRow(
             'Sekunden',
