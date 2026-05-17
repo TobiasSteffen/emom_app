@@ -179,11 +179,12 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   width: 6,
                   height: 6,
-                  margin: const EdgeInsets.only(right: 6),
+                  margin: const EdgeInsets.only(right: 6, top: 4),
                   decoration:
                       BoxDecoration(color: color, shape: BoxShape.circle),
                 ),
@@ -199,59 +200,75 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
                         letterSpacing: 1),
                   ),
                 ),
-                const Spacer(),
-                if (widget.isSelected) ...[
-                  _chip(
-                    label: iv.equipment.label,
-                    active: _openPicker == 'equipment',
-                    onTap: () => _togglePicker('equipment'),
-                  ),
-                  const SizedBox(width: 6),
-                  _chip(
-                    label: iv.exercise.label,
-                    active: _openPicker == 'exercise',
-                    onTap: () => _togglePicker('exercise'),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text('R',
-                      style: TextStyle(fontSize: 13, color: Colors.white38)),
-                  const SizedBox(width: 3),
-                  _smallStepBtn(Icons.remove,
-                      iv.reps > 1 ? () => _update(() => iv.reps--) : null),
-                  SizedBox(
-                    width: 30,
-                    child: Center(
-                      child: Text('${iv.reps}',
-                          style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white54)),
+                if (widget.isSelected)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          _chip(
+                            label: iv.equipment.label,
+                            active: _openPicker == 'equipment',
+                            onTap: () => _togglePicker('equipment'),
+                          ),
+                          const SizedBox(width: 6),
+                          _chip(
+                            label: iv.exercise.label,
+                            active: _openPicker == 'exercise',
+                            onTap: () => _togglePicker('exercise'),
+                          ),
+                        ]),
+                        const SizedBox(height: 6),
+                        Row(children: [
+                          const Text('R',
+                              style: TextStyle(
+                                  fontSize: 13, color: Colors.white38)),
+                          const SizedBox(width: 3),
+                          _smallStepBtn(Icons.remove,
+                              iv.reps > 1
+                                  ? () => _update(() => iv.reps--)
+                                  : null),
+                          SizedBox(
+                            width: 30,
+                            child: Center(
+                              child: Text('${iv.reps}',
+                                  style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white54)),
+                            ),
+                          ),
+                          _smallStepBtn(
+                              Icons.add, () => _update(() => iv.reps++)),
+                          const SizedBox(width: 12),
+                          const Text('s',
+                              style: TextStyle(
+                                  fontSize: 13, color: Colors.white38)),
+                          const SizedBox(width: 3),
+                          _smallStepBtn(
+                              Icons.remove,
+                              iv.durationSeconds > 30
+                                  ? () => _update(() => iv.durationSeconds =
+                                      (iv.durationSeconds - 5).clamp(30, 9999))
+                                  : null),
+                          SizedBox(
+                            width: 34,
+                            child: Center(
+                              child: Text('${iv.durationSeconds}',
+                                  style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white54)),
+                            ),
+                          ),
+                          _smallStepBtn(Icons.add,
+                              () => _update(() => iv.durationSeconds += 5)),
+                        ]),
+                      ],
                     ),
-                  ),
-                  _smallStepBtn(Icons.add, () => _update(() => iv.reps++)),
-                  const SizedBox(width: 8),
-                  const Text('s',
-                      style: TextStyle(fontSize: 13, color: Colors.white38)),
-                  const SizedBox(width: 3),
-                  _smallStepBtn(
-                      Icons.remove,
-                      iv.durationSeconds > 30
-                          ? () => _update(() => iv.durationSeconds =
-                              (iv.durationSeconds - 5).clamp(30, 9999))
-                          : null),
-                  SizedBox(
-                    width: 34,
-                    child: Center(
-                      child: Text('${iv.durationSeconds}',
-                          style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white54)),
-                    ),
-                  ),
-                  _smallStepBtn(
-                      Icons.add, () => _update(() => iv.durationSeconds += 5)),
-                ] else ...[
+                  )
+                else ...[
+                  const Spacer(),
                   Image.asset(iv.equipment.iconPath,
                       width: 14, height: 14, color: Colors.white38),
                   const SizedBox(width: 4),
