@@ -150,11 +150,32 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
         ],
       );
 
+  Widget _equipmentGroup(
+    String iconPath,
+    List<Equipment> items,
+    Equipment current,
+    void Function(Equipment) onSelect,
+  ) =>
+      Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          children: [
+            Image.asset(iconPath, width: 14, height: 14, color: Colors.white38),
+            const SizedBox(width: 8),
+            for (final eq in items) ...[
+              _pickerChip(eq.shortLabel, current == eq, () => onSelect(eq)),
+              const SizedBox(width: 6),
+            ],
+          ],
+        ),
+      );
+
   Widget _expandedForm(IntervalConfig iv) {
     void selectEquipment(Equipment eq) => _update(() {
-          final wasKb = iv.equipment.isKettlebell;
           iv.equipment = eq;
-          if (wasKb != eq.isKettlebell) iv.exercise = eq.defaultExercise;
+          if (!eq.validExercises.contains(iv.exercise)) {
+            iv.exercise = eq.defaultExercise;
+          }
         });
 
     return Container(
@@ -172,11 +193,21 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
           if (_openPicker == 'equipment') ...[
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: Wrap(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (final eq in Equipment.values)
-                    _pickerChip(eq.label, iv.equipment == eq,
-                        () => selectEquipment(eq)),
+                  _equipmentGroup(
+                    'assets/icon/kettlebell.png',
+                    Equipment.values.where((e) => e.isKettlebell).toList(),
+                    iv.equipment,
+                    selectEquipment,
+                  ),
+                  _equipmentGroup(
+                    'assets/icon/steelmace.png',
+                    Equipment.values.where((e) => e.isSteelMace).toList(),
+                    iv.equipment,
+                    selectEquipment,
+                  ),
                 ],
               ),
             ),
