@@ -7,6 +7,7 @@ class OverallProgress extends StatelessWidget {
   final int totalRepsDone;
   final int totalReps;
   final String workoutLabel;
+  final bool isPause;
 
   const OverallProgress({
     super.key,
@@ -15,12 +16,13 @@ class OverallProgress extends StatelessWidget {
     required this.totalRepsDone,
     required this.totalReps,
     required this.workoutLabel,
+    this.isPause = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final progress = currentMinute / totalMinutes;
-    final phaseColor = phaseColorForMinute(currentMinute);
+    final phaseColor = isPause ? Colors.white24 : phaseColorForMinute(currentMinute);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
