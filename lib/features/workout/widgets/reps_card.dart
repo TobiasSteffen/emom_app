@@ -4,7 +4,7 @@ import '../../../core/models/settings.dart';
 class RepsCard extends StatelessWidget {
   final int currentMinute;
   final int currentReps;
-  final String exerciseLabel;
+  final String workoutLabel;
   final String iconPath;
   final Animation<double> pulseAnimation;
 
@@ -12,7 +12,7 @@ class RepsCard extends StatelessWidget {
     super.key,
     required this.currentMinute,
     required this.currentReps,
-    required this.exerciseLabel,
+    required this.workoutLabel,
     required this.iconPath,
     required this.pulseAnimation,
   });
@@ -42,7 +42,7 @@ class RepsCard extends StatelessWidget {
                 style: TextStyle(
                     fontSize: 120, fontWeight: FontWeight.w900, color: phaseColor, height: 1)),
             const SizedBox(height: 8),
-            Text(exerciseLabel,
+            Text(workoutLabel,
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 16)),
           ],
         ),

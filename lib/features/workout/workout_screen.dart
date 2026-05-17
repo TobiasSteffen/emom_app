@@ -204,9 +204,8 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     final notifier = ref.read(workoutNotifierProvider.notifier);
     final phaseColor = phaseColorForMinute(state.currentMinute);
     final exerciseLabel = notifier.exerciseLabelForMinute(state.currentMinute);
-    final iconPath = notifier.equipmentForMinute(state.currentMinute) == Equipment.kettlebell
-        ? 'assets/icon/kettlebell.png'
-        : 'assets/icon/steelmace.png';
+    final workoutLabel = notifier.workoutLabelForMinute(state.currentMinute);
+    final iconPath = notifier.equipmentForMinute(state.currentMinute).iconPath;
 
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -238,7 +237,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
           RepsCard(
             currentMinute: state.currentMinute,
             currentReps: state.currentReps,
-            exerciseLabel: exerciseLabel,
+            workoutLabel: workoutLabel,
             iconPath: iconPath,
             pulseAnimation: _pulseAnimation,
           ),
