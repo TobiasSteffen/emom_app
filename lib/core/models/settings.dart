@@ -40,10 +40,10 @@ extension EquipmentX on Equipment {
       case Equipment.sm8:   return '8 kg';
       case Equipment.sm12:  return '12 kg';
       case Equipment.pb0:   return 'ohne';
-      case Equipment.pb2_5: return '2,5 kg';
-      case Equipment.pb5:   return '5 kg';
-      case Equipment.pb7_5: return '7,5 kg';
-      case Equipment.pb10:  return '10 kg';
+      case Equipment.pb2_5: return '+2,5 kg';
+      case Equipment.pb5:   return '+5 kg';
+      case Equipment.pb7_5: return '+7,5 kg';
+      case Equipment.pb10:  return '+10 kg';
     }
   }
 
