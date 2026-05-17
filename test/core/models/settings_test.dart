@@ -11,12 +11,12 @@ void main() {
       expect(Equipment.sm12.isKettlebell, isFalse);
     });
 
-    test('label returns correct German string', () {
-      expect(Equipment.kb16.label, 'KB 16kg');
-      expect(Equipment.kb20.label, 'KB 20kg');
-      expect(Equipment.kb24.label, 'KB 24kg');
-      expect(Equipment.sm8.label, 'SM 8kg');
-      expect(Equipment.sm12.label, 'SM 12kg');
+    test('label returns correct string for KB and SM variants', () {
+      expect(Equipment.kb16.label, 'Kettlebell 16kg');
+      expect(Equipment.kb20.label, 'Kettlebell 20kg');
+      expect(Equipment.kb24.label, 'Kettlebell 24kg');
+      expect(Equipment.sm8.label,  'Steel Mace 8kg');
+      expect(Equipment.sm12.label, 'Steel Mace 12kg');
     });
 
     test('iconPath returns kettlebell.png for KB variants, steelmace.png for SM', () {
@@ -55,10 +55,10 @@ void main() {
 
     test('label returns correct string for PB variants', () {
       expect(Equipment.pb0.label,   'Pezziball');
-      expect(Equipment.pb2_5.label, 'PB 2,5kg');
-      expect(Equipment.pb5.label,   'PB 5kg');
-      expect(Equipment.pb7_5.label, 'PB 7,5kg');
-      expect(Equipment.pb10.label,  'PB 10kg');
+      expect(Equipment.pb2_5.label, 'Pezziball + 2,5kg');
+      expect(Equipment.pb5.label,   'Pezziball + 5kg');
+      expect(Equipment.pb7_5.label, 'Pezziball + 7,5kg');
+      expect(Equipment.pb10.label,  'Pezziball + 10kg');
     });
 
     test('shortLabel returns weight-only for PB variants', () {
