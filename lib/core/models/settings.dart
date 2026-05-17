@@ -71,6 +71,11 @@ extension EquipmentX on Equipment {
 }
 
 extension ExerciseX on Exercise {
+  bool get isOneArm =>
+      this == Exercise.swingEinarmig ||
+      this == Exercise.snatch ||
+      this == Exercise.pushPress;
+
   String get label {
     switch (this) {
       case Exercise.swingBeidarmig:     return 'Swing beidarmig';
@@ -81,6 +86,13 @@ extension ExerciseX on Exercise {
       case Exercise.myotatischerCrunch: return 'Myotatischer Crunch';
     }
   }
+}
+
+enum ExerciseSide { links, rechts }
+
+extension ExerciseSideX on ExerciseSide {
+  String get label => this == ExerciseSide.links ? 'Links' : 'Rechts';
+  String get shortLabel => this == ExerciseSide.links ? 'L' : 'R';
 }
 
 Color phaseColorForMinute(int minute) {
