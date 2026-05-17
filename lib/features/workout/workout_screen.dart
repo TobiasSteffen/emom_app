@@ -152,6 +152,9 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
       physics: const BouncingScrollPhysics(parent: PageScrollPhysics()),
       dragStartBehavior: DragStartBehavior.down,
       onPageChanged: (page) {
+        if (page == AppPage.calendar.index) {
+          if (state.isRunning) notifier.pause();
+        }
         if (page == AppPage.plans.index) {
           final lib = ref.read(planLibraryNotifierProvider).requireValue;
           setState(() {
