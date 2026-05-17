@@ -167,7 +167,12 @@ class WorkoutNotifier extends _$WorkoutNotifier {
       _activePlan.intervals[minute].equipment;
 
   String exerciseLabelForMinute(int minute) =>
-      equipmentForMinute(minute) == Equipment.kettlebell ? 'Swings' : '360s';
+      _activePlan.intervals[minute].exercise.label;
+
+  String workoutLabelForMinute(int minute) {
+    final iv = _activePlan.intervals[minute];
+    return '${iv.equipment.label} · ${iv.exercise.label}';
+  }
 
   void _tick(Timer timer) {
     final newSeconds = _s.secondsLeft - 1;
@@ -203,6 +208,7 @@ class WorkoutNotifier extends _$WorkoutNotifier {
         reps: s.currentReps,
         durationSeconds: s.currentDuration,
         equipment: equipmentForMinute(s.currentMinute).index,
+        exercise: _activePlan.intervals[s.currentMinute].exercise.index,
       ),
     ];
 
