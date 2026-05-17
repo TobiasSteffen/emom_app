@@ -33,6 +33,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   late PageController _pageController;
   bool _planLibWasOpened = false;
   bool _wasRunningBeforePlanLib = false;
+  bool _wasRunningBeforeCalendar = false;
   String _planKeySnapshot = '';
 
   @override
@@ -153,6 +154,9 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
       dragStartBehavior: DragStartBehavior.down,
       onPageChanged: (page) {
         if (page == AppPage.calendar.index) {
+          setState(() {
+            _wasRunningBeforeCalendar = state.isRunning || state.waitingForConfirmation;
+          });
           if (state.isRunning) notifier.pause();
         }
         if (page == AppPage.plans.index) {
@@ -178,6 +182,10 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
           } else if (_wasRunningBeforePlanLib && !state.isFinished) {
             notifier.start();
           }
+        }
+        if (page == AppPage.workout.index && _wasRunningBeforeCalendar) {
+          setState(() => _wasRunningBeforeCalendar = false);
+          if (!state.isFinished) notifier.start();
         }
       },
       children: [
