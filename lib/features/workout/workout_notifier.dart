@@ -166,9 +166,6 @@ class WorkoutNotifier extends _$WorkoutNotifier {
   Equipment equipmentForMinute(int minute) =>
       _activePlan.intervals[minute].equipment;
 
-  String exerciseLabelForMinute(int minute) =>
-      _activePlan.intervals[minute].exercise.label;
-
   String workoutLabelForMinute(int minute) {
     final iv = _activePlan.intervals[minute];
     return '${iv.equipment.label} · ${iv.exercise.label}';
