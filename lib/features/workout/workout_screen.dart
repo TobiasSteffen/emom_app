@@ -225,6 +225,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
             totalRepsDone: state.totalRepsDone,
             totalReps: state.totalReps,
             workoutLabel: workoutLabel,
+            isPause: isPauseInterval,
           ),
           const SizedBox(height: 8),
           PlanIndicator(
@@ -323,8 +324,17 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     final notifier = ref.read(workoutNotifierProvider.notifier);
     return FinishedScreen(
       totalReps: state.totalReps,
-      workoutLabel: notifier.workoutLabelForMinute(state.currentMinute),
+      workoutLabel: _lastNonPauseLabel(state, notifier),
       onReset: () => notifier.reset(),
     );
+  }
+
+  String _lastNonPauseLabel(WorkoutState state, WorkoutNotifier notifier) {
+    for (int i = state.currentMinute; i >= 0; i--) {
+      if (!state.intervals[i].isPause) {
+        return notifier.workoutLabelForMinute(i);
+      }
+    }
+    return '';
   }
 }
