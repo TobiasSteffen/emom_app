@@ -207,6 +207,12 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
                     iv.equipment,
                     selectEquipment,
                   ),
+                  _equipmentGroup(
+                    'assets/icon/pezziball.png',
+                    Equipment.values.where((e) => e.isPezziball).toList(),
+                    iv.equipment,
+                    selectEquipment,
+                  ),
                 ],
               ),
             ),
