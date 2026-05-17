@@ -455,5 +455,7 @@ Kopfzeile der Detailansicht: Datum, `X/30 Intervalle`, Gesamtreps-Aufschlüsselu
 
 - **Onboarding-Wizard**: Beim ersten App-Start wird ein Wizard angezeigt, der die wichtigsten Funktionen erklärt: Trainingsplan auswählen/erstellen, Workout starten, Intervall bestätigen, Trainingshistorie. Der Wizard soll überspringbar sein und jederzeit in den Einstellungen erneut aufrufbar sein.
 
+- **Pause-Intervall**: Ein Intervall soll als "Pause" markierbar sein — kein Gerät, keine Übung, nur ein Countdown. Im Workout-Screen wird eine Pause anders dargestellt (z.B. graue Farbe, "PAUSE"-Label statt Reps-Anzeige). Im Plan-Editor ist Pause als eigene Option neben Gerät/Übung wählbar.
+
 - **Langfristige Architektur**: Mit wachsender Datenkomplexität (Kalender, Ernährung, mehrere Sportarten) ist eine Migration der Persistenzschicht auf eine lokale SQLite-Datenbank (`drift`-Paket) zu evaluieren.
 
