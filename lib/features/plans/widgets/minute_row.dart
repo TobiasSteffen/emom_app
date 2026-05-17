@@ -158,13 +158,20 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
       Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Image.asset(iconPath, width: 14, height: 14, color: Colors.white38),
-            const SizedBox(width: 8),
-            for (final eq in items) ...[
-              _pickerChip(eq.shortLabel, current == eq, () => onSelect(eq)),
-              const SizedBox(width: 6),
-            ],
+            Padding(
+              padding: const EdgeInsets.only(top: 6, right: 8),
+              child: Image.asset(iconPath, width: 14, height: 14, color: Colors.white38),
+            ),
+            Expanded(
+              child: Wrap(
+                children: [
+                  for (final eq in items)
+                    _pickerChip(eq.shortLabel, current == eq, () => onSelect(eq)),
+                ],
+              ),
+            ),
           ],
         ),
       );
