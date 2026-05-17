@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum Equipment { kb16, kb20, kb24, sm8, sm12 }
+enum Equipment { kb16, kb20, kb24, sm8, sm12, pb0, pb2_5, pb5, pb7_5, pb10 }
 
-enum Exercise { swingBeidarmig, swingEinarmig, snatch, pushPress, mace360 }
+enum Exercise { swingBeidarmig, swingEinarmig, snatch, pushPress, mace360, myotatischerCrunch }
 
 extension EquipmentX on Equipment {
   bool get isKettlebell =>
@@ -12,51 +12,73 @@ extension EquipmentX on Equipment {
   bool get isSteelMace =>
       this == Equipment.sm8 || this == Equipment.sm12;
 
+  bool get isPezziball =>
+      this == Equipment.pb0   || this == Equipment.pb2_5 ||
+      this == Equipment.pb5   || this == Equipment.pb7_5 ||
+      this == Equipment.pb10;
+
   String get label {
     switch (this) {
-      case Equipment.kb16: return 'KB 16kg';
-      case Equipment.kb20: return 'KB 20kg';
-      case Equipment.kb24: return 'KB 24kg';
-      case Equipment.sm8:  return 'SM 8kg';
-      case Equipment.sm12: return 'SM 12kg';
+      case Equipment.kb16:  return 'KB 16kg';
+      case Equipment.kb20:  return 'KB 20kg';
+      case Equipment.kb24:  return 'KB 24kg';
+      case Equipment.sm8:   return 'SM 8kg';
+      case Equipment.sm12:  return 'SM 12kg';
+      case Equipment.pb0:   return 'Pezziball';
+      case Equipment.pb2_5: return 'PB 2,5kg';
+      case Equipment.pb5:   return 'PB 5kg';
+      case Equipment.pb7_5: return 'PB 7,5kg';
+      case Equipment.pb10:  return 'PB 10kg';
     }
   }
 
   String get shortLabel {
     switch (this) {
-      case Equipment.kb16: return '16 kg';
-      case Equipment.kb20: return '20 kg';
-      case Equipment.kb24: return '24 kg';
-      case Equipment.sm8:  return '8 kg';
-      case Equipment.sm12: return '12 kg';
+      case Equipment.kb16:  return '16 kg';
+      case Equipment.kb20:  return '20 kg';
+      case Equipment.kb24:  return '24 kg';
+      case Equipment.sm8:   return '8 kg';
+      case Equipment.sm12:  return '12 kg';
+      case Equipment.pb0:   return 'ohne';
+      case Equipment.pb2_5: return '2,5 kg';
+      case Equipment.pb5:   return '5 kg';
+      case Equipment.pb7_5: return '7,5 kg';
+      case Equipment.pb10:  return '10 kg';
     }
   }
 
   String get iconPath => switch (this) {
     Equipment.kb16 || Equipment.kb20 || Equipment.kb24 => 'assets/icon/kettlebell.png',
-    Equipment.sm8 || Equipment.sm12 => 'assets/icon/steelmace.png',
+    Equipment.sm8  || Equipment.sm12                   => 'assets/icon/steelmace.png',
+    Equipment.pb0  || Equipment.pb2_5 || Equipment.pb5 ||
+    Equipment.pb7_5 || Equipment.pb10                  => 'assets/icon/pezziball.png',
   };
 
   Exercise get defaultExercise => switch (this) {
     Equipment.kb16 || Equipment.kb20 || Equipment.kb24 => Exercise.swingBeidarmig,
-    Equipment.sm8 || Equipment.sm12 => Exercise.mace360,
+    Equipment.sm8  || Equipment.sm12                   => Exercise.mace360,
+    Equipment.pb0  || Equipment.pb2_5 || Equipment.pb5 ||
+    Equipment.pb7_5 || Equipment.pb10                  => Exercise.myotatischerCrunch,
   };
 
   List<Exercise> get validExercises => switch (this) {
     Equipment.kb16 || Equipment.kb20 || Equipment.kb24 =>
         [Exercise.swingBeidarmig, Exercise.swingEinarmig, Exercise.snatch, Exercise.pushPress],
-    Equipment.sm8 || Equipment.sm12 => [Exercise.mace360],
+    Equipment.sm8  || Equipment.sm12 => [Exercise.mace360],
+    Equipment.pb0  || Equipment.pb2_5 || Equipment.pb5 ||
+    Equipment.pb7_5 || Equipment.pb10 => [Exercise.myotatischerCrunch],
   };
 }
 
 extension ExerciseX on Exercise {
   String get label {
     switch (this) {
-      case Exercise.swingBeidarmig: return 'Swing beidarmig';
-      case Exercise.swingEinarmig:  return 'Swing einarmig';
-      case Exercise.snatch:         return 'Snatch';
-      case Exercise.pushPress:      return 'Push Press';
-      case Exercise.mace360:        return '360s';
+      case Exercise.swingBeidarmig:     return 'Swing beidarmig';
+      case Exercise.swingEinarmig:      return 'Swing einarmig';
+      case Exercise.snatch:             return 'Snatch';
+      case Exercise.pushPress:          return 'Push Press';
+      case Exercise.mace360:            return '360s';
+      case Exercise.myotatischerCrunch: return 'Myotatischer Crunch';
     }
   }
 }
