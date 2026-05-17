@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 class FinishedScreen extends StatelessWidget {
   final int totalReps;
-  final String exerciseLabel;
+  final String workoutLabel;
   final VoidCallback onReset;
 
   const FinishedScreen({
     super.key,
     required this.totalReps,
-    required this.exerciseLabel,
+    required this.workoutLabel,
     required this.onReset,
   });
 
@@ -27,7 +27,7 @@ class FinishedScreen extends StatelessWidget {
                     fontSize: 32, fontWeight: FontWeight.w900,
                     color: Color(0xFFFF6B00), letterSpacing: 4)),
             const SizedBox(height: 16),
-            Text('$totalReps $exerciseLabel',
+            Text('$totalReps $workoutLabel',
                 style: TextStyle(
                     fontSize: 20, color: Colors.white.withValues(alpha: 0.7))),
             const SizedBox(height: 48),

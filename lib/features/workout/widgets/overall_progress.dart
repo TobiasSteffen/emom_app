@@ -6,7 +6,7 @@ class OverallProgress extends StatelessWidget {
   final int totalMinutes;
   final int totalRepsDone;
   final int totalReps;
-  final String exerciseLabel;
+  final String workoutLabel;
 
   const OverallProgress({
     super.key,
@@ -14,7 +14,7 @@ class OverallProgress extends StatelessWidget {
     required this.totalMinutes,
     required this.totalRepsDone,
     required this.totalReps,
-    required this.exerciseLabel,
+    required this.workoutLabel,
   });
 
   @override
@@ -29,7 +29,7 @@ class OverallProgress extends StatelessWidget {
           children: [
             Text('Minute ${currentMinute + 1} / $totalMinutes',
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13)),
-            Text('$totalRepsDone / $totalReps $exerciseLabel',
+            Text('$totalRepsDone / $totalReps $workoutLabel',
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13)),
           ],
         ),
