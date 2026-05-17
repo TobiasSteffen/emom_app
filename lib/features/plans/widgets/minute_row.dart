@@ -210,74 +210,92 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Divider(color: Colors.white12, height: 1),
-          _formSectionHeader('Gerät', iv.equipment.label, 'equipment'),
-          if (_openPicker == 'equipment') ...[
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _equipmentGroup(
-                    'assets/icon/kettlebell.png',
-                    Equipment.values.where((e) => e.isKettlebell).toList(),
-                    iv.equipment,
-                    selectEquipment,
-                  ),
-                  _equipmentGroup(
-                    'assets/icon/steelmace.png',
-                    Equipment.values.where((e) => e.isSteelMace).toList(),
-                    iv.equipment,
-                    selectEquipment,
-                  ),
-                  _equipmentGroup(
-                    'assets/icon/pezziball.png',
-                    Equipment.values.where((e) => e.isPezziball).toList(),
-                    iv.equipment,
-                    selectEquipment,
-                  ),
-                ],
-              ),
-            ),
-          ],
-          const Divider(color: Colors.white12, height: 1),
-          _formSectionHeader('Übung', iv.exercise.label, 'exercise'),
-          if (_openPicker == 'exercise') ...[
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Wrap(
-                children: [
-                  for (final ex in iv.equipment.validExercises)
-                    _pickerChip(ex.label, iv.exercise == ex,
-                        () => selectExercise(ex)),
-                ],
-              ),
-            ),
-          ],
-          if (iv.exercise.isOneArm) ...[
-            const Divider(color: Colors.white12, height: 1),
-            _formRow(
-              'Seite',
-              Row(
-                children: [
-                  _pickerChip('Links', iv.side == ExerciseSide.links,
-                      () => _update(() => iv.side = ExerciseSide.links)),
-                  const SizedBox(width: 6),
-                  _pickerChip('Rechts', iv.side == ExerciseSide.rechts,
-                      () => _update(() => iv.side = ExerciseSide.rechts)),
-                ],
-              ),
-            ),
-          ],
-          const Divider(color: Colors.white12, height: 1),
-          _formRow(
-            'Wiederholungen',
-            _stepper(
-              display: '${iv.reps}',
-              onDec: iv.reps > 1 ? () => _update(() => iv.reps--) : null,
-              onInc: () => _update(() => iv.reps++),
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 2),
+            child: Row(
+              children: [
+                _pickerChip('Übung', !iv.isPause,
+                    () => _update(() => iv.isPause = false)),
+                _pickerChip('Pause', iv.isPause, () {
+                  setState(() => _openPicker = null);
+                  _update(() {
+                    iv.isPause = true;
+                    iv.side = null;
+                  });
+                }),
+              ],
             ),
           ),
+          if (!iv.isPause) ...[
+            const Divider(color: Colors.white12, height: 1),
+            _formSectionHeader('Gerät', iv.equipment.label, 'equipment'),
+            if (_openPicker == 'equipment') ...[
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _equipmentGroup(
+                      'assets/icon/kettlebell.png',
+                      Equipment.values.where((e) => e.isKettlebell).toList(),
+                      iv.equipment,
+                      selectEquipment,
+                    ),
+                    _equipmentGroup(
+                      'assets/icon/steelmace.png',
+                      Equipment.values.where((e) => e.isSteelMace).toList(),
+                      iv.equipment,
+                      selectEquipment,
+                    ),
+                    _equipmentGroup(
+                      'assets/icon/pezziball.png',
+                      Equipment.values.where((e) => e.isPezziball).toList(),
+                      iv.equipment,
+                      selectEquipment,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const Divider(color: Colors.white12, height: 1),
+            _formSectionHeader('Übung', iv.exercise.label, 'exercise'),
+            if (_openPicker == 'exercise') ...[
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Wrap(
+                  children: [
+                    for (final ex in iv.equipment.validExercises)
+                      _pickerChip(ex.label, iv.exercise == ex,
+                          () => selectExercise(ex)),
+                  ],
+                ),
+              ),
+            ],
+            if (iv.exercise.isOneArm) ...[
+              const Divider(color: Colors.white12, height: 1),
+              _formRow(
+                'Seite',
+                Row(
+                  children: [
+                    _pickerChip('Links', iv.side == ExerciseSide.links,
+                        () => _update(() => iv.side = ExerciseSide.links)),
+                    const SizedBox(width: 6),
+                    _pickerChip('Rechts', iv.side == ExerciseSide.rechts,
+                        () => _update(() => iv.side = ExerciseSide.rechts)),
+                  ],
+                ),
+              ),
+            ],
+            const Divider(color: Colors.white12, height: 1),
+            _formRow(
+              'Wiederholungen',
+              _stepper(
+                display: '${iv.reps}',
+                onDec: iv.reps > 1 ? () => _update(() => iv.reps--) : null,
+                onInc: () => _update(() => iv.reps++),
+              ),
+            ),
+          ],
           const Divider(color: Colors.white12, height: 1),
           _formRow(
             'Sekunden',
@@ -309,7 +327,7 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
   Widget build(BuildContext context) {
     final iv = widget.plan.intervals[widget.index];
     final i = widget.index;
-    final color = phaseColorForMinute(i);
+    final color = iv.isPause ? Colors.white24 : phaseColorForMinute(i);
 
     return GestureDetector(
       onTap: widget.onSelect,
@@ -341,24 +359,34 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
                   ),
                 ),
                 const Spacer(),
-                Image.asset(iv.equipment.iconPath,
-                    width: 14, height: 14, color: Colors.white38),
-                const SizedBox(width: 4),
-                Text(iv.equipment.label,
-                    style: const TextStyle(
-                        fontSize: 11, color: Colors.white38)),
-                const SizedBox(width: 6),
-                Text(iv.exercise.label,
-                    style: const TextStyle(
-                        fontSize: 11, color: Colors.white38)),
-                const SizedBox(width: 6),
-                Text('${iv.reps}R',
-                    style: const TextStyle(
-                        fontSize: 12, color: Colors.white38)),
-                const SizedBox(width: 6),
-                Text('${iv.durationSeconds}s',
-                    style: const TextStyle(
-                        fontSize: 12, color: Colors.white38)),
+                if (iv.isPause) ...[
+                  const Text('PAUSE',
+                      style: TextStyle(
+                          fontSize: 11, color: Colors.white38, letterSpacing: 1)),
+                  const SizedBox(width: 6),
+                  Text('${iv.durationSeconds}s',
+                      style: const TextStyle(
+                          fontSize: 12, color: Colors.white38)),
+                ] else ...[
+                  Image.asset(iv.equipment.iconPath,
+                      width: 14, height: 14, color: Colors.white38),
+                  const SizedBox(width: 4),
+                  Text(iv.equipment.label,
+                      style: const TextStyle(
+                          fontSize: 11, color: Colors.white38)),
+                  const SizedBox(width: 6),
+                  Text(iv.exercise.label,
+                      style: const TextStyle(
+                          fontSize: 11, color: Colors.white38)),
+                  const SizedBox(width: 6),
+                  Text('${iv.reps}R',
+                      style: const TextStyle(
+                          fontSize: 12, color: Colors.white38)),
+                  const SizedBox(width: 6),
+                  Text('${iv.durationSeconds}s',
+                      style: const TextStyle(
+                          fontSize: 12, color: Colors.white38)),
+                ],
               ],
             ),
           ),
