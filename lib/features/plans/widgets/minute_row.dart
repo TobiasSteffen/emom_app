@@ -210,20 +210,42 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 8, bottom: 2),
-            child: Row(
-              children: [
-                _pickerChip('Übung', !iv.isPause,
-                    () => _update(() => iv.isPause = false)),
-                _pickerChip('Pause', iv.isPause, () {
+          Align(
+            alignment: Alignment.centerRight,
+            child: GestureDetector(
+              onTap: () {
+                if (iv.isPause) {
+                  _update(() => iv.isPause = false);
+                } else {
                   _update(() {
                     _openPicker = null;
                     iv.isPause = true;
                     iv.side = null;
                   });
-                }),
-              ],
+                }
+              },
+              child: Container(
+                margin: const EdgeInsets.only(top: 8, bottom: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: iv.isPause
+                      ? const Color(0xFF1565C0)
+                      : const Color(0xFF222222),
+                  borderRadius: BorderRadius.circular(6),
+                  border: iv.isPause
+                      ? null
+                      : Border.all(color: Colors.white12),
+                ),
+                child: Text(
+                  'Pause',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight:
+                        iv.isPause ? FontWeight.bold : FontWeight.normal,
+                    color: iv.isPause ? Colors.white : Colors.white38,
+                  ),
+                ),
+              ),
             ),
           ),
           if (!iv.isPause) ...[
