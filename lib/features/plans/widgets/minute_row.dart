@@ -217,8 +217,8 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
                 _pickerChip('Übung', !iv.isPause,
                     () => _update(() => iv.isPause = false)),
                 _pickerChip('Pause', iv.isPause, () {
-                  setState(() => _openPicker = null);
                   _update(() {
+                    _openPicker = null;
                     iv.isPause = true;
                     iv.side = null;
                   });
