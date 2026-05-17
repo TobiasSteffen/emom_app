@@ -32,23 +32,21 @@ extension EquipmentX on Equipment {
     }
   }
 
-  String get iconPath {
-    if (isKettlebell) return 'assets/icon/kettlebell.png';
-    if (isSteelMace)  return 'assets/icon/steelmace.png';
-    return 'assets/icon/kettlebell.png';
-  }
+  String get iconPath => switch (this) {
+    Equipment.kb16 || Equipment.kb20 || Equipment.kb24 => 'assets/icon/kettlebell.png',
+    Equipment.sm8 || Equipment.sm12 => 'assets/icon/steelmace.png',
+  };
 
-  Exercise get defaultExercise {
-    if (isKettlebell) return Exercise.swingBeidarmig;
-    if (isSteelMace)  return Exercise.mace360;
-    return Exercise.swingBeidarmig;
-  }
+  Exercise get defaultExercise => switch (this) {
+    Equipment.kb16 || Equipment.kb20 || Equipment.kb24 => Exercise.swingBeidarmig,
+    Equipment.sm8 || Equipment.sm12 => Exercise.mace360,
+  };
 
-  List<Exercise> get validExercises {
-    if (isKettlebell) return [Exercise.swingBeidarmig, Exercise.swingEinarmig, Exercise.snatch, Exercise.pushPress];
-    if (isSteelMace)  return [Exercise.mace360];
-    return [];
-  }
+  List<Exercise> get validExercises => switch (this) {
+    Equipment.kb16 || Equipment.kb20 || Equipment.kb24 =>
+        [Exercise.swingBeidarmig, Exercise.swingEinarmig, Exercise.snatch, Exercise.pushPress],
+    Equipment.sm8 || Equipment.sm12 => [Exercise.mace360],
+  };
 }
 
 extension ExerciseX on Exercise {
