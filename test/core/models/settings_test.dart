@@ -61,12 +61,12 @@ void main() {
       expect(Equipment.pb10.label,  'Pezziball + 10kg');
     });
 
-    test('shortLabel returns weight-only for PB variants', () {
+    test('shortLabel returns + prefix for weighted PB variants', () {
       expect(Equipment.pb0.shortLabel,   'ohne');
-      expect(Equipment.pb2_5.shortLabel, '2,5 kg');
-      expect(Equipment.pb5.shortLabel,   '5 kg');
-      expect(Equipment.pb7_5.shortLabel, '7,5 kg');
-      expect(Equipment.pb10.shortLabel,  '10 kg');
+      expect(Equipment.pb2_5.shortLabel, '+2,5 kg');
+      expect(Equipment.pb5.shortLabel,   '+5 kg');
+      expect(Equipment.pb7_5.shortLabel, '+7,5 kg');
+      expect(Equipment.pb10.shortLabel,  '+10 kg');
     });
 
     test('iconPath returns pezziball.png for PB variants', () {
