@@ -117,6 +117,46 @@ void main() {
       final copy = iv.copyWith(clearSide: true);
       expect(copy.side, isNull);
     });
+
+    test('isPause is false by default', () {
+      final iv = IntervalConfig(
+        reps: 5,
+        durationSeconds: 60,
+        equipment: Equipment.kb24,
+        exercise: Exercise.swingBeidarmig,
+      );
+      expect(iv.isPause, false);
+    });
+
+    test('isPause serializes and deserializes correctly', () {
+      final iv = IntervalConfig(
+        reps: 5,
+        durationSeconds: 60,
+        equipment: Equipment.kb24,
+        exercise: Exercise.swingBeidarmig,
+        isPause: true,
+      );
+      final restored = IntervalConfig.fromJson(iv.toJson());
+      expect(restored.isPause, true);
+    });
+
+    test('fromJson without p key gives isPause = false', () {
+      final json = {'r': 10, 'd': 60, 'e': 2, 'x': 0};
+      final iv = IntervalConfig.fromJson(json);
+      expect(iv.isPause, false);
+    });
+
+    test('copyWith can set isPause', () {
+      final iv = IntervalConfig(
+        reps: 5,
+        durationSeconds: 60,
+        equipment: Equipment.kb24,
+        exercise: Exercise.swingBeidarmig,
+      );
+      final paused = iv.copyWith(isPause: true);
+      expect(paused.isPause, true);
+      expect(paused.reps, 5);
+    });
   });
 
   group('TrainingPlan', () {
@@ -163,6 +203,13 @@ void main() {
       final plan = TrainingPlan.pyramid('Test');
       final key1 = plan.planKey;
       plan.intervals[0].side = ExerciseSide.links;
+      expect(plan.planKey, isNot(key1));
+    });
+
+    test('planKey changes when isPause changes', () {
+      final plan = TrainingPlan.pyramid('Test');
+      final key1 = plan.planKey;
+      plan.intervals[0].isPause = true;
       expect(plan.planKey, isNot(key1));
     });
 
