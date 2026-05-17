@@ -227,7 +227,7 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
           ],
           const Divider(color: Colors.white12, height: 1),
           _formRow(
-            'Repetitionen',
+            'Wiederholungen',
             _stepper(
               display: '${iv.reps}',
               onDec: iv.reps > 1 ? () => _update(() => iv.reps--) : null,
