@@ -268,10 +268,10 @@ class PlanLibraryScreen extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(width: 4),
-                            GestureDetector(
-                              onLongPress: () => _renamePlan(context, ref, plan),
-                              behavior: HitTestBehavior.opaque,
-                              child: Expanded(
+                            Expanded(
+                              child: GestureDetector(
+                                onLongPress: () => _renamePlan(context, ref, plan),
+                                behavior: HitTestBehavior.opaque,
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
