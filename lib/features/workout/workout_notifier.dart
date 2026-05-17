@@ -207,8 +207,8 @@ class WorkoutNotifier extends _$WorkoutNotifier {
       IntervalRecord(
         reps: s.currentReps,
         durationSeconds: s.currentDuration,
-        equipment: equipmentForMinute(s.currentMinute).index,
-        exercise: _activePlan.intervals[s.currentMinute].exercise.index,
+        equipment: equipmentForMinute(s.currentMinute),
+        exercise: _activePlan.intervals[s.currentMinute].exercise,
       ),
     ];
 
