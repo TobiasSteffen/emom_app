@@ -168,7 +168,10 @@ class WorkoutNotifier extends _$WorkoutNotifier {
 
   String workoutLabelForMinute(int minute) {
     final iv = _activePlan.intervals[minute];
-    return '${iv.equipment.label} · ${iv.exercise.label}';
+    final sideStr = (iv.exercise.isOneArm && iv.side != null)
+        ? ' · ${iv.side!.label}'
+        : '';
+    return '${iv.equipment.label} · ${iv.exercise.label}$sideStr';
   }
 
   void _tick(Timer timer) {
