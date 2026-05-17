@@ -51,10 +51,14 @@ class CalendarStorage {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_key);
     if (raw == null) return [];
-    final list = jsonDecode(raw) as List;
-    return list
-        .map((j) => CalendarEntry.fromJson(j as Map<String, dynamic>))
-        .toList();
+    try {
+      final list = jsonDecode(raw) as List;
+      return list
+          .map((j) => CalendarEntry.fromJson(j as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   static Future<void> save(List<CalendarEntry> entries) async {
