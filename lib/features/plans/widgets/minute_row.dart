@@ -2,18 +2,17 @@ import 'package:flutter/material.dart';
 import '../../../core/models/training_plan.dart';
 import '../../../core/models/settings.dart';
 
-Widget _stepButton(IconData icon, VoidCallback? onTap, {double size = 26}) =>
-    GestureDetector(
+Widget _stepButton(IconData icon, VoidCallback? onTap) => GestureDetector(
       onTap: onTap,
       child: Container(
-        width: size,
-        height: size,
+        width: 32,
+        height: 32,
         decoration: BoxDecoration(
           color: const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(size / 4),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon,
-            size: size / 2,
+            size: 16,
             color: onTap != null ? Colors.white38 : Colors.white12),
       ),
     );
@@ -39,8 +38,13 @@ class PlanMinuteRow extends StatefulWidget {
 }
 
 class _PlanMinuteRowState extends State<PlanMinuteRow> {
-  // null | 'equipment' | 'exercise'
   String? _openPicker;
+
+  @override
+  void didUpdateWidget(PlanMinuteRow old) {
+    super.didUpdateWidget(old);
+    if (!widget.isSelected) _openPicker = null;
+  }
 
   void _update(VoidCallback fn) {
     setState(fn);
@@ -53,45 +57,16 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
     });
   }
 
-  Widget _smallStepBtn(IconData icon, VoidCallback? onTap) =>
-      _stepButton(icon, onTap, size: 32);
-
-  Widget _chip({
-    required String label,
-    required bool active,
-    required VoidCallback onTap,
-  }) =>
+  Widget _pickerChip(String label, bool selected, VoidCallback onTap) =>
       GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          margin: const EdgeInsets.only(right: 6, bottom: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: active ? const Color(0xFFFF6B00) : const Color(0xFF222222),
-            borderRadius: BorderRadius.circular(4),
-            border: active ? null : Border.all(color: Colors.white12),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: active ? FontWeight.bold : FontWeight.normal,
-              color: active ? Colors.black : Colors.white54,
-            ),
-          ),
-        ),
-      );
-
-  Widget _pickerBtn({
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
-  }) =>
-      GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          decoration: BoxDecoration(
-            color: selected ? const Color(0xFFFF6B00) : const Color(0xFF1A1A1A),
+            color: selected
+                ? const Color(0xFFFF6B00)
+                : const Color(0xFF222222),
             borderRadius: BorderRadius.circular(6),
             border: selected ? null : Border.all(color: Colors.white12),
           ),
@@ -106,63 +81,147 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
         ),
       );
 
-  Widget _equipmentPicker(IntervalConfig iv) {
-    void selectEquipment(Equipment eq) => _update(() {
-      final wasKb = iv.equipment.isKettlebell;
-      iv.equipment = eq;
-      if (wasKb != eq.isKettlebell) {
-        iv.exercise = eq.defaultExercise;
-      }
-    });
+  Widget _formSectionHeader(String label, String value, String picker) =>
+      GestureDetector(
+        onTap: () => _togglePicker(picker),
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 96,
+                child: Text(label,
+                    style: const TextStyle(
+                        fontSize: 12, color: Colors.white38)),
+              ),
+              Expanded(
+                child: Text(value,
+                    style: const TextStyle(
+                        fontSize: 13, color: Colors.white70)),
+              ),
+              Icon(
+                _openPicker == picker
+                    ? Icons.expand_less
+                    : Icons.expand_more,
+                size: 16,
+                color: Colors.white24,
+              ),
+            ],
+          ),
+        ),
+      );
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+  Widget _formRow(String label, Widget content) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 96,
+              child: Text(label,
+                  style:
+                      const TextStyle(fontSize: 12, color: Colors.white38)),
+            ),
+            content,
+          ],
+        ),
+      );
+
+  Widget _stepper({
+    required int value,
+    required String display,
+    required VoidCallback onInc,
+    VoidCallback? onDec,
+  }) =>
+      Row(
+        children: [
+          _stepButton(Icons.remove, onDec),
+          SizedBox(
+            width: 40,
+            child: Center(
+              child: Text(display,
+                  style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white70)),
+            ),
+          ),
+          _stepButton(Icons.add, onInc),
+        ],
+      );
+
+  Widget _expandedForm(IntervalConfig iv) {
+    void selectEquipment(Equipment eq) => _update(() {
+          final wasKb = iv.equipment.isKettlebell;
+          iv.equipment = eq;
+          if (wasKb != eq.isKettlebell) iv.exercise = eq.defaultExercise;
+        });
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF111111),
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            Image.asset('assets/icon/kettlebell.png',
-                width: 14, height: 14, color: Colors.white38),
-            const SizedBox(width: 8),
-            _pickerBtn(label: '16 kg', selected: iv.equipment == Equipment.kb16,
-                onTap: () => selectEquipment(Equipment.kb16)),
-            const SizedBox(width: 6),
-            _pickerBtn(label: '20 kg', selected: iv.equipment == Equipment.kb20,
-                onTap: () => selectEquipment(Equipment.kb20)),
-            const SizedBox(width: 6),
-            _pickerBtn(label: '24 kg', selected: iv.equipment == Equipment.kb24,
-                onTap: () => selectEquipment(Equipment.kb24)),
-          ]),
-          const SizedBox(height: 8),
-          Row(children: [
-            Image.asset('assets/icon/steelmace.png',
-                width: 14, height: 14, color: Colors.white38),
-            const SizedBox(width: 8),
-            _pickerBtn(label: '8 kg', selected: iv.equipment == Equipment.sm8,
-                onTap: () => selectEquipment(Equipment.sm8)),
-            const SizedBox(width: 6),
-            _pickerBtn(label: '12 kg', selected: iv.equipment == Equipment.sm12,
-                onTap: () => selectEquipment(Equipment.sm12)),
-          ]),
+          const Divider(color: Colors.white12, height: 1),
+          _formSectionHeader('Gerät', iv.equipment.label, 'equipment'),
+          if (_openPicker == 'equipment') ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Wrap(
+                children: [
+                  for (final eq in Equipment.values)
+                    _pickerChip(eq.label, iv.equipment == eq,
+                        () => selectEquipment(eq)),
+                ],
+              ),
+            ),
+          ],
+          const Divider(color: Colors.white12, height: 1),
+          _formSectionHeader('Übung', iv.exercise.label, 'exercise'),
+          if (_openPicker == 'exercise') ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Wrap(
+                children: [
+                  for (final ex in iv.equipment.validExercises)
+                    _pickerChip(ex.label, iv.exercise == ex,
+                        () => _update(() => iv.exercise = ex)),
+                ],
+              ),
+            ),
+          ],
+          const Divider(color: Colors.white12, height: 1),
+          _formRow(
+            'Repetitionen',
+            _stepper(
+              value: iv.reps,
+              display: '${iv.reps}',
+              onDec: iv.reps > 1 ? () => _update(() => iv.reps--) : null,
+              onInc: () => _update(() => iv.reps++),
+            ),
+          ),
+          const Divider(color: Colors.white12, height: 1),
+          _formRow(
+            'Sekunden',
+            _stepper(
+              value: iv.durationSeconds,
+              display: '${iv.durationSeconds}',
+              onDec: iv.durationSeconds > 30
+                  ? () => _update(() => iv.durationSeconds =
+                      (iv.durationSeconds - 5).clamp(30, 9999))
+                  : null,
+              onInc: () => _update(() => iv.durationSeconds += 5),
+            ),
+          ),
         ],
       ),
     );
   }
-
-  Widget _exercisePicker(IntervalConfig iv) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-        child: Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: iv.equipment.validExercises.map((ex) {
-            return _pickerBtn(
-              label: ex.label,
-              selected: iv.exercise == ex,
-              onTap: () => _update(() => iv.exercise = ex),
-            );
-          }).toList(),
-        ),
-      );
 
   @override
   Widget build(BuildContext context) {
@@ -177,14 +236,13 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
+            padding: const EdgeInsets.symmetric(vertical: 6),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   width: 6,
                   height: 6,
-                  margin: const EdgeInsets.only(right: 6, top: 4),
+                  margin: const EdgeInsets.only(right: 6),
                   decoration:
                       BoxDecoration(color: color, shape: BoxShape.circle),
                 ),
@@ -195,106 +253,34 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
                     style: TextStyle(
                         fontSize: 11,
                         color: widget.isSelected
-                            ? Colors.white54
+                            ? Colors.white70
                             : Colors.white38,
                         letterSpacing: 1),
                   ),
                 ),
-                if (widget.isSelected)
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(children: [
-                          _chip(
-                            label: iv.equipment.label,
-                            active: _openPicker == 'equipment',
-                            onTap: () => _togglePicker('equipment'),
-                          ),
-                          const SizedBox(width: 6),
-                          _chip(
-                            label: iv.exercise.label,
-                            active: _openPicker == 'exercise',
-                            onTap: () => _togglePicker('exercise'),
-                          ),
-                        ]),
-                        const SizedBox(height: 6),
-                        Row(children: [
-                          const Text('R',
-                              style: TextStyle(
-                                  fontSize: 13, color: Colors.white38)),
-                          const SizedBox(width: 3),
-                          _smallStepBtn(Icons.remove,
-                              iv.reps > 1
-                                  ? () => _update(() => iv.reps--)
-                                  : null),
-                          SizedBox(
-                            width: 30,
-                            child: Center(
-                              child: Text('${iv.reps}',
-                                  style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white54)),
-                            ),
-                          ),
-                          _smallStepBtn(
-                              Icons.add, () => _update(() => iv.reps++)),
-                          const SizedBox(width: 12),
-                          const Text('s',
-                              style: TextStyle(
-                                  fontSize: 13, color: Colors.white38)),
-                          const SizedBox(width: 3),
-                          _smallStepBtn(
-                              Icons.remove,
-                              iv.durationSeconds > 30
-                                  ? () => _update(() => iv.durationSeconds =
-                                      (iv.durationSeconds - 5).clamp(30, 9999))
-                                  : null),
-                          SizedBox(
-                            width: 34,
-                            child: Center(
-                              child: Text('${iv.durationSeconds}',
-                                  style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white54)),
-                            ),
-                          ),
-                          _smallStepBtn(Icons.add,
-                              () => _update(() => iv.durationSeconds += 5)),
-                        ]),
-                      ],
-                    ),
-                  )
-                else ...[
-                  const Spacer(),
-                  Image.asset(iv.equipment.iconPath,
-                      width: 14, height: 14, color: Colors.white38),
-                  const SizedBox(width: 4),
-                  Text(iv.equipment.label,
-                      style:
-                          const TextStyle(fontSize: 11, color: Colors.white38)),
-                  const SizedBox(width: 6),
-                  Text(iv.exercise.label,
-                      style:
-                          const TextStyle(fontSize: 11, color: Colors.white38)),
-                  const SizedBox(width: 6),
-                  Text('${iv.reps}R',
-                      style:
-                          const TextStyle(fontSize: 12, color: Colors.white38)),
-                  const SizedBox(width: 6),
-                  Text('${iv.durationSeconds}s',
-                      style:
-                          const TextStyle(fontSize: 12, color: Colors.white38)),
-                ],
+                const Spacer(),
+                Image.asset(iv.equipment.iconPath,
+                    width: 14, height: 14, color: Colors.white38),
+                const SizedBox(width: 4),
+                Text(iv.equipment.label,
+                    style: const TextStyle(
+                        fontSize: 11, color: Colors.white38)),
+                const SizedBox(width: 6),
+                Text(iv.exercise.label,
+                    style: const TextStyle(
+                        fontSize: 11, color: Colors.white38)),
+                const SizedBox(width: 6),
+                Text('${iv.reps}R',
+                    style: const TextStyle(
+                        fontSize: 12, color: Colors.white38)),
+                const SizedBox(width: 6),
+                Text('${iv.durationSeconds}s',
+                    style: const TextStyle(
+                        fontSize: 12, color: Colors.white38)),
               ],
             ),
           ),
-          if (widget.isSelected && _openPicker == 'equipment')
-            _equipmentPicker(iv),
-          if (widget.isSelected && _openPicker == 'exercise')
-            _exercisePicker(iv),
+          if (widget.isSelected) _expandedForm(iv),
         ],
       ),
     );
