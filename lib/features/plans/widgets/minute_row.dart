@@ -290,6 +290,16 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
               onInc: () => _update(() => iv.durationSeconds += 5),
             ),
           ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: GestureDetector(
+              onTap: widget.onSelect,
+              child: const Padding(
+                padding: EdgeInsets.only(top: 4, bottom: 8),
+                child: Icon(Icons.expand_less, size: 20, color: Colors.white24),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -352,7 +362,12 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
               ],
             ),
           ),
-          if (widget.isSelected) _expandedForm(iv),
+          if (widget.isSelected)
+            GestureDetector(
+              onTap: () {},
+              behavior: HitTestBehavior.opaque,
+              child: _expandedForm(iv),
+            ),
         ],
       ),
     );
