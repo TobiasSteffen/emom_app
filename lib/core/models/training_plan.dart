@@ -10,6 +10,7 @@ class IntervalConfig {
   Equipment equipment;
   Exercise exercise;
   ExerciseSide? side;
+  bool isPause;
 
   IntervalConfig({
     required this.reps,
@@ -17,6 +18,7 @@ class IntervalConfig {
     required this.equipment,
     required this.exercise,
     this.side,
+    this.isPause = false,
   });
 
   Map<String, dynamic> toJson() {
@@ -27,6 +29,7 @@ class IntervalConfig {
       'x': exercise.index,
     };
     if (side != null) m['s'] = side!.index;
+    if (isPause) m['p'] = 1;
     return m;
   }
 
@@ -50,6 +53,7 @@ class IntervalConfig {
       equipment: eq,
       exercise: ex,
       side: sideIndex != null ? ExerciseSide.values.elementAtOrNull(sideIndex) : null,
+      isPause: (j['p'] as int?) == 1,
     );
   }
 
@@ -60,6 +64,7 @@ class IntervalConfig {
     Exercise? exercise,
     ExerciseSide? side,
     bool clearSide = false,
+    bool? isPause,
   }) =>
       IntervalConfig(
         reps: reps ?? this.reps,
@@ -67,6 +72,7 @@ class IntervalConfig {
         equipment: equipment ?? this.equipment,
         exercise: exercise ?? this.exercise,
         side: clearSide ? null : (side ?? this.side),
+        isPause: isPause ?? this.isPause,
       );
 }
 
@@ -85,7 +91,8 @@ class TrainingPlan {
   int get totalDurationSeconds => intervals.fold(0, (s, iv) => s + iv.durationSeconds);
 
   String get planKey => intervals
-      .map((iv) => '${iv.reps},${iv.durationSeconds},${iv.equipment.index},${iv.exercise.index},${iv.side?.index ?? -1}')
+      .map((iv) =>
+          '${iv.reps},${iv.durationSeconds},${iv.equipment.index},${iv.exercise.index},${iv.side?.index ?? -1},${iv.isPause ? 1 : 0}')
       .join('|');
 
   static String _newId() {
