@@ -212,7 +212,6 @@ class PlanLibraryScreen extends ConsumerWidget {
                   final plan = library.plans[i];
                   final isActive = plan.id == library.activePlanId;
                   return GestureDetector(
-                    onLongPress: () => _renamePlan(context, ref, plan),
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -269,29 +268,33 @@ class PlanLibraryScreen extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(width: 4),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    plan.name,
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      color: isActive
-                                          ? Colors.white70
-                                          : Colors.white38,
-                                      fontWeight: isActive
-                                          ? FontWeight.w600
-                                          : FontWeight.normal,
+                            GestureDetector(
+                              onLongPress: () => _renamePlan(context, ref, plan),
+                              behavior: HitTestBehavior.opaque,
+                              child: Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      plan.name,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        color: isActive
+                                            ? Colors.white70
+                                            : Colors.white38,
+                                        fontWeight: isActive
+                                            ? FontWeight.w600
+                                            : FontWeight.normal,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '${plan.intervals.length} Intervalle · ${_formatDuration(plan.totalDurationSeconds)}',
-                                    style: const TextStyle(
-                                        fontSize: 12, color: Colors.white24),
-                                  ),
-                                ],
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${plan.intervals.length} Intervalle · ${_formatDuration(plan.totalDurationSeconds)}',
+                                      style: const TextStyle(
+                                          fontSize: 12, color: Colors.white24),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                             const Icon(Icons.chevron_right,
