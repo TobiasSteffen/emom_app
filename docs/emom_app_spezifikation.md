@@ -444,28 +444,6 @@ Kopfzeile der Detailansicht: Datum, `X/30 Intervalle`, Gesamtreps-Aufschlüsselu
 
 - **Trainingshistorie – Editierbarkeit**: Historische Einträge sollen nachträglich bearbeitbar sein (z.B. einzelne Intervall-Werte korrigieren).
 - **Trainingshistorie – Kommentar**: Pro Workout-Eintrag soll ein freier Kommentar erfassbar und editierbar sein (z.B. Notizen zur Session).
-- **Trainingsplan-Verwaltung (Minuten-genau)**: Der phasenbasierte Modus wird entfernt. Stattdessen gibt es eine Verwaltung für Minuten-genaue Trainingspläne mit folgender UI (Option B):
-
-  **Tab WORKOUT-PLAN – Plan-Liste:**
-  - Der Tab zeigt eine scrollbare Liste aller gespeicherten Pläne.
-  - Pro Eintrag: Name des Plans, Anzahl Intervalle, Gesamtdauer (z.B. `30 Intervalle · 30m 00s`), Pfeil-Icon rechts (`›`).
-  - Der aktuell aktive Plan ist mit einem farbigen Punkt markiert.
-  - Oben ein `+ Neuer Plan`-Button.
-  - Tippen auf einen Plan → aktiviert ihn und öffnet den 30-Zeilen-Editor in einem neuen Screen (Navigator.push) oder Bottom Sheet.
-  - Wischgeste nach links auf einem Eintrag → Löschen (mit Bestätigungs-Dialog, nicht löschbar wenn es der einzige Plan ist).
-  - Langer Druck auf einen Eintrag → Umbenennen (Eingabe-Dialog).
-
-  **Plan-Editor:**
-  - Entspricht dem bestehenden Minuten-genau-Editor (30 Zeilen, Selektions-Modell, Stepper für Reps/Sekunden, Gerät-Dropdown pro Zeile).
-  - Titel der AppBar zeigt den Plan-Namen.
-
-  **Neuer Plan:**
-  - Wird mit den Pyramiden-Standardwerten vorbelegt: Reps und Dauer gemäß bisherigem phasenbasiertem Plan (`buildPlan()` / `buildDurations()`-Logik, alle Geräte Kettlebell).
-  - Name-Eingabe beim Anlegen (Eingabe-Dialog), Standardname z.B. „Plan 2", „Plan 3" (fortlaufend).
-
-  **Persistierung:**
-  - Alle Pläne werden in `shared_preferences` als JSON gespeichert (Liste von Plänen, je mit Name, `customPlan`, `customDurations`, `customEquipment`).
-  - Der aktive Plan-Index wird ebenfalls gespeichert und beim App-Start wiederhergestellt.
 
 - **Mehrere Sportarten & Icons**: Neben Kettlebell und Steel Mace sollen weitere Sportarten hinzufügbar sein, jeweils mit eigenem Icon. In einem Plan können beliebig viele Sportarten gemischt auftreten (pro Intervall wählbar).
 
@@ -473,4 +451,9 @@ Kopfzeile der Detailansicht: Datum, `X/30 Intervalle`, Gesamtreps-Aufschlüsselu
 
 - **Kalenderplanung**: Trainingspläne sollen an konkreten Tagen im Kalender geplant werden können. Pro geplantem Trainingstag sind Ernährungshinweise für den Tag vor und den Tag nach dem Training erfassbar und anzeigbar.
 
+- **Mehrsprachigkeit**: Die App soll mehrere Sprachen unterstützen (zunächst Deutsch und Englisch). Alle UI-Texte, Labels und Fehlermeldungen sollen über ein Lokalisierungssystem (Flutter `intl` / ARB-Dateien) verwaltet werden. Sprache folgt der Systemeinstellung des Geräts, mit manueller Override-Option in den Einstellungen.
+
+- **Onboarding-Wizard**: Beim ersten App-Start wird ein Wizard angezeigt, der die wichtigsten Funktionen erklärt: Trainingsplan auswählen/erstellen, Workout starten, Intervall bestätigen, Trainingshistorie. Der Wizard soll überspringbar sein und jederzeit in den Einstellungen erneut aufrufbar sein.
+
 - **Langfristige Architektur**: Mit wachsender Datenkomplexität (Kalender, Ernährung, mehrere Sportarten) ist eine Migration der Persistenzschicht auf eine lokale SQLite-Datenbank (`drift`-Paket) zu evaluieren.
+
