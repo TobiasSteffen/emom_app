@@ -202,7 +202,10 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
 
   Widget _buildWorkoutScreen(WorkoutState state) {
     final notifier = ref.read(workoutNotifierProvider.notifier);
-    final phaseColor = phaseColorForMinute(state.currentMinute);
+    final isPauseInterval = state.intervals[state.currentMinute].isPause;
+    final phaseColor = isPauseInterval
+        ? Colors.white24
+        : phaseColorForMinute(state.currentMinute);
     final workoutLabel = notifier.workoutLabelForMinute(state.currentMinute);
     final iconPath = notifier.equipmentForMinute(state.currentMinute).iconPath;
 
@@ -239,6 +242,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
             workoutLabel: workoutLabel,
             iconPath: iconPath,
             pulseAnimation: _pulseAnimation,
+            isPause: isPauseInterval,
           ),
           const SizedBox(height: 32),
           TimerDisplay(
@@ -248,7 +252,10 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
           ),
           if (state.currentMinute < state.totalMinutes - 1) ...[
             const SizedBox(height: 16),
-            NextMinutePreview(nextReps: state.intervals[state.currentMinute + 1].reps),
+            NextMinutePreview(
+              nextReps: state.intervals[state.currentMinute + 1].reps,
+              nextIsPause: state.intervals[state.currentMinute + 1].isPause,
+            ),
           ],
           const Spacer(),
           Row(
@@ -293,11 +300,16 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   Widget _buildConfirmationOverlay(WorkoutState state) {
     final notifier = ref.read(workoutNotifierProvider.notifier);
     final nextMinute = state.currentMinute + 1;
+    final nextInterval = state.intervals[nextMinute];
+    final nextColor = nextInterval.isPause
+        ? Colors.white24
+        : phaseColorForMinute(nextMinute);
     return ConfirmationOverlay(
-      nextReps: state.intervals[nextMinute].reps,
-      nextColor: phaseColorForMinute(nextMinute),
+      nextReps: nextInterval.reps,
+      nextColor: nextColor,
       nextLabel: notifier.workoutLabelForMinute(nextMinute),
       nextMinuteNumber: nextMinute + 1,
+      nextIsPause: nextInterval.isPause,
       onConfirm: () {
         _pulseController.forward().then((_) => _pulseController.reverse());
         notifier.confirmInterval();
