@@ -54,8 +54,12 @@ class PlanLibraryScreen extends ConsumerWidget {
     final plan = TrainingPlan.pyramid(name);
     await ref.read(planLibraryNotifierProvider.notifier).addPlan(plan);
     if (!context.mounted) return;
-    await Navigator.push(
-        context, MaterialPageRoute(builder: (_) => PlanEditorScreen(plan: plan)));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.mounted) {
+        Navigator.push(
+            context, MaterialPageRoute(builder: (_) => PlanEditorScreen(plan: plan)));
+      }
+    });
   }
 
   Future<void> _renamePlan(
