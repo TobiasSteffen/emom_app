@@ -30,7 +30,6 @@ class PlanMinuteExactEditor extends StatelessWidget {
           key: const PageStorageKey<String>('planMinuteExactList'),
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemExtent: 42,
           itemCount: 30,
           itemBuilder: (_, i) => PlanMinuteRow(
             key: ValueKey(i),
