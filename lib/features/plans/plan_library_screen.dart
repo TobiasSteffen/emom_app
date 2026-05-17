@@ -209,6 +209,11 @@ class PlanLibraryScreen extends ConsumerWidget {
                   final isActive = plan.id == library.activePlanId;
                   return GestureDetector(
                     onLongPress: () => _renamePlan(context, ref, plan),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => PlanEditorScreen(plan: plan)),
+                    ),
                     child: Dismissible(
                       key: ValueKey(plan.id),
                       direction: DismissDirection.endToStart,
@@ -227,73 +232,67 @@ class PlanLibraryScreen extends ConsumerWidget {
                         ),
                         child: const Icon(Icons.delete_outline, color: Colors.red),
                       ),
-                      child: GestureDetector(
-                        onTap: () {
-                          ref
-                              .read(planLibraryNotifierProvider.notifier)
-                              .setActivePlan(plan.id);
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF111111),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                margin: const EdgeInsets.only(right: 12),
-                                decoration: BoxDecoration(
-                                  color: isActive
-                                      ? const Color(0xFFFF6B00)
-                                      : Colors.white24,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      plan.name,
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        color: isActive
-                                            ? Colors.white70
-                                            : Colors.white38,
-                                        fontWeight: isActive
-                                            ? FontWeight.w600
-                                            : FontWeight.normal,
-                                      ),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF111111),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () => ref
+                                  .read(planLibraryNotifierProvider.notifier)
+                                  .setActivePlan(plan.id),
+                              child: SizedBox(
+                                width: 32,
+                                height: 32,
+                                child: Center(
+                                  child: Container(
+                                    width: 10,
+                                    height: 10,
+                                    decoration: BoxDecoration(
+                                      color: isActive
+                                          ? const Color(0xFFFF6B00)
+                                          : Colors.white24,
+                                      shape: BoxShape.circle,
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${plan.intervals.length} Intervalle · ${_formatDuration(plan.totalDurationSeconds)}',
-                                      style: const TextStyle(
-                                          fontSize: 12, color: Colors.white24),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    plan.name,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      color: isActive
+                                          ? Colors.white70
+                                          : Colors.white38,
+                                      fontWeight: isActive
+                                          ? FontWeight.w600
+                                          : FontWeight.normal,
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${plan.intervals.length} Intervalle · ${_formatDuration(plan.totalDurationSeconds)}',
+                                    style: const TextStyle(
+                                        fontSize: 12, color: Colors.white24),
+                                  ),
+                                ],
                               ),
-                              GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) => PlanEditorScreen(plan: plan)),
-                                ),
-                                child: const Padding(
-                                  padding: EdgeInsets.all(12),
-                                  child: Icon(Icons.chevron_right,
-                                      color: Colors.white24, size: 20),
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                            const Icon(Icons.chevron_right,
+                                color: Colors.white24, size: 20),
+                          ],
                         ),
                       ),
                     ),
