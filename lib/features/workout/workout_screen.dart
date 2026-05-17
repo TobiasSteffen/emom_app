@@ -203,7 +203,6 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   Widget _buildWorkoutScreen(WorkoutState state) {
     final notifier = ref.read(workoutNotifierProvider.notifier);
     final phaseColor = phaseColorForMinute(state.currentMinute);
-    final exerciseLabel = notifier.exerciseLabelForMinute(state.currentMinute);
     final workoutLabel = notifier.workoutLabelForMinute(state.currentMinute);
     final iconPath = notifier.equipmentForMinute(state.currentMinute).iconPath;
 
@@ -222,7 +221,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
             totalMinutes: state.totalMinutes,
             totalRepsDone: state.totalRepsDone,
             totalReps: state.totalReps,
-            exerciseLabel: exerciseLabel,
+            workoutLabel: workoutLabel,
           ),
           const SizedBox(height: 8),
           PlanIndicator(
@@ -297,7 +296,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     return ConfirmationOverlay(
       nextReps: state.intervals[nextMinute].reps,
       nextColor: phaseColorForMinute(nextMinute),
-      nextLabel: notifier.exerciseLabelForMinute(nextMinute),
+      nextLabel: notifier.workoutLabelForMinute(nextMinute),
       nextMinuteNumber: nextMinute + 1,
       onConfirm: () {
         _pulseController.forward().then((_) => _pulseController.reverse());
@@ -310,7 +309,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     final notifier = ref.read(workoutNotifierProvider.notifier);
     return FinishedScreen(
       totalReps: state.totalReps,
-      exerciseLabel: notifier.exerciseLabelForMinute(state.currentMinute),
+      workoutLabel: notifier.workoutLabelForMinute(state.currentMinute),
       onReset: () => notifier.reset(),
     );
   }
