@@ -194,8 +194,8 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
                     style: TextStyle(
                         fontSize: 11,
                         color: widget.isSelected
-                            ? Colors.white38
-                            : Colors.white24,
+                            ? Colors.white54
+                            : Colors.white38,
                         letterSpacing: 1),
                   ),
                 ),
@@ -253,23 +253,23 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
                       Icons.add, () => _update(() => iv.durationSeconds += 5)),
                 ] else ...[
                   Image.asset(iv.equipment.iconPath,
-                      width: 14, height: 14, color: Colors.white24),
+                      width: 14, height: 14, color: Colors.white38),
                   const SizedBox(width: 4),
                   Text(iv.equipment.label,
                       style:
-                          const TextStyle(fontSize: 11, color: Colors.white24)),
+                          const TextStyle(fontSize: 11, color: Colors.white38)),
                   const SizedBox(width: 6),
                   Text(iv.exercise.label,
                       style:
-                          const TextStyle(fontSize: 11, color: Colors.white24)),
+                          const TextStyle(fontSize: 11, color: Colors.white38)),
                   const SizedBox(width: 6),
                   Text('${iv.reps}R',
                       style:
-                          const TextStyle(fontSize: 12, color: Colors.white24)),
+                          const TextStyle(fontSize: 12, color: Colors.white38)),
                   const SizedBox(width: 6),
                   Text('${iv.durationSeconds}s',
                       style:
-                          const TextStyle(fontSize: 12, color: Colors.white24)),
+                          const TextStyle(fontSize: 12, color: Colors.white38)),
                 ],
               ],
             ),
