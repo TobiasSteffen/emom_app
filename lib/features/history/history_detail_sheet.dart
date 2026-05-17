@@ -11,15 +11,14 @@ class HistoryDetailSheet extends StatelessWidget {
       DateFormat("EE, d. MMMM yyyy  HH:mm", 'de').format(dt);
 
   String _repBreakdown() {
-    final Map<int, int> byEquipment = {};
+    final Map<Equipment, int> byEquipment = {};
     for (final iv in record.intervals) {
       byEquipment[iv.equipment] = (byEquipment[iv.equipment] ?? 0) + iv.reps;
     }
     if (byEquipment.length == 1) return '${record.totalReps} Reps';
-    return (byEquipment.entries.toList()..sort((a, b) => a.key.compareTo(b.key)))
+    return (byEquipment.entries.toList()..sort((a, b) => a.key.index.compareTo(b.key.index)))
         .map((e) {
-          final eq = Equipment.values.elementAtOrNull(e.key);
-          final label = eq?.label ?? 'Unbekannt';
+          final label = e.key.label;
           return '${e.value}× $label';
         })
         .join(' / ');
@@ -84,11 +83,10 @@ class HistoryDetailSheet extends StatelessWidget {
               itemBuilder: (ctx, i) {
                 final iv = record.intervals[i];
                 final color = phaseColorForMinute(i);
-                final isKb = iv.equipment < 3;
-                final eq = Equipment.values.elementAtOrNull(iv.equipment);
-                final ex = Exercise.values.elementAtOrNull(iv.exercise);
-                final eqLabel = eq?.label ?? '';
-                final exLabel = ex?.label ?? 'Unbekannt';
+                final eq = iv.equipment;
+                final ex = iv.exercise;
+                final eqLabel = eq.label;
+                final exLabel = ex.label;
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(
@@ -107,9 +105,7 @@ class HistoryDetailSheet extends StatelessWidget {
                                 color: Colors.white38, fontSize: 12)),
                       ),
                       Image.asset(
-                        isKb
-                            ? 'assets/icon/kettlebell.png'
-                            : 'assets/icon/steelmace.png',
+                        iv.equipment.iconPath,
                         width: 14,
                         height: 14,
                         color: Colors.white38,

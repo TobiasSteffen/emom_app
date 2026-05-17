@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:emom_app/core/models/workout_history.dart';
+import 'package:emom_app/core/models/settings.dart';
 
 void main() {
   setUp(() {
@@ -18,8 +19,8 @@ void main() {
         timestamp: 1000,
         planMode: 1,
         intervals: [
-          IntervalRecord(reps: 10, durationSeconds: 60, equipment: 0, exercise: 0),
-          IntervalRecord(reps: 12, durationSeconds: 60, equipment: 0, exercise: 0),
+          IntervalRecord(reps: 10, durationSeconds: 60, equipment: Equipment.kb16),
+          IntervalRecord(reps: 12, durationSeconds: 60, equipment: Equipment.kb16),
         ],
       );
 
@@ -38,17 +39,17 @@ void main() {
         timestamp: t,
         planMode: 1,
         intervals: [
-          IntervalRecord(reps: 5, durationSeconds: 60, equipment: 0, exercise: 0),
-          IntervalRecord(reps: 6, durationSeconds: 60, equipment: 0, exercise: 0),
+          IntervalRecord(reps: 5, durationSeconds: 60, equipment: Equipment.kb16),
+          IntervalRecord(reps: 6, durationSeconds: 60, equipment: Equipment.kb16),
         ],
       ));
       await WorkoutHistory.addOrUpdateRecord(WorkoutRecord(
         timestamp: t,
         planMode: 1,
         intervals: [
-          IntervalRecord(reps: 5, durationSeconds: 60, equipment: 0, exercise: 0),
-          IntervalRecord(reps: 6, durationSeconds: 60, equipment: 0, exercise: 0),
-          IntervalRecord(reps: 7, durationSeconds: 60, equipment: 0, exercise: 0),
+          IntervalRecord(reps: 5, durationSeconds: 60, equipment: Equipment.kb16),
+          IntervalRecord(reps: 6, durationSeconds: 60, equipment: Equipment.kb16),
+          IntervalRecord(reps: 7, durationSeconds: 60, equipment: Equipment.kb16),
         ],
       ));
 
@@ -62,16 +63,16 @@ void main() {
         timestamp: 1000,
         planMode: 1,
         intervals: [
-          IntervalRecord(reps: 5, durationSeconds: 60, equipment: 0, exercise: 0),
-          IntervalRecord(reps: 5, durationSeconds: 60, equipment: 0, exercise: 0),
+          IntervalRecord(reps: 5, durationSeconds: 60, equipment: Equipment.kb16),
+          IntervalRecord(reps: 5, durationSeconds: 60, equipment: Equipment.kb16),
         ],
       ));
       await WorkoutHistory.addOrUpdateRecord(WorkoutRecord(
         timestamp: 2000,
         planMode: 1,
         intervals: [
-          IntervalRecord(reps: 8, durationSeconds: 60, equipment: 0, exercise: 0),
-          IntervalRecord(reps: 8, durationSeconds: 60, equipment: 0, exercise: 0),
+          IntervalRecord(reps: 8, durationSeconds: 60, equipment: Equipment.kb16),
+          IntervalRecord(reps: 8, durationSeconds: 60, equipment: Equipment.kb16),
         ],
       ));
 
@@ -85,9 +86,9 @@ void main() {
         timestamp: 3000,
         planMode: 1,
         intervals: [
-          IntervalRecord(reps: 10, durationSeconds: 60, equipment: 2, exercise: 0), // kb24
-          IntervalRecord(reps: 8, durationSeconds: 60, equipment: 3, exercise: 4),  // sm8
-          IntervalRecord(reps: 6, durationSeconds: 60, equipment: 2, exercise: 0),  // kb24
+          IntervalRecord(reps: 10, durationSeconds: 60, equipment: Equipment.kb24), // kb24
+          IntervalRecord(reps: 8, durationSeconds: 60, equipment: Equipment.sm8, exercise: Exercise.mace360),  // sm8
+          IntervalRecord(reps: 6, durationSeconds: 60, equipment: Equipment.kb24), // kb24
         ],
       );
 
@@ -102,8 +103,8 @@ void main() {
         timestamp: 9999,
         planMode: 1,
         intervals: [
-          IntervalRecord(reps: 15, durationSeconds: 45, equipment: 4, exercise: 4), // sm12, mace360
-          IntervalRecord(reps: 10, durationSeconds: 60, equipment: 1, exercise: 2), // kb20, snatch
+          IntervalRecord(reps: 15, durationSeconds: 45, equipment: Equipment.sm12, exercise: Exercise.mace360), // sm12, mace360
+          IntervalRecord(reps: 10, durationSeconds: 60, equipment: Equipment.kb20, exercise: Exercise.snatch), // kb20, snatch
         ],
       );
       final restored = WorkoutRecord.fromJson(original.toJson());
@@ -112,15 +113,15 @@ void main() {
       expect(restored.planMode, 1);
       expect(restored.intervals.length, 2);
       expect(restored.intervals[0].reps, 15);
-      expect(restored.intervals[0].equipment, 4);
-      expect(restored.intervals[0].exercise, 4);
-      expect(restored.intervals[1].exercise, 2);
+      expect(restored.intervals[0].equipment, Equipment.sm12);
+      expect(restored.intervals[0].exercise, Exercise.mace360);
+      expect(restored.intervals[1].exercise, Exercise.snatch);
     });
 
     test('fromJson with missing exercise key defaults to 0 (swingBeidarmig)', () {
       final json = {'r': 10, 'd': 60, 'e': 2}; // old record without 'x'
       final iv = IntervalRecord.fromJson(json);
-      expect(iv.exercise, 0);
+      expect(iv.exercise, Exercise.swingBeidarmig);
     });
   });
 }
