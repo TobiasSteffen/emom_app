@@ -7,6 +7,8 @@ import '../../core/providers/settings_provider.dart';
 import '../history/history_sheet.dart';
 import '../config/config_screen.dart';
 import '../plans/plan_library_screen.dart';
+import '../../core/models/app_page.dart';
+import '../calendar/calendar_screen.dart';
 import 'workout_notifier.dart';
 import 'widgets/plan_indicator.dart';
 import 'widgets/workout_header.dart';
@@ -43,7 +45,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeOut),
     );
-    _pageController = PageController();
+    _pageController = PageController(initialPage: AppPage.workout.index);
   }
 
   @override
@@ -150,7 +152,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
       physics: const BouncingScrollPhysics(parent: PageScrollPhysics()),
       dragStartBehavior: DragStartBehavior.down,
       onPageChanged: (page) {
-        if (page == 1) {
+        if (page == AppPage.plans.index) {
           final lib = ref.read(planLibraryNotifierProvider).requireValue;
           setState(() {
             _planLibWasOpened = true;
@@ -159,7 +161,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
           });
           if (state.isRunning) notifier.pause();
         }
-        if (page == 0 && _planLibWasOpened) {
+        if (page == AppPage.workout.index && _planLibWasOpened) {
           setState(() => _planLibWasOpened = false);
           final newLib = ref.read(planLibraryNotifierProvider).requireValue;
           final planChanged = newLib.activePlan.planKey != _planKeySnapshot;
@@ -176,6 +178,13 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
         }
       },
       children: [
+        CalendarScreen(
+          onBack: () => _pageController.animateToPage(
+            AppPage.workout.index,
+            duration: const Duration(milliseconds: 380),
+            curve: Curves.easeInOutCubic,
+          ),
+        ),
         Scaffold(
           body: SafeArea(
             child: Stack(
@@ -191,7 +200,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
         ),
         PlanLibraryScreen(
           onBack: () => _pageController.animateToPage(
-            0,
+            AppPage.workout.index,
             duration: const Duration(milliseconds: 380),
             curve: Curves.easeInOutCubic,
           ),
@@ -231,7 +240,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
           PlanIndicator(
             planName: ref.watch(planLibraryNotifierProvider).valueOrNull?.activePlan.name ?? '',
             onTap: () => _pageController.animateToPage(
-              1,
+              AppPage.plans.index,
               duration: const Duration(milliseconds: 380),
               curve: Curves.easeInOutCubic,
             ),
