@@ -7,6 +7,7 @@ class PlanMinuteExactEditor extends StatelessWidget {
   final int? selectedRow;
   final ValueChanged<int?> onRowSelected;
   final VoidCallback onChanged;
+  final void Function(int oldIndex, int newIndex) onReorder;
 
   const PlanMinuteExactEditor({
     super.key,
@@ -14,58 +15,33 @@ class PlanMinuteExactEditor extends StatelessWidget {
     required this.selectedRow,
     required this.onRowSelected,
     required this.onChanged,
+    required this.onReorder,
   });
-
-  String _formatDuration(int seconds) {
-    final m = seconds ~/ 60;
-    final s = seconds % 60;
-    return '${m}m ${s.toString().padLeft(2, '0')}s';
-  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        ListView.builder(
-          key: const PageStorageKey<String>('planMinuteExactList'),
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: 30,
-          itemBuilder: (_, i) => PlanMinuteRow(
-            key: ValueKey(i),
-            index: i,
-            plan: plan,
-            isSelected: selectedRow == i,
-            onSelect: () => onRowSelected(selectedRow == i ? null : i),
-            onChanged: onChanged,
-          ),
+    return ReorderableListView.builder(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+      buildDefaultDragHandles: false,
+      proxyDecorator: (child, index, animation) => Material(
+        elevation: 4,
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(8),
+        child: child,
+      ),
+      itemCount: 30,
+      itemBuilder: (_, i) => ReorderableDelayedDragStartListener(
+        key: ValueKey(i),
+        index: i,
+        child: PlanMinuteRow(
+          index: i,
+          plan: plan,
+          isSelected: selectedRow == i,
+          onSelect: () => onRowSelected(selectedRow == i ? null : i),
+          onChanged: onChanged,
         ),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF111111),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('GESAMT',
-                  style: TextStyle(fontSize: 10, letterSpacing: 3, color: Colors.white24)),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text('${plan.totalReps} Wdh.',
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white38)),
-                  Text(_formatDuration(plan.totalDurationSeconds),
-                      style: const TextStyle(fontSize: 13, color: Colors.white24)),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
+      ),
+      onReorder: onReorder,
     );
   }
 }
