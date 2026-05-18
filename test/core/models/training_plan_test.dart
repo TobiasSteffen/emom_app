@@ -2,6 +2,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:emom_app/core/models/training_plan.dart';
 import 'package:emom_app/core/models/settings.dart';
 
+IntervalConfig _iv() => IntervalConfig(
+      reps: 5,
+      durationSeconds: 60,
+      equipment: Equipment.kb24,
+      exercise: Exercise.swingBeidarmig,
+    );
+
 void main() {
   group('IntervalConfig', () {
     test('serializes and deserializes correctly', () {
@@ -221,6 +228,36 @@ void main() {
       expect(restored.intervals.length, 30);
       expect(restored.intervals[0].reps, plan.intervals[0].reps);
       expect(restored.intervals[0].exercise, Exercise.swingBeidarmig);
+    });
+
+    test('minIntervals is 5', () {
+      expect(TrainingPlan.minIntervals, 5);
+    });
+
+    test('maxIntervals is 30', () {
+      expect(TrainingPlan.maxIntervals, 30);
+    });
+
+    test('can create plan with 5 intervals', () {
+      final intervals = List.generate(5, (_) => _iv());
+      expect(
+        () => TrainingPlan(id: 'x', name: 'test', intervals: intervals),
+        returnsNormally,
+      );
+    });
+
+    test('can create plan with 15 intervals', () {
+      final intervals = List.generate(15, (_) => _iv());
+      expect(
+        () => TrainingPlan(id: 'x', name: 'test', intervals: intervals),
+        returnsNormally,
+      );
+    });
+
+    test('totalReps sums variable-length intervals', () {
+      final intervals = List.generate(10, (_) => _iv());
+      final plan = TrainingPlan(id: 'x', name: 'test', intervals: intervals);
+      expect(plan.totalReps, 50);
     });
   });
 
