@@ -49,7 +49,6 @@ class PlanLibraryScreen extends ConsumerWidget {
         );
       },
     );
-    controller.dispose();
     if (name == null || name.isEmpty) return;
     final plan = TrainingPlan.pyramid(name);
     await ref.read(planLibraryNotifierProvider.notifier).addPlan(plan);
@@ -98,7 +97,6 @@ class PlanLibraryScreen extends ConsumerWidget {
         );
       },
     );
-    controller.dispose();
     if (name == null || name.isEmpty) return;
     await ref.read(planLibraryNotifierProvider.notifier).renamePlan(plan.id, name);
   }
