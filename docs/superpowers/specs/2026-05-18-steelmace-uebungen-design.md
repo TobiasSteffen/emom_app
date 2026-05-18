@@ -58,3 +58,7 @@ Neue Reihenfolge:
 
 - UI-Änderungen am Workout-Screen (Side-Anzeige funktioniert bereits generisch via `isOneArm`)
 - Migrationslogik für alte Pläne (kein bestehender Plan hat `schulterHeben`)
+
+## Offene TODOs / Folge-Features
+
+- **Zeilen-Sortierung im Trainingsplan:** Gedrückt halten einer Minuten-Zeile im Plan-Editor soll diese verschiebbar machen (Drag & Drop Reorder).
