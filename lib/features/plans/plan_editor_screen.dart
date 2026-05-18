@@ -54,6 +54,27 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
     });
   }
 
+  void _onDelete(int index) {
+    if (_plan.intervals.length <= TrainingPlan.minIntervals) return;
+    setState(() {
+      _plan.intervals.removeAt(index);
+      if (_selectedRow != null) {
+        if (_selectedRow == index) {
+          _selectedRow = null;
+        } else if (_selectedRow! > index) {
+          _selectedRow = _selectedRow! - 1;
+        }
+      }
+    });
+  }
+
+  void _onAdd() {
+    if (_plan.intervals.length >= TrainingPlan.maxIntervals) return;
+    setState(() {
+      _plan.intervals.add(_plan.intervals.last.copyWith());
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -90,8 +111,37 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
                 onRowSelected: (i) => setState(() => _selectedRow = i),
                 onChanged: () => setState(() {}),
                 onReorder: _onReorder,
+                onDelete: _onDelete,
               ),
             ),
+            if (_plan.intervals.length < TrainingPlan.maxIntervals)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                child: GestureDetector(
+                  onTap: _onAdd,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                          color: const Color(0xFFFF6B00).withValues(alpha: 0.4)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add, color: Color(0xFFFF6B00), size: 16),
+                        SizedBox(width: 6),
+                        Text('Intervall hinzufügen',
+                            style: TextStyle(
+                                color: Color(0xFFFF6B00),
+                                fontSize: 13,
+                                letterSpacing: 1)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
               child: Container(

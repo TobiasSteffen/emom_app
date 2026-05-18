@@ -8,6 +8,7 @@ class PlanMinuteExactEditor extends StatelessWidget {
   final ValueChanged<int?> onRowSelected;
   final VoidCallback onChanged;
   final void Function(int oldIndex, int newIndex) onReorder;
+  final void Function(int index) onDelete;
 
   const PlanMinuteExactEditor({
     super.key,
@@ -16,6 +17,7 @@ class PlanMinuteExactEditor extends StatelessWidget {
     required this.onRowSelected,
     required this.onChanged,
     required this.onReorder,
+    required this.onDelete,
   });
 
   @override
@@ -29,16 +31,32 @@ class PlanMinuteExactEditor extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         child: child,
       ),
-      itemCount: 30,
+      itemCount: plan.intervals.length,
       itemBuilder: (_, i) => ReorderableDelayedDragStartListener(
         key: ValueKey(i),
         index: i,
-        child: PlanMinuteRow(
-          index: i,
-          plan: plan,
-          isSelected: selectedRow == i,
-          onSelect: () => onRowSelected(selectedRow == i ? null : i),
-          onChanged: onChanged,
+        child: Dismissible(
+          key: ValueKey('dismiss_$i'),
+          direction: DismissDirection.startToEnd,
+          confirmDismiss: (_) async =>
+              plan.intervals.length > TrainingPlan.minIntervals,
+          onDismissed: (_) => onDelete(i),
+          background: Container(
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.only(left: 20),
+            decoration: BoxDecoration(
+              color: Colors.red.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+          ),
+          child: PlanMinuteRow(
+            index: i,
+            plan: plan,
+            isSelected: selectedRow == i,
+            onSelect: () => onRowSelected(selectedRow == i ? null : i),
+            onChanged: onChanged,
+          ),
         ),
       ),
       onReorder: onReorder,
