@@ -36,7 +36,7 @@ class PlanMinuteExactEditor extends StatelessWidget {
         key: ValueKey(i),
         index: i,
         child: Dismissible(
-          key: ValueKey('dismiss_$i'),
+          key: ValueKey(identityHashCode(plan.intervals[i])),
           direction: DismissDirection.startToEnd,
           confirmDismiss: (_) async =>
               plan.intervals.length > TrainingPlan.minIntervals,
