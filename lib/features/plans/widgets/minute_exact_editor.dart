@@ -55,7 +55,7 @@ class PlanMinuteExactEditor extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('${plan.totalReps} Reps',
+                  Text('${plan.totalReps} Wdh.',
                       style: const TextStyle(
                           fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white38)),
                   Text(_formatDuration(plan.totalDurationSeconds),

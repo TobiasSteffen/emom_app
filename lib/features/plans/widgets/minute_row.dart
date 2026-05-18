@@ -412,7 +412,7 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
                       style: const TextStyle(
                           fontSize: 11, color: Colors.white38)),
                   const SizedBox(width: 6),
-                  Text('${iv.reps}R',
+                  Text('${iv.reps}W',
                       style: const TextStyle(
                           fontSize: 12, color: Colors.white38)),
                   const SizedBox(width: 6),
