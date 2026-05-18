@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 enum Equipment { kb16, kb20, kb24, sm8, sm12, pb0, pb2_5, pb5, pb7_5, pb10 }
 
-enum Exercise { swingBeidarmig, swingEinarmig, snatch, pushPress, mace360, myotatischerCrunch }
+enum Exercise { swingBeidarmig, swingEinarmig, snatch, pushPress, mace360, myotatischerCrunch, schulterHeben }
 
 extension EquipmentX on Equipment {
   bool get isKettlebell =>
@@ -64,7 +64,7 @@ extension EquipmentX on Equipment {
   List<Exercise> get validExercises => switch (this) {
     Equipment.kb16 || Equipment.kb20 || Equipment.kb24 =>
         [Exercise.swingBeidarmig, Exercise.swingEinarmig, Exercise.snatch, Exercise.pushPress],
-    Equipment.sm8  || Equipment.sm12 => [Exercise.mace360],
+    Equipment.sm8  || Equipment.sm12 => [Exercise.mace360, Exercise.schulterHeben],
     Equipment.pb0  || Equipment.pb2_5 || Equipment.pb5 ||
     Equipment.pb7_5 || Equipment.pb10 => [Exercise.myotatischerCrunch],
   };
@@ -74,7 +74,9 @@ extension ExerciseX on Exercise {
   bool get isOneArm =>
       this == Exercise.swingEinarmig ||
       this == Exercise.snatch ||
-      this == Exercise.pushPress;
+      this == Exercise.pushPress ||
+      this == Exercise.mace360 ||
+      this == Exercise.schulterHeben;
 
   String get label {
     switch (this) {
@@ -84,6 +86,7 @@ extension ExerciseX on Exercise {
       case Exercise.pushPress:          return 'Push Press';
       case Exercise.mace360:            return '360s';
       case Exercise.myotatischerCrunch: return 'Myotatischer Crunch';
+      case Exercise.schulterHeben:      return 'Schulterheben';
     }
   }
 }

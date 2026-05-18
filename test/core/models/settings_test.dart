@@ -33,14 +33,15 @@ void main() {
       expect(Equipment.sm12.defaultExercise, Exercise.mace360);
     });
 
-    test('validExercises: KB has 4 exercises; SM has 1', () {
+    test('validExercises: KB has 4 exercises; SM has 2', () {
       expect(Equipment.kb20.validExercises, [
         Exercise.swingBeidarmig,
         Exercise.swingEinarmig,
         Exercise.snatch,
         Exercise.pushPress,
       ]);
-      expect(Equipment.sm8.validExercises, [Exercise.mace360]);
+      expect(Equipment.sm8.validExercises, [Exercise.mace360, Exercise.schulterHeben]);
+      expect(Equipment.sm12.validExercises, [Exercise.mace360, Exercise.schulterHeben]);
     });
 
     test('isPezziball: pb0/pb2_5/pb5/pb7_5/pb10 → true; KB/SM → false', () {
@@ -97,12 +98,17 @@ void main() {
       expect(Exercise.myotatischerCrunch.label, 'Myotatischer Crunch');
     });
 
-    test('isOneArm: swingEinarmig/snatch/pushPress → true; swingBeidarmig/mace360/myotatischerCrunch → false', () {
+    test('label: schulterHeben returns Schulterheben', () {
+      expect(Exercise.schulterHeben.label, 'Schulterheben');
+    });
+
+    test('isOneArm: swingEinarmig/snatch/pushPress/mace360/schulterHeben → true; swingBeidarmig/myotatischerCrunch → false', () {
       expect(Exercise.swingEinarmig.isOneArm, isTrue);
       expect(Exercise.snatch.isOneArm, isTrue);
       expect(Exercise.pushPress.isOneArm, isTrue);
+      expect(Exercise.mace360.isOneArm, isTrue);
+      expect(Exercise.schulterHeben.isOneArm, isTrue);
       expect(Exercise.swingBeidarmig.isOneArm, isFalse);
-      expect(Exercise.mace360.isOneArm, isFalse);
       expect(Exercise.myotatischerCrunch.isOneArm, isFalse);
     });
   });
