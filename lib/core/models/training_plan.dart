@@ -77,15 +77,18 @@ class IntervalConfig {
 }
 
 class TrainingPlan {
+  static const int minIntervals = 5;
+  static const int maxIntervals = 30;
+
   final String id;
   String name;
-  List<IntervalConfig> intervals; // immer genau 30 Einträge
+  List<IntervalConfig> intervals;
 
   TrainingPlan({
     required this.id,
     required this.name,
     required this.intervals,
-  }) : assert(intervals.length == 30);
+  });
 
   int get totalReps => intervals.fold(0, (s, iv) => s + iv.reps);
   int get totalDurationSeconds => intervals.fold(0, (s, iv) => s + iv.durationSeconds);
