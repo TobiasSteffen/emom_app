@@ -274,10 +274,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
           if (state.currentMinute < state.totalMinutes - 1) ...[
             const SizedBox(height: 16),
             NextMinutePreview(
-              nextReps: state.intervals[state.currentMinute + 1].isPause
-                  ? 0
-                  : state.intervals[state.currentMinute + 1].reps,
-              nextIsPause: state.intervals[state.currentMinute + 1].isPause,
+              interval: state.intervals[state.currentMinute + 1],
             ),
           ],
           const Spacer(),
