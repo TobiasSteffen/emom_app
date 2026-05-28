@@ -77,7 +77,7 @@ class IntervalConfig {
 }
 
 class TrainingPlan {
-  static const int minIntervals = 5;
+  static const int minIntervals = 3;
   static const int maxIntervals = 30;
 
   final String id;
