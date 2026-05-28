@@ -2,7 +2,7 @@
 
 ## Übersicht
 
-Die **Kettlebell EMOM App** ist eine Flutter-basierte Trainings-Timer-App für Android. Sie führt den Nutzer durch ein 30-minütiges EMOM-Protokoll (Every Minute On the Minute) mit Kettlebell Swings oder Steel Mace 360s – das Trainingsgerät ist in den Einstellungen wählbar.
+Die **Kettlebell EMOM App** ist eine Flutter-basierte Trainings-Timer-App für Android. Sie führt den Nutzer durch ein 30-minütiges EMOM-Protokoll (Every Minute On the Minute). Pro Intervall ist ein Sportgerät wählbar: **Kettlebell** (16/20/24 kg), **Steel Mace** (8/12 kg) oder **Pezziball** (ohne Gewicht / +2,5 / +5 / +7,5 / +10 kg). Bei einarmigen Kettlebell-Übungen (Swing einarmig, Snatch, Push Press) ist zusätzlich die Seite (Links/Rechts) pro Intervall konfigurierbar. Einzelne Intervalle können als **Pause** markiert werden — dann entfällt die Gerät-/Übungs-/Reps-Konfiguration; der Countdown läuft, aber keine Reps werden gezählt.
 
 ---
 
@@ -27,7 +27,7 @@ Reps und Dauer sind vollständig konfigurierbar (phasenbasiert oder minutengenau
 - **EMOM-Timer**: Countdown je Intervall (konfigurierbare Dauer, Standard 60 s)
 - **Rep-Anzeige**: Aktuelle Wiederholungszahl wird groß angezeigt, begleitet vom Icon des gewählten Sportgeräts
 - **Gesamtfortschritt**: Fortschrittsbalken zeigt Minute und absolvierte Wiederholungen
-- **Vorschau**: Nächste Minute mit Rep-Anzahl wird angezeigt
+- **Vorschau**: Nächste Minute wird kompakt angezeigt — Gerät-Icon, Gerätebezeichnung, Übung (inkl. Seite bei einarmigen Übungen), Reps und Dauer. Bei Pause-Intervallen: `PAUSE · Xs`. Nicht angezeigt nach dem letzten Intervall.
 - **Phasen-Anzeige**: Aktuelle Phase (Warm Up / Aufbau / Peak / Abbau / Cool Down) wird farblich hervorgehoben
 - **Haptic Feedback**: Vibration bei Intervallwechsel (konfigurierbar)
 - **Countdown-Warntöne**: In den letzten 5 Sekunden eines Intervalls erklingt jede Sekunde ein kurzer Warnton (konfigurierbar)
@@ -36,7 +36,10 @@ Reps und Dauer sind vollständig konfigurierbar (phasenbasiert oder minutengenau
 - **Reset**: Workout kann jederzeit neu gestartet werden
 - **Abschluss-Screen**: Zeigt Gesamtzahl der Wiederholungen nach Beendigung
 - **Config Screen**: Einstellungen erreichbar über Zahnrad-Icon oben rechts oder Wischgeste nach links auf dem Hauptscreen
-- **Sportgerät-Auswahl**: Kettlebell (Swings) oder Steel Mace (360s) – beeinflusst Übungsbezeichnung in der gesamten UI
+- **Sportgerät-Auswahl**: Kettlebell (16/20/24 kg), Steel Mace (8/12 kg) oder Pezziball (0–10 kg); beeinflusst Übungsbezeichnung in der gesamten UI
+- **Übungs-Auswahl**: Kettlebell → Swing beidarmig / Swing einarmig / Snatch / Push Press; Steel Mace → 360s; Pezziball → Myotatischer Crunch
+- **Seite-Auswahl**: Bei einarmigen Kettlebell-Übungen (Swing einarmig, Snatch, Push Press) ist die Seite (Links/Rechts) pro Intervall konfigurierbar
+- **Pause-Intervall**: Einzelne Intervalle können als „Pause" markiert werden — kein Gerät, keine Übung, keine Reps; nur Countdown. Im Workout-Screen grau dargestellt mit „PAUSE"-Label statt Reps
 - **Editierbarer Workout-Plan**: Wiederholungen und Intervalldauer je Intervall konfigurierbar (phasenbasiert oder minutengenau)
 - **Bildschirm-Wachhalten**: Die App verhindert, dass der Bildschirm während eines laufenden Workouts in den Ruhezustand geht (Wake Lock via `wakelock_plus`). Der Wake Lock wird beim Starten aktiviert (`_start()`), beim Pausieren (`_pause()`) und beim Beenden des Workouts deaktiviert.
 - **Trainingshistorie**: Vergangene Workouts werden automatisch gespeichert und sind über ein History-Icon im Hauptscreen abrufbar
@@ -52,6 +55,8 @@ Reps und Dauer sind vollständig konfigurierbar (phasenbasiert oder minutengenau
   - 🟢 Grün `#4CAF50` – Warm Up & Cool Down
   - 🟠 Orange `#FF6B00` – Aufbau & Abbau
   - 🔴 Rot `#FF0000` – Peak
+- **Pause-Intervall-Farbe**: Grau `Colors.white24` — ersetzt die Phasenfarbe in allen Anzeigen (Phasenpunkt, Rep-Card, Fortschrittsbalken) wenn das aktive Intervall eine Pause ist
+- **Pause-Toggle-Button** (Plan-Editor): Einzelner Button rechts oben in der aufgeklappten Zeile. Aktiv (Pause): blauer Hintergrund `#1565C0`, weißer fetter Text. Inaktiv: dunkler Hintergrund `#222222`, `Colors.white12`-Border, gedimmter Text `Colors.white38`. Ein-/Ausblenden des Gerät/Übung/Reps-Formulars mit `AnimatedCrossFade` (220 ms, fade + Höhenübergang simultan).
 - **Puls-Animation** bei Intervallwechsel (kurze Scale-Animation auf der Rep-Card)
 - **Zwei Fortschrittsbalken**: Gesamt-Workout und aktueller Minuten-Countdown
 - **Zahnrad-Icon** (`Icons.settings`) oben rechts öffnet den Config Screen
@@ -66,6 +71,7 @@ Reps und Dauer sind vollständig konfigurierbar (phasenbasiert oder minutengenau
 | Framework | Flutter |
 | Sprache | Dart |
 | Zielplattform | Android |
+| State Management | Riverpod 2.x (`flutter_riverpod`, `riverpod_annotation`, Code-Generierung via `riverpod_generator`) |
 | Deployment | ADB over WiFi |
 
 ### Dependencies
@@ -77,12 +83,16 @@ Reps und Dauer sind vollständig konfigurierbar (phasenbasiert oder minutengenau
 | `flutter/gestures` | (built-in) | `DragStartBehavior` für sofortige Swipe-Erkennung |
 | `flutter/services` | (built-in) | `SystemSound` als Fallback |
 | `shared_preferences` | ^2.0.0 | Persistente Speicherung der Einstellungen |
+| `flutter_riverpod` | ^2.6.1 | State Management (Provider, Notifier) |
+| `riverpod_annotation` | ^2.3.5 | Annotationen für Code-Generierung |
 | `flutter_launcher_icons` | ^0.14.0 | Generierung des App-Icons für alle Android-Auflösungen (dev) |
 | `file_picker` | ^8.0.0 | Nativer Dateiauswahl-Dialog für den Import eigener Sounddateien |
 | `path_provider` | ^2.0.0 | Zugriff auf das app-interne Dokumentenverzeichnis |
 | `wakelock_plus` | ^1.0.0 | Bildschirm-Wachhalten während des Workouts |
 | `volume_controller` | ^2.0.0 | Medien-Lautstärke auf den konfigurierten Zielwert erhöhen (nur wenn aktuell niedriger); wird nicht wiederhergestellt |
 | `intl` | ^0.20.2 | Lokalisierte Datumsformatierung (Deutsch) für die Trainingshistorie |
+| `riverpod_generator` | ^2.4.3 | Code-Generierung für Riverpod-Notifier (dev) |
+| `build_runner` | ^2.4.9 | Dart-Code-Generierung (dev) |
 
 ### Icon-Generierung
 
@@ -108,7 +118,7 @@ dart run flutter_launcher_icons
 
 #### In-App-Icons
 
-Die Icons `kettlebell.png` und `steelmace.png` (256×256, transparenter Hintergrund) sowie `icon.png` (1024×1024, dunkler Hintergrund) werden per Python-Skript programmatisch als PNG generiert. Quellskript: `docs/generate_icons.py`. Abhängigkeiten: nur Python-Stdlib (`zlib`, `struct`, `math`, `os`).
+Die Icons `kettlebell.png`, `steelmace.png` und `pezziball.png` (256×256, transparenter Hintergrund) sowie `icon.png` (1024×1024, dunkler Hintergrund) werden per Python-Skript programmatisch als PNG generiert. Quellskript: `docs/generate_icons.py`. Abhängigkeiten: nur Python-Stdlib (`zlib`, `struct`, `math`, `os`).
 
 #### Alarm-Sounds
 
@@ -143,47 +153,136 @@ Das Skript überschreibt `alarm.wav` nicht automatisch; zum Neuerzeugen muss der
 ```
 emom_app/
 ├── lib/
-│   ├── main.dart             # App-Einstieg, WorkoutScreen, gesamte Trainingslogik und UI
-│   ├── config_screen.dart    # Einstellungsseite (ConfigScreen, _MinuteRow, _SoundPickerDialog)
-│   ├── settings.dart         # AppSettings-Klasse, Persistierung via shared_preferences
-│   └── workout_history.dart  # IntervalRecord, WorkoutRecord, WorkoutHistory (Persistierung)
+│   ├── main.dart                    # App-Einstieg (runApp, ProviderScope)
+│   ├── app.dart                     # MaterialApp, PageView (WorkoutScreen / PlanLibraryScreen)
+│   ├── core/
+│   │   ├── models/
+│   │   │   ├── settings.dart        # AppSettings, Equipment/Exercise-Enums, Persistierung
+│   │   │   ├── training_plan.dart   # TrainingPlan, IntervalConfig, planKey
+│   │   │   └── workout_history.dart # IntervalRecord, WorkoutRecord, WorkoutHistory
+│   │   └── providers/
+│   │       ├── plan_library_notifier.dart    # PlanLibraryNotifier (Riverpod)
+│   │       ├── plan_library_notifier.g.dart  # generated
+│   │       ├── settings_provider.dart        # SettingsNotifier (Riverpod)
+│   │       └── settings_provider.g.dart      # generated
+│   └── features/
+│       ├── config/
+│       │   ├── config_screen.dart            # Einstellungsseite (zwei Tabs)
+│       │   └── widgets/
+│       │       ├── feedback_tab.dart         # Tab „FEEDBACK" (Töne, Vibration, Lautstärke)
+│       │       └── sound_picker_dialog.dart  # Modaler Sound-Auswahl-Dialog
+│       ├── history/
+│       │   ├── history_notifier.dart         # HistoryNotifier (Riverpod)
+│       │   ├── history_notifier.g.dart       # generated
+│       │   ├── history_sheet.dart            # Modal Bottom Sheet – Verlauf-Übersicht
+│       │   └── history_detail_sheet.dart     # Modal Bottom Sheet – Verlauf-Detail
+│       ├── plans/
+│       │   ├── plan_library_screen.dart      # Seite 1 im PageView; Plan-Liste & Navigation
+│       │   ├── plan_editor_screen.dart       # Plan-Editor (Tabs: Phasenbasiert / Minuten-genau)
+│       │   └── widgets/
+│       │       ├── minute_exact_editor.dart  # Liste der 30 Intervall-Zeilen
+│       │       └── minute_row.dart           # PlanMinuteRow (kompakt + editierbar)
+│       └── workout/
+│           ├── workout_notifier.dart         # WorkoutNotifier, WorkoutState (Riverpod)
+│           ├── workout_notifier.g.dart       # generated
+│           ├── workout_screen.dart           # Hauptscreen (Timer-UI)
+│           └── widgets/
+│               ├── confirmation_overlay.dart # Bestätigungs-Overlay nach Intervall-Ende
+│               ├── finished_screen.dart      # Abschluss-Screen
+│               ├── next_minute_preview.dart  # Vorschau nächste Minute
+│               ├── overall_progress.dart     # Gesamt-Fortschrittsbalken
+│               ├── plan_indicator.dart       # Phasen-Indikator
+│               ├── reps_card.dart            # Große Rep-Anzeige (inkl. Pause-Darstellung)
+│               ├── timer_display.dart        # Countdown-Anzeige
+│               └── workout_header.dart       # Header mit Icons
 ├── assets/
 │   ├── sounds/
-│   │   ├── bell.wav          # Alternativer Ton (auswählbar als Countdown-Sound)
-│   │   ├── tick.wav          # Standard-Warnton für die letzten 5 Sekunden (je Sekunde)
-│   │   ├── alarm.wav         # Wecker-Signal (880 Hz, scharf/durchdringend)
-│   │   └── alarm_low.wav     # Wecker-Signal, tiefere Variante (440 Hz, angenehmer)
+│   │   ├── bell.wav
+│   │   ├── tick.wav
+│   │   ├── alarm.wav
+│   │   └── alarm_low.wav
 │   └── icon/
-│       ├── icon.png          # Kettlebell-Icon (1024×1024, Quelle für flutter_launcher_icons)
-│       ├── kettlebell.png    # Kettlebell-Icon für Hauptscreen-Anzeige (256×256)
-│       └── steelmace.png     # Steel-Mace-Icon für Hauptscreen-Anzeige (256×256)
+│       ├── icon.png           # App-Icon (1024×1024)
+│       ├── kettlebell.png     # Kettlebell-Icon (256×256)
+│       ├── steelmace.png      # Steel-Mace-Icon (256×256)
+│       └── pezziball.png      # Pezziball-Icon (256×256)
 ├── docs/
-│   ├── emom_app_spezifikation.md  # Diese Datei
-│   ├── generate_sounds.py         # Erzeugt alarm_low.wav (440 Hz)
-│   └── generate_icons.py          # Erzeugt kettlebell.png, steelmace.png, icon.png
-├── android/                  # Android-spezifische Konfiguration
-├── pubspec.yaml              # Dependencies
-└── build/
-    └── app/outputs/
-        └── flutter-apk/      # Generierte APK
+│   ├── emom_app_spezifikation.md
+│   ├── generate_sounds.py
+│   └── generate_icons.py
+├── android/
+├── pubspec.yaml
+└── build/app/outputs/flutter-apk/
 ```
+
+---
+
+## Datenmodell: Training
+
+### `Equipment`-Enum (10 Varianten)
+
+| Wert | Label | Gruppe |
+|---|---|---|
+| `kb16` | Kettlebell 16kg | Kettlebell |
+| `kb20` | Kettlebell 20kg | Kettlebell |
+| `kb24` | Kettlebell 24kg | Kettlebell |
+| `sm8` | Steel Mace 8kg | Steel Mace |
+| `sm12` | Steel Mace 12kg | Steel Mace |
+| `pb0` | Pezziball | Pezziball |
+| `pb2_5` | Pezziball + 2,5kg | Pezziball |
+| `pb5` | Pezziball + 5kg | Pezziball |
+| `pb7_5` | Pezziball + 7,5kg | Pezziball |
+| `pb10` | Pezziball + 10kg | Pezziball |
+
+### `Exercise`-Enum (6 Varianten)
+
+| Wert | Label | Gültig für |
+|---|---|---|
+| `swingBeidarmig` | Swing beidarmig | Kettlebell |
+| `swingEinarmig` | Swing einarmig | Kettlebell (einarmig) |
+| `snatch` | Snatch | Kettlebell (einarmig) |
+| `pushPress` | Push Press | Kettlebell (einarmig) |
+| `mace360` | 360s | Steel Mace |
+| `myotatischerCrunch` | Myotatischer Crunch | Pezziball |
+
+Einarmige Übungen (`swingEinarmig`, `snatch`, `pushPress`) aktivieren die **Seite-Auswahl** (Links/Rechts) pro Intervall.
+
+### `TrainingPlan` – Konstanten
+
+| Konstante | Wert | Bedeutung |
+|---|---|---|
+| `minIntervals` | `3` | Mindestanzahl Intervalle; Löschen ist geblockt wenn nur noch 3 vorhanden |
+| `maxIntervals` | `30` | Maximalanzahl Intervalle; „Intervall hinzufügen"-Button verschwindet bei 30 |
+
+### `IntervalConfig` (Laufzeit-Modell, nicht direkt persistiert)
+
+| Feld | Typ | Beschreibung |
+|---|---|---|
+| `equipment` | `Equipment` | Gewähltes Sportgerät |
+| `exercise` | `Exercise` | Gewählte Übung |
+| `side` | `ExerciseSide?` | Seite (nur bei einarmigen Übungen) |
+| `reps` | `int` | Wiederholungen |
+| `durationSeconds` | `int` | Intervalldauer in Sekunden (min. 30) |
+| `isPause` | `bool` | Pause-Intervall (kein Gerät/Übung/Reps) |
+
+JSON-Kurzschlüssel: `e` (equipment index), `x` (exercise index), `s` (side index), `r` (reps), `d` (duration), `p` (1 wenn Pause, sonst weggelassen — rückwärtskompatibel).
 
 ---
 
 ## Workout-Logik
 
-Die Rep-Anzahl und Intervalldauer pro Minute werden beim App-Start sowie nach jeder Konfigurationsänderung als Listen berechnet (`buildPlan()`, `buildDurations()`) und zur Laufzeit nur noch indexiert.
+Die Trainingslogik ist in `WorkoutNotifier` (Riverpod `@riverpod`-Annotierung, Code-generiert) implementiert. Der `WorkoutState` enthält das aktive `TrainingPlan`-Objekt mit allen 30 `IntervalConfig`-Einträgen sowie Laufzeitvariablen (aktuelle Minute, Countdown, Status).
 
-Im **Phasen-Modus** (`PlanMode.phaseBased`) werden Reps und Dauer pro Phase konfiguriert. Warm Up, Peak und Cool Down Reps werden direkt eingegeben, Aufbau/Abbau automatisch interpoliert.
+Im **Phasen-Modus** werden Reps und Dauer pro Phase konfiguriert; Aufbau/Abbau-Reps werden linear interpoliert.
 
-Im **Minuten-Modus** (`PlanMode.minuteExact`) werden Reps, Dauer und Sportgerät direkt aus den 30 gespeicherten Wertepaaren geladen:
-
-```
-Reps:    [5,5,5,5,5, 6,7,8,9,10,11,12,13,14,15, 15,15,15,15,15, 14,13,12,11,10, 10,10,10,10,10]
-Sekunden:[60,60,...] (je Intervall individuell konfigurierbar, min. 30)
-```
+Im **Minuten-Modus** werden Reps, Dauer, Sportgerät, Übung, Seite und Pause-Flag direkt aus den 30 `IntervalConfig`-Einträgen geladen.
 
 Ein `Timer.periodic` mit 1-Sekunden-Intervall zählt den Countdown herunter.
+
+**Pause-Intervall-Logik:**
+- `WorkoutState.currentReps`: `0` wenn `isPause`, sonst `intervals[currentMinute].reps`
+- `WorkoutState.totalReps`: Summe aller nicht-Pause-Intervalle
+- `workoutLabelForMinute`: gibt `'Pause'` zurück wenn `isPause`
 
 ### Warntöne & Intervall-Abschluss
 
@@ -204,7 +303,7 @@ Es gibt **keinen** Ton bei der vollen Minute / beim Intervallwechsel. Die Töne 
 
 ## Navigation & Übergänge
 
-Hauptscreen und Config Screen sind als zwei Seiten eines `PageView` implementiert. Es gibt keine Navigator-Push/Pop-Navigation.
+Hauptscreen und Plan-Bibliothek sind als zwei Seiten eines `PageView` implementiert. Es gibt keine Navigator-Push/Pop-Navigation auf oberster Ebene.
 
 | Aspekt | Wert |
 |---|---|
@@ -213,19 +312,21 @@ Hauptscreen und Config Screen sind als zwei Seiten eines `PageView` implementier
 | Swipe-Erkennung | `DragStartBehavior.down` (kein Erkennungs-Delay) |
 | Übergangsanimation | `animateToPage`, 380 ms, `Curves.easeInOutCubic` |
 | Seite 0 | Hauptscreen (WorkoutScreen) |
-| Seite 1 | Config Screen |
+| Seite 1 | Plan-Bibliothek (PlanLibraryScreen) |
 
-**Navigationsauslöser Hauptscreen → Config:**
+**Navigationsauslöser Hauptscreen → Plan-Bibliothek:**
 - Wischgeste nach links
 - Tippen auf das Zahnrad-Icon oben rechts
 
-**Navigationsauslöser Config → Hauptscreen:**
+**Navigationsauslöser Plan-Bibliothek → Hauptscreen:**
 - Wischgeste nach rechts
 - Zurück-Pfeil oben links (speichert Einstellungen)
 
-**Verhalten beim Rückwechsel (Config → Hauptscreen):**
-- Einstellungen werden automatisch gespeichert (`settings.save()`)
-- War das Workout beim Öffnen des Config Screens aktiv und hat sich der Plan nicht geändert: Workout wird automatisch fortgesetzt
+**Plan-Editor** (`PlanEditorScreen`): Wird von der Plan-Bibliothek über Navigator.push geöffnet.
+
+**Verhalten beim Rückwechsel (Plan-Bibliothek → Hauptscreen):**
+- Einstellungen werden automatisch gespeichert
+- War das Workout beim Öffnen aktiv und hat sich der Plan nicht geändert: Workout wird automatisch fortgesetzt
 - Hat sich der Plan geändert: Bestätigungs-Dialog „Training zurücksetzen?" erscheint
 
 ---
@@ -250,7 +351,7 @@ Zwischen den Tabs kann per Tippen oder Wischgeste gewechselt werden.
 | Einstellung | Typ | Standardwert | Beschreibung |
 |---|---|---|---|
 | Plan-Modus | RadioButton | `phaseBased` | Umschalten zwischen Phasen-basiert und Minuten-genau |
-| Sportgerät | RadioButton | `kettlebell` | Nur im Phasen-Modus sichtbar; pro Minute im Minuten-Modus |
+| Sportgerät | RadioButton | `kb24` | Nur im Phasen-Modus sichtbar; pro Minute im Minuten-Modus |
 
 Der Plan-Modus wird persistiert und beim App-Start wiederhergestellt. Standard: `phaseBased`.
 
@@ -306,27 +407,44 @@ Standardwerte: Dauer `60` s, Warm Up `5`, Peak `15`, Cool Down `10` Reps.
 
 #### Modus 2: Minuten-genau
 
-30 Zeilen – je eine pro Intervall. Die Liste ist in einen äußeren `ScrollView` eingebettet (`shrinkWrap: true`, `NeverScrollableScrollPhysics`, `itemExtent: 42`).
+Variable Anzahl Intervalle (**min. 3, max. 30**), je eine Zeile pro Intervall. Standard beim Anlegen eines neuen Plans: 30 Intervalle.
 
-**Selektions-Modell:** Immer nur eine Zeile ist gleichzeitig editierbar. Tippen auf eine nicht-ausgewählte Zeile selektiert sie; Tippen auf die bereits ausgewählte Zeile de-selektiert sie. Der Inhalt der Zeile wechselt zwischen kompakter Anzeige (nicht ausgewählt) und erweiterter Editier-Ansicht (ausgewählt) — ohne Animations-Übergang.
+**Selektions-Modell:** Immer nur eine Zeile ist gleichzeitig editierbar. Tippen auf eine nicht-ausgewählte Zeile selektiert sie; Tippen auf die bereits ausgewählte Zeile de-selektiert sie. Der Inhalt der Zeile wechselt zwischen kompakter Anzeige und erweiterter Editier-Ansicht mit `AnimatedCrossFade` für das Gerät/Übung/Reps-Formular.
 
-**Nicht ausgewählte Zeile** (kompakt):
+**Nicht ausgewählte Zeile** (kompakt, normale Übung):
 ```
-[●] [Min X]  ···  [eq-icon 14 px]  [NR]  [Ns]
+[●] [Min X]  ···  [eq-icon 14px]  [Gerät]  [Übung]  [NR]  [Ns]
 ```
-Werte werden als reiner Text angezeigt, keine Buttons.
+
+**Nicht ausgewählte Zeile** (kompakt, Pause):
+```
+[●] [Min X]  ···  PAUSE  [Ns]
+```
+Der Phasenpunkt ist bei Pause-Intervallen grau (`Colors.white24`) statt farbig.
 
 **Ausgewählte Zeile** (editierbar):
-```
-[●] [Min X]  ···  [eq-dropdown]  R  [−][wert][+]  s  [−][wert][+]
-```
 
-- **Phasenpunkt**: Farbiger Kreis (6 px) gemäß Phase (Warm Up/Aufbau/Peak/Abbau/Cool Down)
-- **Sportart-Dropdown**: Zeigt das Icon des gewählten Geräts (16 px); öffnet beim Tippen ein Popup mit Kettlebell- und Steel-Mace-Option
-- **R-Stepper**: Reps, Minimalwert 1, Schrittweite 1
-- **S-Stepper**: Sekunden, Minimalwert 30, Schrittweite 5
+Oben rechts: **Pause-Toggle-Button** — blau wenn aktiv (`#1565C0`), gedimmt wenn inaktiv. Tippen aktiviert/deaktiviert das Pause-Flag. Beim Aktivieren werden offene Picker geschlossen und die Seite zurückgesetzt.
 
-**Fußzeile (GESAMT):** Unterhalb der Liste wird live die Summe aller Reps sowie die Gesamtdauer (formatiert als `Xm XXs`) angezeigt. Wird bei jeder Änderung sofort aktualisiert.
+Darunter (nur sichtbar wenn nicht Pause, animiert mit `AnimatedCrossFade` 220 ms):
+
+- **Gerät**: Aufklappbarer Abschnitt mit Gruppen-Auswahl. Kettlebell-Chips (16/20/24 kg), Steel-Mace-Chips (8/12 kg), Pezziball-Chips (ohne/+2,5/+5/+7,5/+10 kg) — je Gruppe mit Gruppen-Icon links.
+- **Übung**: Aufklappbarer Abschnitt; zeigt nur die für das gewählte Gerät gültigen Übungen als Chips.
+- **Seite** *(nur bei einarmigen Übungen)*: Links/Rechts-Chips.
+- **Wiederholungen**: Stepper (min. 1, Schrittweite 1).
+
+Immer sichtbar (unabhängig von Pause):
+- **Sekunden**: Stepper (min. 30, Schrittweite 5).
+
+**Drag-to-Reorder:** Intervalle können per Drag-and-Drop umsortiert werden. Langes Gedrückthalten einer Zeile startet den Drag-Modus (`ReorderableDelayedDragStartListener`). Beim Loslassen wird die neue Reihenfolge sofort übernommen. Die Selektion (`_selectedRow`) folgt der verschobenen Zeile automatisch.
+
+**Swipe-to-Delete:** Nach rechts swipen zeigt einen roten Hintergrund-Streifen mit Trash-Icon (`Icons.delete_outline`). Beim Loslassen wird das Intervall gelöscht — sofern danach noch mindestens 3 Intervalle verbleiben. Bei weniger als 3 verbleibenden Intervallen wird der Swipe geblockt (kein Löschen möglich).
+
+**Bestätigungsdialog bei aktivem Plan:** Ist der bearbeitete Plan der aktuell aktive Trainingsplan, erscheint vor dem Löschen ein `AlertDialog` mit den Optionen „Abbrechen" und „Löschen" (rot). Nur nach Bestätigung wird das Intervall entfernt. Bei nicht-aktivem Plan wird direkt gelöscht.
+
+**Intervall hinzufügen:** Unterhalb der Liste (oberhalb der Fußzeile) erscheint ein orangefarbener „Intervall hinzufügen"-Button, solange die Anzahl der Intervalle unter dem Maximum (30) liegt. Das neue Intervall ist eine Kopie des letzten vorhandenen Intervalls.
+
+**Fußzeile (GESAMT):** Unterhalb der Liste (bzw. des Add-Buttons) wird live die Summe aller Reps (Pause-Intervalle nicht mitgezählt) sowie die Gesamtdauer (formatiert als `Xm XXs`) angezeigt.
 
 ### Persistierung
 
@@ -342,19 +460,16 @@ Folgende Felder werden über `shared_preferences` gespeichert und beim App-Start
 | `volumeBoostLevel` | double | `1.0` |
 | `countdownSoundFile` | String | `tick.wav` |
 | `alarmSoundFile` | String | `alarm.wav` |
-| `equipment` | int (index) | `0` (kettlebell) |
+| `equipment` | int (index) | `2` (kb24) |
 | `warmUpReps` | int | `5` |
 | `peakReps` | int | `15` |
 | `coolDownReps` | int | `10` |
 | `phaseDurations` | JSON `List<int>` | `[60,60,60,60,60]` |
-| `customPlan` | JSON `List<int>` | Pyramiden-Defaultwerte |
-| `customDurations` | JSON `List<int>` | `[60,60,...×30]` |
-| `customEquipment` | JSON `List<int>` | `[0,0,...×30]` |
-
+| `customIntervals` | JSON `List<IntervalConfig>` | Pyramiden-Defaultwerte |
 
 ### Verhalten
 
-- Jede Einstellungsänderung im Config Screen wird beim Verlassen (Wischgeste oder Zurück-Pfeil) automatisch gespeichert
+- Jede Einstellungsänderung im Config Screen wird beim Verlassen automatisch gespeichert
 - Wenn sich der Workout-Plan geändert hat und das Workout aktiv war: Bestätigungs-Dialog
 - Der Config Screen öffnet bei jedem Besuch auf Tab 1 (WORKOUT-PLAN); der zuletzt gespeicherte Plan-Modus ist aktiv
 
@@ -372,9 +487,10 @@ Jedes gespeicherte Workout besteht aus einem `WorkoutRecord` mit einer Liste von
 |---|---|---|
 | `reps` | int | Wiederholungen dieses Intervalls |
 | `durationSeconds` | int | Geplante Dauer dieses Intervalls in Sekunden |
-| `equipment` | int | `0` = Kettlebell, `1` = Steel Mace |
+| `equipment` | `Equipment` | Gewähltes Sportgerät (voller 10-Varianten-Enum) |
+| `exercise` | `Exercise` | Gewählte Übung (Standard: `swingBeidarmig`) |
 
-JSON-Kurzschlüssel: `r`, `d`, `e`.
+JSON-Kurzschlüssel: `r`, `d`, `e` (Equipment-Index), `x` (Exercise-Index; weggelassen → 0 = swingBeidarmig, rückwärtskompatibel).
 
 **`WorkoutRecord`** (Felder):
 
@@ -393,17 +509,17 @@ Berechnete Getter (nicht gespeichert): `totalReps`, `totalDurationSeconds`, `ket
 - Schlüssel in `shared_preferences`: `workoutHistory`
 - Format: JSON-String, Array von `WorkoutRecord`-Objekten, neueste Einträge zuerst
 - Maximale Eintragsanzahl: **300**; bei Überschreitung wird der älteste Eintrag entfernt
-- Implementiert in `lib/workout_history.dart`, Klasse `WorkoutHistory` mit den statischen Methoden `load()` und `addOrUpdateRecord(record)`
+- Implementiert in `lib/core/models/workout_history.dart`, Klasse `WorkoutHistory` mit den statischen Methoden `load()` und `addOrUpdateRecord(record)`
 
 ### Speicherzeitpunkt
 
-Ein Workout wird **erstmals gespeichert, wenn das zweite Intervall abgeschlossen wurde** (d.h. der Timer des zweiten Intervalls auf 0 läuft; `_completedIntervals.length >= 2`). Nach jeder weiteren Intervall-Bestätigung sowie am Ende des letzten Intervalls wird der bestehende Eintrag (identifiziert über `timestamp`) aktualisiert. Ein abgebrochenes Workout mit nur einem abgeschlossenen Intervall wird nicht gespeichert.
+Ein Workout wird **erstmals gespeichert, wenn das zweite Intervall abgeschlossen wurde**. Nach jeder weiteren Intervall-Bestätigung sowie am Ende des letzten Intervalls wird der bestehende Eintrag (identifiziert über `timestamp`) aktualisiert. Ein abgebrochenes Workout mit nur einem abgeschlossenen Intervall wird nicht gespeichert.
 
-Der `timestamp` wird beim ersten Aufruf von `_start()` gesetzt (`_workoutStartTime ??= DateTime.now()`). Bei `_reset()` wird `_workoutStartTime` auf `null` und `_completedIntervals` auf leer zurückgesetzt.
+Der `timestamp` wird beim ersten Aufruf von `_start()` gesetzt. Bei `_reset()` wird der Timestamp zurückgesetzt.
 
 ### UI: Verlauf-Übersicht
 
-Öffnet sich als `DraggableScrollableSheet` (Modal Bottom Sheet) beim Tippen auf `Icons.history` im Hauptscreen-Header. Die Daten werden vor dem Öffnen des Sheets geladen (`WorkoutHistory.load()` wird `await`-ed, danach erst `showModalBottomSheet` aufgerufen).
+Öffnet sich als `DraggableScrollableSheet` (Modal Bottom Sheet) beim Tippen auf `Icons.history` im Hauptscreen-Header.
 
 Jeder Eintrag zeigt:
 ```
@@ -425,7 +541,7 @@ Pro Intervall-Zeile:
 ```
 [●]  Min X   [eq-icon 14px]   N Reps   ···   Xs
 ```
-- Farbiger Phasenpunkt (6 px) gemäß `_phaseColorForMinute(index)`
+- Farbiger Phasenpunkt (6 px) gemäß `phaseColorForMinute(index)`
 - Gerät-Icon 14 px, eingefärbt `Colors.white38`
 - Reps in Phasenfarbe, fett
 - Dauer rechts in `Colors.white24`
@@ -447,6 +563,10 @@ Kopfzeile der Detailansicht: Datum, `X/30 Intervalle`, Gesamtreps-Aufschlüsselu
 
 - **Mehrere Sportarten & Icons**: Neben Kettlebell und Steel Mace sollen weitere Sportarten hinzufügbar sein, jeweils mit eigenem Icon. In einem Plan können beliebig viele Sportarten gemischt auftreten (pro Intervall wählbar).
 
+- **Benutzerdefinierte Sportarten**: Der Nutzer soll eigene Sportgeräte anlegen können (Name, zugehörige Übungen, Icon). Diese erscheinen dann im Plan-Editor gleichwertig neben den eingebauten Geräten (Kettlebell, Steel Mace, Pezziball). Technische Grundvoraussetzung: `Equipment`-Enum muss zu einem dynamischen Datenmodell migriert werden, das zur Laufzeit erweiterbar ist und via JSON persistiert wird (SharedPreferences oder Datei). Der `IntervalConfig`-Typ muss auf das neue Modell umgestellt werden.
+  - **Icon-Auswahl**: Emoji-Picker als einfachste Offline-Variante (kein Netzwerk, keine Abhängigkeiten).
+  - **Icon-Generierung via KI** *(offen)*: Optional könnte beim Anlegen einer neuen Sportart ein SVG-Icon automatisch per Anfrage an die Claude API generiert werden (Prompt: Gerätename → SVG-Code → gerendert via `flutter_svg`). Erfordert einen Anthropic-API-Key, den der Nutzer einmalig in den App-Einstellungen hinterlegt. Kein Free-Tier — Kosten ca. $0.001–0.002 pro Anfrage (Haiku-Modell). Noch nicht geplant.
+
 - **Plan-Kommentare**: Einzelne Phasen oder Intervalle innerhalb eines Plans sollen mit Freitext-Kommentaren versehbar sein (z.B. Technikhinweise, Intensitätsvorgaben).
 
 - **Kalenderplanung**: Trainingspläne sollen an konkreten Tagen im Kalender geplant werden können. Pro geplantem Trainingstag sind Ernährungshinweise für den Tag vor und den Tag nach dem Training erfassbar und anzeigbar.
@@ -455,7 +575,30 @@ Kopfzeile der Detailansicht: Datum, `X/30 Intervalle`, Gesamtreps-Aufschlüsselu
 
 - **Onboarding-Wizard**: Beim ersten App-Start wird ein Wizard angezeigt, der die wichtigsten Funktionen erklärt: Trainingsplan auswählen/erstellen, Workout starten, Intervall bestätigen, Trainingshistorie. Der Wizard soll überspringbar sein und jederzeit in den Einstellungen erneut aufrufbar sein.
 
-- **Pause-Intervall**: Ein Intervall soll als "Pause" markierbar sein — kein Gerät, keine Übung, nur ein Countdown. Im Workout-Screen wird eine Pause anders dargestellt (z.B. graue Farbe, "PAUSE"-Label statt Reps-Anzeige). Im Plan-Editor ist Pause als eigene Option neben Gerät/Übung wählbar.
+- ~~**Pause-Intervall**: Ein Intervall soll als "Pause" markierbar sein~~ ✅ Umgesetzt: Intervalle können als Pause markiert werden (kein Gerät/Übung/Reps, nur Countdown). Im Workout-Screen grau dargestellt mit „PAUSE"-Label. Im Plan-Editor über blauen Toggle-Button oben rechts schaltbar, Ein-/Ausblenden des Formulars mit `AnimatedCrossFade`.
 
 - **Langfristige Architektur**: Mit wachsender Datenkomplexität (Kalender, Ernährung, mehrere Sportarten) ist eine Migration der Persistenzschicht auf eine lokale SQLite-Datenbank (`drift`-Paket) zu evaluieren.
 
+- **Garmin-Integration** *(Voraussetzung: Garmin Watch kaufen — Garmin ist einer der offensten Anbieter)*:
+
+  Garmin-Apps werden in **Monkey C** (JS-ähnlich) über die **Connect IQ**-Plattform entwickelt (VS Code + Monkey C Extension + Connect IQ SDK + Java 8). Flutter kann nicht portiert werden, aber Flutter und Monkey C können über Bluetooth kommunizieren.
+
+  **Kommunikations-Architektur (Flutter ↔ Uhr):**
+  ```
+  Flutter App (Phone)
+       ↕  Platform Channel (Dart ↔ Kotlin/Java)
+  Garmin Mobile SDK (nativ)
+       ↕  Bluetooth
+  Monkey C App (Uhr)
+  ```
+  Fertiger Flutter-Wrapper: `watch_connectivity_garmin` (pub.dev). Beide Richtungen funktionieren: Phone startet Training → Uhr zeigt es an; Uhr misst Herzrate → Flutter zeigt Statistiken.
+
+  **Weg 1 – Live-Daten direkt von der Uhr (Connect IQ):** Monkey C sendet per Bluetooth an Flutter: Herzrate, HRV, GPS/Pace, Kalorien, Schritte, SpO2, Stress-Level, Schlaf (je nach Modell).
+
+  **Weg 2 – Garmin Health API / Connect API** *(empfohlen für Trainingshistorie)*:
+  ```
+  Garmin Uhr → (automatische Sync) → Garmin Connect (Cloud) → (Health API) → Flutter App
+  ```
+  Verfügbare Daten: Aktivitäts-Zusammenfassungen, HRV, VO2max, Schlafanalyse, Body Battery, Langzeit-Trends.
+
+  API-Zugang: Für persönliche Nutzung (OAuth mit eigenem Garmin-Account) problemlos. Für öffentliche App mit vielen Nutzern: offizielle Garmin-Partnerschaft nötig. Da die App aktuell nur für den persönlichen Einsatz gedacht ist → Weg 2 direkt zugänglich.
