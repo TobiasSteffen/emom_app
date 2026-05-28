@@ -9,6 +9,7 @@ class PlanMinuteExactEditor extends StatelessWidget {
   final VoidCallback onChanged;
   final void Function(int oldIndex, int newIndex) onReorder;
   final void Function(int index) onDelete;
+  final Future<bool> Function(int index)? onConfirmDelete;
 
   const PlanMinuteExactEditor({
     super.key,
@@ -18,6 +19,7 @@ class PlanMinuteExactEditor extends StatelessWidget {
     required this.onChanged,
     required this.onReorder,
     required this.onDelete,
+    this.onConfirmDelete,
   });
 
   @override
@@ -38,8 +40,11 @@ class PlanMinuteExactEditor extends StatelessWidget {
         child: Dismissible(
           key: ValueKey(identityHashCode(plan.intervals[i])),
           direction: DismissDirection.startToEnd,
-          confirmDismiss: (_) async =>
-              plan.intervals.length > TrainingPlan.minIntervals,
+          confirmDismiss: (_) async {
+            if (plan.intervals.length <= TrainingPlan.minIntervals) return false;
+            if (onConfirmDelete != null) return await onConfirmDelete!(i);
+            return true;
+          },
           onDismissed: (_) => onDelete(i),
           background: Container(
             alignment: Alignment.centerLeft,
