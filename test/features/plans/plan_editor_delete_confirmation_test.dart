@@ -6,9 +6,9 @@ import 'package:emom_app/core/models/training_plan.dart';
 import 'package:emom_app/core/providers/plan_library_notifier.dart';
 import 'package:emom_app/features/plans/plan_editor_screen.dart';
 
-// Must be > TrainingPlan.minIntervals (5) so deletion is allowed
-List<IntervalConfig> _sixIntervals() => List.generate(
-      6,
+// Must be > TrainingPlan.minIntervals (3) so deletion is allowed
+List<IntervalConfig> _fourIntervals() => List.generate(
+      4,
       (i) => IntervalConfig(
         equipment: Equipment.kb16,
         exercise: Exercise.swingBeidarmig,
@@ -25,7 +25,7 @@ Future<void> _pumpEditor(
   final plan = TrainingPlan(
     id: planId,
     name: 'Test',
-    intervals: _sixIntervals(),
+    intervals: _fourIntervals(),
   );
   final library = PlanLibrary(
     plans: [plan],
