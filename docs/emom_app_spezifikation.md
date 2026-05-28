@@ -157,15 +157,23 @@ emom_app/
 │   ├── app.dart                     # MaterialApp, PageView (WorkoutScreen / PlanLibraryScreen)
 │   ├── core/
 │   │   ├── models/
+│   │   │   ├── app_page.dart        # AppPage enum: calendar(0), workout(1), plans(2)
 │   │   │   ├── settings.dart        # AppSettings, Equipment/Exercise-Enums, Persistierung
-│   │   │   ├── training_plan.dart   # TrainingPlan, IntervalConfig, planKey
-│   │   │   └── workout_history.dart # IntervalRecord, WorkoutRecord, WorkoutHistory
+│   │   │   ├── training_plan.dart   # TrainingPlan, IntervalConfig, PlanLibrary, PlanLibraryStorage
+│   │   │   ├── workout_history.dart # IntervalRecord, WorkoutRecord, WorkoutHistory
+│   │   │   └── calendar_entry.dart  # CalendarEntry, CalendarStorage
 │   │   └── providers/
 │   │       ├── plan_library_notifier.dart    # PlanLibraryNotifier (Riverpod)
 │   │       ├── plan_library_notifier.g.dart  # generated
 │   │       ├── settings_provider.dart        # SettingsNotifier (Riverpod)
-│   │       └── settings_provider.g.dart      # generated
+│   │       ├── settings_provider.g.dart      # generated
+│   │       ├── calendar_notifier.dart        # CalendarNotifier (Riverpod)
+│   │       └── calendar_notifier.g.dart      # generated
 │   └── features/
+│       ├── calendar/
+│       │   ├── calendar_screen.dart          # Kalender-Monatsansicht (Seite 0 im PageView)
+│       │   └── widgets/
+│       │       └── day_editor_sheet.dart     # Modal Bottom Sheet – Plan & Ernährung pro Tag
 │       ├── config/
 │       │   ├── config_screen.dart            # Einstellungsseite (zwei Tabs)
 │       │   └── widgets/
@@ -303,7 +311,7 @@ Es gibt **keinen** Ton bei der vollen Minute / beim Intervallwechsel. Die Töne 
 
 ## Navigation & Übergänge
 
-Hauptscreen und Plan-Bibliothek sind als zwei Seiten eines `PageView` implementiert. Es gibt keine Navigator-Push/Pop-Navigation auf oberster Ebene.
+Kalender, Hauptscreen und Plan-Bibliothek sind als **drei Seiten eines `PageView`** implementiert (`AppPage`-Enum: `calendar(0)`, `workout(1)`, `plans(2)`). Der initiale Start erfolgt auf Seite 1 (Workout). Config Screen und Plan-Editor verwenden `Navigator.push`.
 
 | Aspekt | Wert |
 |---|---|
@@ -311,23 +319,37 @@ Hauptscreen und Plan-Bibliothek sind als zwei Seiten eines `PageView` implementi
 | Physik | `BouncingScrollPhysics(parent: PageScrollPhysics())` |
 | Swipe-Erkennung | `DragStartBehavior.down` (kein Erkennungs-Delay) |
 | Übergangsanimation | `animateToPage`, 380 ms, `Curves.easeInOutCubic` |
-| Seite 0 | Hauptscreen (WorkoutScreen) |
-| Seite 1 | Plan-Bibliothek (PlanLibraryScreen) |
+| Seite 0 | Kalender (`CalendarScreen`) |
+| Seite 1 | Hauptscreen / Workout (`WorkoutScreen`) |
+| Seite 2 | Plan-Bibliothek (`PlanLibraryScreen`) |
+
+**Navigationsauslöser Hauptscreen → Kalender:**
+- Wischgeste nach rechts
+- Tippen auf den Kalender-Chevron links in der AppBar des Kalender-Screens (Rückrichtung)
 
 **Navigationsauslöser Hauptscreen → Plan-Bibliothek:**
 - Wischgeste nach links
-- Tippen auf das Zahnrad-Icon oben rechts
+- Tippen auf den Plan-Indikator (Planname) im Workout-Screen
 
 **Navigationsauslöser Plan-Bibliothek → Hauptscreen:**
 - Wischgeste nach rechts
 - Zurück-Pfeil oben links (speichert Einstellungen)
 
-**Plan-Editor** (`PlanEditorScreen`): Wird von der Plan-Bibliothek über Navigator.push geöffnet.
+**Navigationsauslöser Kalender → Hauptscreen:**
+- Wischgeste nach links
+- Tippen auf `Icons.chevron_right` (oben links im Kalender-Screen)
+
+**Config Screen**: Wird über `Navigator.push` geöffnet (nicht Teil des PageView). Erreichbar über `Icons.settings` oben rechts im Workout-Header.
+
+**Plan-Editor** (`PlanEditorScreen`): Wird von der Plan-Bibliothek über `Navigator.push` geöffnet.
 
 **Verhalten beim Rückwechsel (Plan-Bibliothek → Hauptscreen):**
 - Einstellungen werden automatisch gespeichert
 - War das Workout beim Öffnen aktiv und hat sich der Plan nicht geändert: Workout wird automatisch fortgesetzt
 - Hat sich der Plan geändert: Bestätigungs-Dialog „Training zurücksetzen?" erscheint
+
+**Verhalten beim Wechsel zu Kalender und zurück:**
+- Wenn das Workout aktiv war, wird es beim Öffnen des Kalenders pausiert und beim Zurückkehren automatisch fortgesetzt
 
 ---
 
@@ -472,6 +494,55 @@ Folgende Felder werden über `shared_preferences` gespeichert und beim App-Start
 - Jede Einstellungsänderung im Config Screen wird beim Verlassen automatisch gespeichert
 - Wenn sich der Workout-Plan geändert hat und das Workout aktiv war: Bestätigungs-Dialog
 - Der Config Screen öffnet bei jedem Besuch auf Tab 1 (WORKOUT-PLAN); der zuletzt gespeicherte Plan-Modus ist aktiv
+
+---
+
+## Kalenderplanung
+
+### Übersicht
+
+Der Kalender-Screen (`CalendarScreen`, Seite 0 im PageView) zeigt eine Monatsansicht. Pro Tag kann ein **Trainingsplan** sowie optionale **Ernährungsnotizen** für den Vortag und Nachtag hinterlegt werden.
+
+### Kalender-Grid
+
+- **Spalten**: Mo–So (7 Spalten), Wochentag-Kürzel oben
+- **Navigation**: `‹` / `›`-Buttons wechseln den angezeigten Monat; Titel zeigt „Monat Jahr" (Deutsch)
+- **Heute**: orange Rahmen (`#FF6B00`, 1 px) um die aktuelle Tageszelle
+- **Vergangene Tage**: gedimmter Text (`Colors.white24`)
+- **Eintrags-Indikator**: orangefarbener Punkt (4 px, `#FF6B00`) unterhalb der Tageszahl, wenn ein Eintrag vorhanden ist
+- Tippen auf einen Tag öffnet den `DayEditorSheet`
+
+### DayEditorSheet
+
+Öffnet sich als Modal Bottom Sheet beim Tippen auf einen Kalendertag.
+
+**Felder:**
+
+| Feld | Typ | Pflicht | Beschreibung |
+|---|---|---|---|
+| Trainingsplan | Chip-Auswahl | Ja (Pflicht zum Speichern) | Auswahl aus allen vorhandenen Plänen der Plan-Bibliothek |
+| Ernährung Vortag | Freitext (2 Zeilen) | Nein | Notizen zur Ernährung am Tag vor dem Training |
+| Ernährung Nachtag | Freitext (2 Zeilen) | Nein | Notizen zur Ernährung am Tag nach dem Training |
+
+**Buttons:**
+- **Speichern**: Orangefarbener Button (aktiv wenn Plan ausgewählt, sonst gedimmt)
+- **Eintrag entfernen**: Nur sichtbar wenn bereits ein Eintrag für den Tag existiert; löscht den Eintrag
+
+### Datenmodell: `CalendarEntry`
+
+| Feld | Typ | JSON-Schlüssel | Beschreibung |
+|---|---|---|---|
+| `date` | `DateTime` | `d` (ISO: `YYYY-MM-DD`) | Datum des Eintrags |
+| `planId` | `String` | `p` | ID des zugeordneten Trainingsplans |
+| `preNutrition` | `String` | `pre` (nur wenn nicht leer) | Ernährungsnotiz Vortag |
+| `postNutrition` | `String` | `post` (nur wenn nicht leer) | Ernährungsnotiz Nachtag |
+
+### Persistierung
+
+- Schlüssel in `shared_preferences`: `calendarEntries`
+- Format: JSON-Array von `CalendarEntry`-Objekten
+- Implementiert in `lib/core/models/calendar_entry.dart` (`CalendarStorage.load()` / `CalendarStorage.save()`)
+- State Management: `CalendarNotifier` (Riverpod `@Riverpod(keepAlive: true)`)
 
 ---
 
