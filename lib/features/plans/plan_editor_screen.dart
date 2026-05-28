@@ -75,6 +75,46 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
     });
   }
 
+  Future<bool> _confirmDelete(int index) async {
+    final lib = await ref.read(planLibraryNotifierProvider.future);
+    if (lib.activePlanId != _plan.id) return true;
+    if (!mounted) return false;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text(
+          'Intervall löschen',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'Dieser Plan ist gerade aktiv. Trotzdem löschen?',
+          style: TextStyle(color: Colors.white60),
+        ),
+        actions: [
+          TextButton(
+            style: TextButton.styleFrom(
+              splashFactory: NoSplash.splashFactory,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Abbrechen',
+                style: TextStyle(color: Colors.white38)),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              splashFactory: NoSplash.splashFactory,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Löschen',
+                style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -112,6 +152,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
                 onChanged: () => setState(() {}),
                 onReorder: _onReorder,
                 onDelete: _onDelete,
+                onConfirmDelete: _confirmDelete,
               ),
             ),
             if (_plan.intervals.length < TrainingPlan.maxIntervals)
