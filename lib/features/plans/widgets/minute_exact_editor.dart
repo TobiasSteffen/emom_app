@@ -35,7 +35,7 @@ class PlanMinuteExactEditor extends StatelessWidget {
       ),
       itemCount: plan.intervals.length,
       itemBuilder: (_, i) => ReorderableDelayedDragStartListener(
-        key: ValueKey(i),
+        key: ValueKey(identityHashCode(plan.intervals[i])),
         index: i,
         child: _SwipeToRevealRow(
           rowKey: ValueKey('swipe_row_$i'),
@@ -122,9 +122,12 @@ class _SwipeToRevealRowState extends State<_SwipeToRevealRow>
   Future<void> _handleDeleteTap() async {
     if (_busy) return;
     _busy = true;
-    await widget.onDeleteTap();
-    _busy = false;
-    if (mounted) _ctrl.animateTo(0.0);
+    try {
+      await widget.onDeleteTap();
+    } finally {
+      _busy = false;
+      if (mounted) _ctrl.animateTo(0.0);
+    }
   }
 
   @override
@@ -133,6 +136,9 @@ class _SwipeToRevealRowState extends State<_SwipeToRevealRow>
       key: widget.rowKey,
       onHorizontalDragUpdate: _onDragUpdate,
       onHorizontalDragEnd: _onDragEnd,
+      onHorizontalDragCancel: () {
+        if (_ctrl.value != 0.0) _ctrl.animateTo(0.0);
+      },
       child: AnimatedBuilder(
         animation: _ctrl,
         builder: (_, child) {
