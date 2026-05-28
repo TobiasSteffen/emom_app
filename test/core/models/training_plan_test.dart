@@ -230,8 +230,8 @@ void main() {
       expect(restored.intervals[0].exercise, Exercise.swingBeidarmig);
     });
 
-    test('minIntervals is 5', () {
-      expect(TrainingPlan.minIntervals, 5);
+    test('minIntervals is 3', () {
+      expect(TrainingPlan.minIntervals, 3);
     });
 
     test('maxIntervals is 30', () {
