@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/training_plan.dart';
 import '../../core/providers/plan_library_notifier.dart';
+import '../shared/widgets/swipe_to_reveal_row.dart';
 import 'plan_editor_screen.dart';
 
 class PlanLibraryScreen extends ConsumerWidget {
@@ -101,58 +102,7 @@ class PlanLibraryScreen extends ConsumerWidget {
     await ref.read(planLibraryProvider.notifier).renamePlan(plan.id, name);
   }
 
-  Future<void> _confirmDelete(
-      BuildContext context, WidgetRef ref, TrainingPlan plan,
-      {required bool isActive, required bool isLast}) async {
-    if (isActive || isLast) {
-      await showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: const Color(0xFF1A1A1A),
-          title: const Text('Nicht möglich',
-              style: TextStyle(color: Colors.white54, fontSize: 15, letterSpacing: 1)),
-          content: Text(
-            isActive
-                ? 'Der aktive Plan kann nicht gelöscht werden.'
-                : 'Der letzte Plan kann nicht gelöscht werden.',
-            style: const TextStyle(color: Colors.white38, fontSize: 13),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('OK', style: TextStyle(color: Colors.white38)),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Plan löschen?',
-            style: TextStyle(color: Colors.white54, fontSize: 15, letterSpacing: 1)),
-        content: Text('„${plan.name}" wird permanent gelöscht.',
-            style: const TextStyle(color: Colors.white38, fontSize: 13)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Abbrechen', style: TextStyle(color: Colors.white38)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Löschen', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    ) ?? false;
-    if (confirm) {
-      await ref.read(planLibraryProvider.notifier).deletePlan(plan.id);
-    }
-  }
-
-  @override
+@override
   Widget build(BuildContext context, WidgetRef ref) {
     final libraryAsync = ref.watch(planLibraryProvider);
 
@@ -215,24 +165,14 @@ class PlanLibraryScreen extends ConsumerWidget {
                       MaterialPageRoute(
                           builder: (_) => PlanEditorScreen(plan: plan)),
                     ),
-                    child: Dismissible(
+                    child: SwipeToRevealRow(
                       key: ValueKey(plan.id),
-                      direction: DismissDirection.endToStart,
-                      confirmDismiss: (_) async {
-                        await _confirmDelete(context, ref, plan,
-                            isActive: isActive,
-                            isLast: library.plans.length == 1);
-                        return false;
+                      canDelete: library.plans.length > 1,
+                      onDeleteTap: () async {
+                        await ref
+                            .read(planLibraryProvider.notifier)
+                            .deletePlan(plan.id);
                       },
-                      background: Container(
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: 20),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.delete_outline, color: Colors.red),
-                      ),
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.symmetric(
