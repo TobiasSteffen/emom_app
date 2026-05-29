@@ -194,9 +194,10 @@ class WorkoutNotifier extends _$WorkoutNotifier {
   Future<void> _raiseVolume() async {
     if (!_settings.volumeBoostEnabled || _settings.volumeBoostLevel <= 0) return;
     try {
-      final current = await VolumeController().getVolume();
+      final current = await VolumeController.instance.getVolume();
       if (current < _settings.volumeBoostLevel) {
-        VolumeController().setVolume(_settings.volumeBoostLevel, showSystemUI: false);
+        VolumeController.instance.showSystemUI = false;
+        await VolumeController.instance.setVolume(_settings.volumeBoostLevel);
       }
     } catch (_) {}
   }
