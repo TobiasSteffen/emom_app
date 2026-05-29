@@ -213,6 +213,8 @@ class WorkoutNotifier extends _$WorkoutNotifier {
         durationSeconds: s.currentDuration,
         equipment: equipmentForMinute(s.currentMinute),
         exercise: _activePlan.intervals[s.currentMinute].exercise,
+        side: _activePlan.intervals[s.currentMinute].side,
+        isPause: _activePlan.intervals[s.currentMinute].isPause,
       ),
     ];
 
