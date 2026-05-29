@@ -12,4 +12,9 @@ class HistoryNotifier extends _$HistoryNotifier {
     await WorkoutHistory.addOrUpdateRecord(record);
     ref.invalidateSelf();
   }
+
+  Future<void> updateRecord(WorkoutRecord updated) async {
+    await WorkoutHistory.addOrUpdateRecord(updated);
+    ref.invalidateSelf();
+  }
 }
