@@ -36,6 +36,7 @@ class HistoryDetailSheet extends ConsumerStatefulWidget {
 
 class _HistoryDetailSheetState extends ConsumerState<HistoryDetailSheet> {
   late List<IntervalConfig> _editIntervals;
+  late List<IntervalRecord> _savedIntervals;
   int? _selectedRow;
   bool _isDirty = false;
   bool _saving = false;
@@ -44,6 +45,7 @@ class _HistoryDetailSheetState extends ConsumerState<HistoryDetailSheet> {
   void initState() {
     super.initState();
     _editIntervals = widget.record.intervals.map(_toConfig).toList();
+    _savedIntervals = List.from(widget.record.intervals);
   }
 
   String _formatDateTime(DateTime dt) =>
@@ -66,12 +68,12 @@ class _HistoryDetailSheetState extends ConsumerState<HistoryDetailSheet> {
   }
 
   void _revertRow(int i) {
-    _editIntervals[i] = _toConfig(widget.record.intervals[i]);
+    _editIntervals[i] = _toConfig(_savedIntervals[i]);
   }
 
   bool _computeIsDirty() {
     for (int i = 0; i < _editIntervals.length; i++) {
-      final orig = widget.record.intervals[i];
+      final orig = _savedIntervals[i];
       final edit = _editIntervals[i];
       if (orig.reps != edit.reps ||
           orig.durationSeconds != edit.durationSeconds ||
@@ -93,7 +95,13 @@ class _HistoryDetailSheetState extends ConsumerState<HistoryDetailSheet> {
       intervals: _editIntervals.map(_toRecord).toList(),
     );
     await ref.read(historyProvider.notifier).updateRecord(updated);
-    if (mounted) Navigator.of(context).pop();
+    if (mounted) {
+      setState(() {
+        _savedIntervals = _editIntervals.map(_toRecord).toList();
+        _isDirty = false;
+        _saving = false;
+      });
+    }
   }
 
   @override
