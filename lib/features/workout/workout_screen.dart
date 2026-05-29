@@ -242,9 +242,6 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
           OverallProgress(
             currentMinute: state.currentMinute,
             totalMinutes: state.totalMinutes,
-            totalRepsDone: state.totalRepsDone,
-            totalReps: state.totalReps,
-            workoutLabel: workoutLabel,
             isPause: isPauseInterval,
           ),
           const SizedBox(height: 8),
