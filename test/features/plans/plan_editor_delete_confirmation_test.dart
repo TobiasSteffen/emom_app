@@ -5,6 +5,7 @@ import 'package:emom_app/core/models/settings.dart';
 import 'package:emom_app/core/models/training_plan.dart';
 import 'package:emom_app/core/providers/plan_library_notifier.dart';
 import 'package:emom_app/features/plans/plan_editor_screen.dart';
+import 'package:emom_app/features/shared/widgets/swipe_to_reveal_row.dart';
 
 // Must be > TrainingPlan.minIntervals (3) so deletion is allowed
 List<IntervalConfig> _fourIntervals() => List.generate(
@@ -56,7 +57,7 @@ class _FakePlanLibraryNotifier extends PlanLibraryNotifier {
 
 /// Swipe row at [index] open (reveal trash button), then settle.
 Future<void> _swipeOpen(WidgetTester tester, int index) async {
-  final rowFinder = find.byKey(ValueKey('swipe_row_$index'));
+  final rowFinder = find.byType(SwipeToRevealRow).at(index);
   await tester.drag(rowFinder, const Offset(80, 0));
   await tester.pumpAndSettle();
 }
@@ -103,8 +104,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(AlertDialog), findsNothing);
-    expect(find.byKey(const ValueKey('swipe_row_0')), findsOneWidget);
-    expect(find.byKey(const ValueKey('swipe_row_3')), findsOneWidget);
+    expect(find.byType(SwipeToRevealRow), findsNWidgets(4));
   });
 
   testWidgets('Bestätigen löscht das Intervall', (tester) async {
@@ -115,7 +115,7 @@ void main() {
     await tester.tap(find.text('Löschen'));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('swipe_row_3')), findsNothing);
+    expect(find.byType(SwipeToRevealRow), findsNWidgets(3));
   });
 
   testWidgets('Swipe gesperrt wenn nur noch minIntervals Zeilen',
@@ -147,7 +147,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.drag(
-        find.byKey(const ValueKey('swipe_row_0')), const Offset(80, 0));
+        find.byType(SwipeToRevealRow).at(0), const Offset(80, 0));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('delete_0')), findsNothing);
