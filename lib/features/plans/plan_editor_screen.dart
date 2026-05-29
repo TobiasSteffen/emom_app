@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/training_plan.dart';
 import '../../core/providers/plan_library_notifier.dart';
+import 'undo_manager.dart';
 import 'widgets/minute_exact_editor.dart';
 
 class PlanEditorScreen extends ConsumerStatefulWidget {
@@ -15,6 +16,7 @@ class PlanEditorScreen extends ConsumerStatefulWidget {
 class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
   late TrainingPlan _plan;
   int? _selectedRow;
+  late final UndoManager _undoManager;
 
   @override
   void initState() {
@@ -24,6 +26,13 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
       name: widget.plan.name,
       intervals: widget.plan.intervals.map((iv) => iv.copyWith()).toList(),
     );
+    _undoManager = UndoManager();
+  }
+
+  @override
+  void dispose() {
+    _undoManager.dispose();
+    super.dispose();
   }
 
   Future<void> _save() async {
@@ -37,6 +46,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
   }
 
   void _onReorder(int oldIndex, int newIndex) {
+    _undoManager.push(_plan.intervals);
     setState(() {
       final item = _plan.intervals.removeAt(oldIndex);
       _plan.intervals.insert(newIndex, item);
@@ -55,6 +65,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
 
   void _onDelete(int index) {
     if (_plan.intervals.length <= TrainingPlan.minIntervals) return;
+    _undoManager.push(_plan.intervals);
     setState(() {
       _plan.intervals.removeAt(index);
       if (_selectedRow != null) {
@@ -69,8 +80,20 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
 
   void _onAdd() {
     if (_plan.intervals.length >= TrainingPlan.maxIntervals) return;
+    _undoManager.push(_plan.intervals);
     setState(() {
       _plan.intervals.add(_plan.intervals.last.copyWith());
+    });
+  }
+
+  void _undo() {
+    setState(() {
+      _plan = TrainingPlan(
+        id: _plan.id,
+        name: _plan.name,
+        intervals: _undoManager.undo(),
+      );
+      _selectedRow = null;
     });
   }
 
@@ -140,6 +163,13 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
             style: const TextStyle(
                 fontSize: 15, letterSpacing: 4, color: Colors.white38),
           ),
+          actions: [
+            if (_undoManager.canUndo)
+              IconButton(
+                icon: const Icon(Icons.undo, color: Colors.white38),
+                onPressed: _undo,
+              ),
+          ],
         ),
         body: Column(
           children: [
@@ -149,6 +179,8 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
                 selectedRow: _selectedRow,
                 onRowSelected: (i) => setState(() => _selectedRow = i),
                 onChanged: () => setState(() {}),
+                onBeforeFieldChange: () =>
+                    _undoManager.pushDebounced(_plan.intervals),
                 onReorder: _onReorder,
                 onDelete: _onDelete,
                 onConfirmDelete: _confirmDelete,
