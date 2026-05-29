@@ -6,9 +6,11 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:vibration/vibration.dart';
 import 'package:volume_controller/volume_controller.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import '../../core/models/equipment_catalog.dart';
 import '../../core/models/settings.dart';
 import '../../core/models/training_plan.dart';
 import '../../core/models/workout_history.dart';
+import '../../core/providers/equipment_catalog_notifier.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/providers/plan_library_notifier.dart';
 import '../history/history_notifier.dart';
@@ -83,12 +85,14 @@ class WorkoutNotifier extends _$WorkoutNotifier {
   bool? _hasVibrator;
   late AppSettings _settings;
   late TrainingPlan _activePlan;
+  late EquipmentCatalog _catalog;
 
   @override
   Future<WorkoutState> build() async {
     _settings = await ref.read(settingsProvider.future);
     final library = await ref.read(planLibraryProvider.future);
     _activePlan = library.activePlan;
+    _catalog = await ref.read(equipmentCatalogProvider.future);
     _hasVibrator = await Vibration.hasVibrator();
 
     ref.onDispose(() {
@@ -134,6 +138,7 @@ class WorkoutNotifier extends _$WorkoutNotifier {
     WakelockPlus.disable();
     final library = await ref.read(planLibraryProvider.future);
     _activePlan = library.activePlan;
+    _catalog = await ref.read(equipmentCatalogProvider.future);
     state = AsyncData(WorkoutState(
       intervals: _activePlan.intervals,
       currentMinute: 0,
@@ -165,16 +170,26 @@ class WorkoutNotifier extends _$WorkoutNotifier {
     _settings = newSettings;
   }
 
-  Equipment equipmentForMinute(int minute) =>
-      _activePlan.intervals[minute].equipment;
+  String iconAssetForMinute(int minute) {
+    final iv = _activePlan.intervals[minute];
+    return _catalog.findType(iv.equipmentTypeId)?.iconAsset ??
+        'assets/icon/kettlebell.png';
+  }
 
   String workoutLabelForMinute(int minute) {
     final iv = _activePlan.intervals[minute];
     if (iv.isPause) return 'Pause';
-    final sideStr = (iv.exercise.isOneArm && iv.side != null)
+    final eqType = _catalog.findType(iv.equipmentTypeId);
+    if (eqType == null) return '?';
+    final variant = iv.variantId != null
+        ? eqType.variants.where((v) => v.id == iv.variantId).firstOrNull
+        : null;
+    final exercise = eqType.exercises.where((e) => e.id == iv.exerciseTypeId).firstOrNull;
+    final sideStr = (exercise?.hasSide == true && iv.side != null)
         ? ' · ${iv.side!.label}'
         : '';
-    return '${iv.equipment.label} · ${iv.exercise.label}$sideStr';
+    final equipStr = variant != null ? '${eqType.name} ${variant.label}' : eqType.name;
+    return '$equipStr · ${exercise?.name ?? '?'}$sideStr';
   }
 
   void _tick(Timer timer) {
@@ -211,8 +226,9 @@ class WorkoutNotifier extends _$WorkoutNotifier {
       IntervalRecord(
         reps: s.currentReps,
         durationSeconds: s.currentDuration,
-        equipment: equipmentForMinute(s.currentMinute),
-        exercise: _activePlan.intervals[s.currentMinute].exercise,
+        equipmentTypeId: _activePlan.intervals[s.currentMinute].equipmentTypeId,
+        variantId: _activePlan.intervals[s.currentMinute].variantId,
+        exerciseTypeId: _activePlan.intervals[s.currentMinute].exerciseTypeId,
         side: _activePlan.intervals[s.currentMinute].side,
         isPause: _activePlan.intervals[s.currentMinute].isPause,
       ),
