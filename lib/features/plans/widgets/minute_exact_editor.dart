@@ -41,8 +41,8 @@ class PlanMinuteExactEditor extends StatelessWidget {
         key: ValueKey(identityHashCode(plan.intervals[i])),
         index: i,
         child: SwipeToRevealRow(
-          key: ValueKey('swipe_row_$i'),
-          deleteKey: ValueKey('delete_$i'),
+          key: ValueKey(identityHashCode(plan.intervals[i])),
+          deleteKey: ValueKey('delete_${identityHashCode(plan.intervals[i])}'),
           canDelete: plan.intervals.length > TrainingPlan.minIntervals,
           onDeleteTap: () async {
             if (onConfirmDelete != null) {
