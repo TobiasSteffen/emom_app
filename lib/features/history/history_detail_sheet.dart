@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../core/models/equipment_catalog.dart';
 import '../../core/models/workout_history.dart';
 import '../../core/models/settings.dart';
 import '../../core/models/training_plan.dart';
+import '../../core/providers/equipment_catalog_notifier.dart';
 import '../shared/widgets/interval_edit_form.dart';
 import 'history_notifier.dart';
 
 IntervalConfig _toConfig(IntervalRecord r) => IntervalConfig(
-      equipment: r.equipment,
-      exercise: r.exercise,
+      equipmentTypeId: r.equipmentTypeId,
+      variantId: r.variantId,
+      exerciseTypeId: r.exerciseTypeId,
       reps: r.reps,
       durationSeconds: r.durationSeconds,
       side: r.side,
@@ -17,8 +20,9 @@ IntervalConfig _toConfig(IntervalRecord r) => IntervalConfig(
     );
 
 IntervalRecord _toRecord(IntervalConfig c) => IntervalRecord(
-      equipment: c.equipment,
-      exercise: c.exercise,
+      equipmentTypeId: c.equipmentTypeId,
+      variantId: c.variantId,
+      exerciseTypeId: c.exerciseTypeId,
       reps: c.reps,
       durationSeconds: c.durationSeconds,
       side: c.side,
@@ -51,20 +55,19 @@ class _HistoryDetailSheetState extends ConsumerState<HistoryDetailSheet> {
   String _formatDateTime(DateTime dt) =>
       DateFormat("EE, d. MMMM yyyy  HH:mm", 'de').format(dt);
 
-  String _repBreakdown() {
-    final Map<Equipment, int> byEquipment = {};
+  String _repBreakdown(EquipmentCatalog catalog) {
+    final Map<String, int> byType = {};
     for (final iv in _editIntervals) {
       if (!iv.isPause) {
-        byEquipment[iv.equipment] =
-            (byEquipment[iv.equipment] ?? 0) + iv.reps;
+        byType[iv.equipmentTypeId] = (byType[iv.equipmentTypeId] ?? 0) + iv.reps;
       }
     }
-    final totalReps = byEquipment.values.fold(0, (a, b) => a + b);
-    if (byEquipment.length <= 1) return '$totalReps Reps';
-    return (byEquipment.entries.toList()
-          ..sort((a, b) => a.key.index.compareTo(b.key.index)))
-        .map((e) => '${e.value}× ${e.key.label}')
-        .join(' / ');
+    final total = byType.values.fold(0, (a, b) => a + b);
+    if (byType.length <= 1) return '$total Reps';
+    return byType.entries.map((e) {
+      final name = catalog.findType(e.key)?.name ?? e.key;
+      return '${e.value}× $name';
+    }).join(' / ');
   }
 
   void _revertRow(int i) {
@@ -77,8 +80,9 @@ class _HistoryDetailSheetState extends ConsumerState<HistoryDetailSheet> {
       final edit = _editIntervals[i];
       if (orig.reps != edit.reps ||
           orig.durationSeconds != edit.durationSeconds ||
-          orig.equipment != edit.equipment ||
-          orig.exercise != edit.exercise ||
+          orig.equipmentTypeId != edit.equipmentTypeId ||
+          orig.variantId != edit.variantId ||
+          orig.exerciseTypeId != edit.exerciseTypeId ||
           orig.side != edit.side ||
           orig.isPause != edit.isPause) {
         return true;
@@ -106,13 +110,17 @@ class _HistoryDetailSheetState extends ConsumerState<HistoryDetailSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final catalogAsync = ref.watch(equipmentCatalogProvider);
+    final catalog = catalogAsync.value;
+    final repBreakdown =
+        catalog != null ? _repBreakdown(catalog) : '... Reps';
+
     final dt =
         DateTime.fromMillisecondsSinceEpoch(widget.record.timestamp);
     final totalSecs =
         _editIntervals.fold(0, (a, b) => a + b.durationSeconds);
     final durStr =
         '${totalSecs ~/ 60}m ${(totalSecs % 60).toString().padLeft(2, '0')}s';
-    final repBreakdown = _repBreakdown();
 
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
@@ -176,6 +184,10 @@ class _HistoryDetailSheetState extends ConsumerState<HistoryDetailSheet> {
                 final isSelected = _selectedRow == i;
                 final color =
                     iv.isPause ? Colors.white24 : phaseColorForMinute(i);
+                final eqType = catalog?.findType(iv.equipmentTypeId);
+                final exerciseType = eqType?.exercises
+                    .where((e) => e.id == iv.exerciseTypeId)
+                    .firstOrNull;
 
                 return GestureDetector(
                   onTap: () => setState(() {
@@ -222,21 +234,23 @@ class _HistoryDetailSheetState extends ConsumerState<HistoryDetailSheet> {
                                       fontSize: 12)),
                             ] else ...[
                               Image.asset(
-                                iv.equipment.iconPath,
+                                eqType?.iconAsset ??
+                                    'assets/icon/kettlebell.png',
                                 width: 14,
                                 height: 14,
                                 color: Colors.white38,
                               ),
                               const SizedBox(width: 6),
-                              Text(iv.equipment.label,
+                              Text(
+                                  eqType?.name ?? iv.equipmentTypeId,
                                   style: const TextStyle(
                                       color: Colors.white38,
                                       fontSize: 11)),
                               const SizedBox(width: 4),
                               Text(
                                 iv.side != null
-                                    ? '· ${iv.exercise.label} ${iv.side!.shortLabel}'
-                                    : '· ${iv.exercise.label}',
+                                    ? '· ${exerciseType?.name ?? iv.exerciseTypeId} ${iv.side!.shortLabel}'
+                                    : '· ${exerciseType?.name ?? iv.exerciseTypeId}',
                                 style: const TextStyle(
                                     color: Colors.white24, fontSize: 11),
                               ),

@@ -79,16 +79,9 @@ class HistorySheet extends ConsumerWidget {
 
   Widget _buildCard(WorkoutRecord record) {
     final dt = DateTime.fromMillisecondsSinceEpoch(record.timestamp);
-    final planModeStr = record.planMode == 0 ? 'Phasenbasiert' : 'Minuten-genau';
-    final kbReps = record.kettlebellReps;
-    final smReps = record.steelMaceReps;
-    final equipStr = kbReps > 0 && smReps > 0
-        ? 'Kettlebell + Steel Mace'
-        : kbReps > 0 ? 'Kettlebell' : 'Steel Mace';
     final totalSecs = record.totalDurationSeconds;
-    final durStr = '${totalSecs ~/ 60}m ${(totalSecs % 60).toString().padLeft(2, '0')}s';
-    final repBreakdown = kbReps > 0 && smReps > 0 ? '  ·  $kbReps× KB  /  $smReps× SM' : '';
-
+    final durStr =
+        '${totalSecs ~/ 60}m ${(totalSecs % 60).toString().padLeft(2, '0')}s';
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -101,11 +94,8 @@ class HistorySheet extends ConsumerWidget {
         children: [
           Text(_formatDateTime(dt),
               style: const TextStyle(color: Colors.white38, fontSize: 11)),
-          const SizedBox(height: 6),
-          Text('$equipStr · $planModeStr · ${record.intervals.length}/30 Intervalle',
-              style: const TextStyle(color: Colors.white, fontSize: 13)),
           const SizedBox(height: 4),
-          Text('${record.totalReps} Reps  ·  $durStr$repBreakdown',
+          Text('${record.totalReps} Reps  ·  $durStr',
               style: const TextStyle(color: Color(0xFFFF6B00), fontSize: 13)),
         ],
       ),
