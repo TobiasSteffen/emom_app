@@ -27,7 +27,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
   }
 
   Future<void> _save() async {
-    await ref.read(planLibraryNotifierProvider.notifier).updatePlan(_plan);
+    await ref.read(planLibraryProvider.notifier).updatePlan(_plan);
   }
 
   String _formatDuration(int seconds) {
@@ -38,7 +38,6 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
 
   void _onReorder(int oldIndex, int newIndex) {
     setState(() {
-      if (newIndex > oldIndex) newIndex--;
       final item = _plan.intervals.removeAt(oldIndex);
       _plan.intervals.insert(newIndex, item);
       if (_selectedRow != null) {
@@ -76,7 +75,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
   }
 
   Future<bool> _confirmDelete(int index) async {
-    final lib = await ref.read(planLibraryNotifierProvider.future);
+    final lib = await ref.read(planLibraryProvider.future);
     if (lib.activePlanId != _plan.id) return true;
     if (!mounted) return false;
 

@@ -51,7 +51,7 @@ class PlanLibraryScreen extends ConsumerWidget {
     );
     if (name == null || name.isEmpty) return;
     final plan = TrainingPlan.pyramid(name);
-    await ref.read(planLibraryNotifierProvider.notifier).addPlan(plan);
+    await ref.read(planLibraryProvider.notifier).addPlan(plan);
     if (!context.mounted) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (context.mounted) {
@@ -98,7 +98,7 @@ class PlanLibraryScreen extends ConsumerWidget {
       },
     );
     if (name == null || name.isEmpty) return;
-    await ref.read(planLibraryNotifierProvider.notifier).renamePlan(plan.id, name);
+    await ref.read(planLibraryProvider.notifier).renamePlan(plan.id, name);
   }
 
   Future<void> _confirmDelete(
@@ -148,13 +148,13 @@ class PlanLibraryScreen extends ConsumerWidget {
       ),
     ) ?? false;
     if (confirm) {
-      await ref.read(planLibraryNotifierProvider.notifier).deletePlan(plan.id);
+      await ref.read(planLibraryProvider.notifier).deletePlan(plan.id);
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final libraryAsync = ref.watch(planLibraryNotifierProvider);
+    final libraryAsync = ref.watch(planLibraryProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFF000000),
@@ -246,7 +246,7 @@ class PlanLibraryScreen extends ConsumerWidget {
                             GestureDetector(
                               behavior: HitTestBehavior.opaque,
                               onTap: () => ref
-                                  .read(planLibraryNotifierProvider.notifier)
+                                  .read(planLibraryProvider.notifier)
                                   .setActivePlan(plan.id),
                               child: SizedBox(
                                 width: 32,

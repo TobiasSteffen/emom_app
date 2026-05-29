@@ -13,7 +13,7 @@ class HistorySheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final historyAsync = ref.watch(historyNotifierProvider);
+    final historyAsync = ref.watch(historyProvider);
     return DraggableScrollableSheet(
       initialChildSize: 0.7,
       maxChildSize: 0.95,

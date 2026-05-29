@@ -11,7 +11,7 @@ class SettingsNotifier extends _$SettingsNotifier {
   void replace(AppSettings settings) => state = AsyncData(settings);
 
   Future<void> save() async {
-    final s = state.valueOrNull;
+    final s = state.value;
     if (s != null) await s.save();
   }
 }

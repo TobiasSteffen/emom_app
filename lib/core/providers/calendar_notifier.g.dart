@@ -6,21 +6,50 @@ part of 'calendar_notifier.dart';
 // RiverpodGenerator
 // **************************************************************************
 
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
+
+@ProviderFor(CalendarNotifier)
+final calendarProvider = CalendarNotifierProvider._();
+
+final class CalendarNotifierProvider
+    extends $AsyncNotifierProvider<CalendarNotifier, List<CalendarEntry>> {
+  CalendarNotifierProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'calendarProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$calendarNotifierHash();
+
+  @$internal
+  @override
+  CalendarNotifier create() => CalendarNotifier();
+}
+
 String _$calendarNotifierHash() => r'695991956d9542d4e3cded90583329dcd08288d1';
 
-/// See also [CalendarNotifier].
-@ProviderFor(CalendarNotifier)
-final calendarNotifierProvider =
-    AsyncNotifierProvider<CalendarNotifier, List<CalendarEntry>>.internal(
-      CalendarNotifier.new,
-      name: r'calendarNotifierProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$calendarNotifierHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
-
-typedef _$CalendarNotifier = AsyncNotifier<List<CalendarEntry>>;
-// ignore_for_file: type=lint
-// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
+abstract class _$CalendarNotifier extends $AsyncNotifier<List<CalendarEntry>> {
+  FutureOr<List<CalendarEntry>> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref =
+        this.ref as $Ref<AsyncValue<List<CalendarEntry>>, List<CalendarEntry>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<List<CalendarEntry>>, List<CalendarEntry>>,
+              AsyncValue<List<CalendarEntry>>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
