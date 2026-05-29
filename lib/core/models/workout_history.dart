@@ -7,27 +7,41 @@ class IntervalRecord {
   final int durationSeconds;
   final Equipment equipment;
   final Exercise exercise;
+  final ExerciseSide? side;
+  final bool isPause;
 
   IntervalRecord({
     required this.reps,
     required this.durationSeconds,
     required this.equipment,
     this.exercise = Exercise.swingBeidarmig,
+    this.side,
+    this.isPause = false,
   });
 
-  Map<String, dynamic> toJson() => {
-    'r': reps,
-    'd': durationSeconds,
-    'e': equipment.index,
-    'x': exercise.index,
-  };
+  Map<String, dynamic> toJson() {
+    final m = <String, dynamic>{
+      'r': reps,
+      'd': durationSeconds,
+      'e': equipment.index,
+      'x': exercise.index,
+    };
+    if (side != null) m['s'] = side!.index;
+    if (isPause) m['p'] = true;
+    return m;
+  }
 
-  factory IntervalRecord.fromJson(Map<String, dynamic> j) => IntervalRecord(
-    reps: j['r'] as int,
-    durationSeconds: j['d'] as int,
-    equipment: Equipment.values.elementAtOrNull(j['e'] as int) ?? Equipment.kb24,
-    exercise: Exercise.values.elementAtOrNull((j['x'] as int?) ?? 0) ?? Exercise.swingBeidarmig,
-  );
+  factory IntervalRecord.fromJson(Map<String, dynamic> j) {
+    final sideIndex = j['s'] as int?;
+    return IntervalRecord(
+      reps: j['r'] as int,
+      durationSeconds: j['d'] as int,
+      equipment: Equipment.values.elementAtOrNull(j['e'] as int) ?? Equipment.kb24,
+      exercise: Exercise.values.elementAtOrNull((j['x'] as int?) ?? 0) ?? Exercise.swingBeidarmig,
+      side: sideIndex != null ? ExerciseSide.values.elementAtOrNull(sideIndex) : null,
+      isPause: (j['p'] as bool?) ?? false,
+    );
+  }
 }
 
 class WorkoutRecord {
