@@ -65,6 +65,26 @@ class _HistoryDetailSheetState extends ConsumerState<HistoryDetailSheet> {
         .join(' / ');
   }
 
+  void _revertRow(int i) {
+    _editIntervals[i] = _toConfig(widget.record.intervals[i]);
+  }
+
+  bool _computeIsDirty() {
+    for (int i = 0; i < _editIntervals.length; i++) {
+      final orig = widget.record.intervals[i];
+      final edit = _editIntervals[i];
+      if (orig.reps != edit.reps ||
+          orig.durationSeconds != edit.durationSeconds ||
+          orig.equipment != edit.equipment ||
+          orig.exercise != edit.exercise ||
+          orig.side != edit.side ||
+          orig.isPause != edit.isPause) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   Future<void> _save() async {
     setState(() => _saving = true);
     final updated = WorkoutRecord(
@@ -150,8 +170,15 @@ class _HistoryDetailSheetState extends ConsumerState<HistoryDetailSheet> {
                     iv.isPause ? Colors.white24 : phaseColorForMinute(i);
 
                 return GestureDetector(
-                  onTap: () => setState(
-                      () => _selectedRow = isSelected ? null : i),
+                  onTap: () => setState(() {
+                    if (isSelected) {
+                      _revertRow(i);
+                      _isDirty = _computeIsDirty();
+                      _selectedRow = null;
+                    } else {
+                      _selectedRow = i;
+                    }
+                  }),
                   behavior: HitTestBehavior.opaque,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -235,8 +262,11 @@ class _HistoryDetailSheetState extends ConsumerState<HistoryDetailSheet> {
                             onChanged: () =>
                                 setState(() => _isDirty = true),
                             index: i,
-                            onCollapse: () =>
-                                setState(() => _selectedRow = null),
+                            onCollapse: () => setState(() {
+                              _revertRow(i);
+                              _isDirty = _computeIsDirty();
+                              _selectedRow = null;
+                            }),
                           ),
                         ),
                         secondChild: const SizedBox(width: double.infinity),
