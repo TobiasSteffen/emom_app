@@ -1,20 +1,23 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'settings.dart';
+import 'training_plan.dart';
 
 class IntervalRecord {
   final int reps;
   final int durationSeconds;
-  final Equipment equipment;
-  final Exercise exercise;
+  final String equipmentTypeId;
+  final String? variantId;
+  final String exerciseTypeId;
   final ExerciseSide? side;
   final bool isPause;
 
   IntervalRecord({
     required this.reps,
     required this.durationSeconds,
-    required this.equipment,
-    this.exercise = Exercise.swingBeidarmig,
+    required this.equipmentTypeId,
+    required this.exerciseTypeId,
+    this.variantId,
     this.side,
     this.isPause = false,
   });
@@ -23,22 +26,40 @@ class IntervalRecord {
     final m = <String, dynamic>{
       'r': reps,
       'd': durationSeconds,
-      'e': equipment.index,
-      'x': exercise.index,
+      'et': equipmentTypeId,
+      'x': exerciseTypeId,
     };
+    if (variantId != null) m['v'] = variantId;
     if (side != null) m['s'] = side!.index;
     if (isPause) m['p'] = true;
     return m;
   }
 
   factory IntervalRecord.fromJson(Map<String, dynamic> j) {
-    final sideIndex = j['s'] as int?;
+    if (j.containsKey('et')) {
+      // New format
+      final sideIdx = j['s'] as int?;
+      return IntervalRecord(
+        reps: j['r'] as int,
+        durationSeconds: j['d'] as int,
+        equipmentTypeId: j['et'] as String,
+        variantId: j['v'] as String?,
+        exerciseTypeId: j['x'] as String,
+        side: sideIdx != null ? ExerciseSide.values.elementAtOrNull(sideIdx) : null,
+        isPause: (j['p'] as bool?) ?? false,
+      );
+    }
+    // Old format: e = Equipment index, x = Exercise index
+    final eIdx = j['e'] as int;
+    final xIdx = (j['x'] as int?) ?? 0;
+    final sideIdx = j['s'] as int?;
     return IntervalRecord(
       reps: j['r'] as int,
       durationSeconds: j['d'] as int,
-      equipment: Equipment.values.elementAtOrNull(j['e'] as int) ?? Equipment.kb24,
-      exercise: Exercise.values.elementAtOrNull((j['x'] as int?) ?? 0) ?? Exercise.swingBeidarmig,
-      side: sideIndex != null ? ExerciseSide.values.elementAtOrNull(sideIndex) : null,
+      equipmentTypeId: IntervalConfig.migrateEqType(eIdx),
+      variantId: IntervalConfig.migrateVariant(eIdx),
+      exerciseTypeId: IntervalConfig.migrateExercise(xIdx),
+      side: sideIdx != null ? ExerciseSide.values.elementAtOrNull(sideIdx) : null,
       isPause: (j['p'] as bool?) ?? false,
     );
   }
@@ -57,8 +78,6 @@ class WorkoutRecord {
 
   int get totalReps => intervals.fold(0, (a, b) => a + b.reps);
   int get totalDurationSeconds => intervals.fold(0, (a, b) => a + b.durationSeconds);
-  int get kettlebellReps => intervals.where((i) => i.equipment.isKettlebell).fold(0, (a, b) => a + b.reps);
-  int get steelMaceReps  => intervals.where((i) => i.equipment.isSteelMace).fold(0, (a, b) => a + b.reps);
 
   Map<String, dynamic> toJson() => {
         't': timestamp,
