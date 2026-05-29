@@ -38,6 +38,7 @@ class _HistoryDetailSheetState extends ConsumerState<HistoryDetailSheet> {
   late List<IntervalConfig> _editIntervals;
   int? _selectedRow;
   bool _isDirty = false;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -65,6 +66,7 @@ class _HistoryDetailSheetState extends ConsumerState<HistoryDetailSheet> {
   }
 
   Future<void> _save() async {
+    setState(() => _saving = true);
     final updated = WorkoutRecord(
       timestamp: widget.record.timestamp,
       planMode: widget.record.planMode,
@@ -251,7 +253,7 @@ class _HistoryDetailSheetState extends ConsumerState<HistoryDetailSheet> {
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _save,
+                  onPressed: _saving ? null : _save,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFF6B00),
                     foregroundColor: Colors.black,
