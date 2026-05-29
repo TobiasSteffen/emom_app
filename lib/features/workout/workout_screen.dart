@@ -227,7 +227,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
         ? Colors.white24
         : phaseColorForMinute(state.currentMinute);
     final workoutLabel = notifier.workoutLabelForMinute(state.currentMinute);
-    final iconPath = notifier.equipmentForMinute(state.currentMinute).iconPath;
+    final iconPath = notifier.iconAssetForMinute(state.currentMinute);
 
     return Padding(
       padding: const EdgeInsets.all(24),
