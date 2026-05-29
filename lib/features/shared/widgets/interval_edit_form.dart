@@ -28,12 +28,17 @@ class IntervalEditForm extends StatefulWidget {
   /// Optionaler Callback für den Einklappen-Button am unteren Rand.
   final VoidCallback? onCollapse;
 
+  /// Wird aufgerufen direkt BEVOR eine Feldmutation stattfindet.
+  /// Ermöglicht dem Parent, einen Snapshot für Undo zu erstellen.
+  final VoidCallback? onBeforeChange;
+
   const IntervalEditForm({
     super.key,
     required this.iv,
     required this.onChanged,
     this.index,
     this.onCollapse,
+    this.onBeforeChange,
   });
 
   @override
@@ -46,6 +51,7 @@ class _IntervalEditFormState extends State<IntervalEditForm> {
   String? _openPicker;
 
   void _update(VoidCallback fn) {
+    widget.onBeforeChange?.call();
     setState(fn);
     widget.onChanged();
   }
