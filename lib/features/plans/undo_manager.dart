@@ -3,6 +3,8 @@ import 'dart:collection';
 import '../../core/models/training_plan.dart';
 
 class UndoManager {
+  /// [maxSteps] is the maximum number of snapshots retained.
+  /// When exceeded, the oldest snapshot is dropped (FIFO eviction).
   UndoManager({this.maxSteps = 90});
 
   final int maxSteps;
@@ -36,11 +38,13 @@ class UndoManager {
     _debounceTimer?.cancel();
     _debounceTimer = null;
     _debounceActive = false;
-    return _stack.removeLast();
+    return _stack.removeLast().map((iv) => iv.copyWith()).toList();
   }
 
   void dispose() {
     _debounceTimer?.cancel();
+    _debounceTimer = null;
+    _debounceActive = false;
   }
 
   void _pushSnapshot(List<IntervalConfig> intervals) {

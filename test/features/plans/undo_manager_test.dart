@@ -28,7 +28,7 @@ void main() {
       final um = UndoManager();
       final original = [_iv(reps: 5)];
       um.push(original);
-      original[0].reps = 99;
+      original[0] = original[0].copyWith(reps: 99);
       final restored = um.undo();
       expect(restored[0].reps, 5);
     });
@@ -46,6 +46,11 @@ void main() {
       um.push([_iv()]);
       um.undo();
       expect(um.canUndo, isFalse);
+    });
+
+    test('undo() on empty stack throws StateError', () {
+      final um = UndoManager();
+      expect(() => um.undo(), throwsStateError);
     });
 
     test('oldest entry discarded when maxSteps exceeded', () {
