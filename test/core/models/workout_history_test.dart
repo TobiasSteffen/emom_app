@@ -159,5 +159,37 @@ void main() {
       expect(iv.side, isNull);
       expect(iv.isPause, false);
     });
+
+    test('IntervalRecord: toJson omits s and p keys when side is null and isPause is false', () {
+      final iv = IntervalRecord(
+        reps: 5,
+        durationSeconds: 60,
+        equipment: Equipment.kb16,
+      );
+      final json = iv.toJson();
+      expect(json.containsKey('s'), isFalse);
+      expect(json.containsKey('p'), isFalse);
+    });
+
+    test('IntervalRecord: toJson includes s and p keys when set', () {
+      final iv = IntervalRecord(
+        reps: 5,
+        durationSeconds: 60,
+        equipment: Equipment.kb24,
+        exercise: Exercise.snatch,
+        side: ExerciseSide.rechts,
+        isPause: false,
+      );
+      expect(iv.toJson().containsKey('s'), isTrue);
+
+      final pause = IntervalRecord(
+        reps: 0,
+        durationSeconds: 60,
+        equipment: Equipment.kb24,
+        isPause: true,
+      );
+      expect(pause.toJson().containsKey('p'), isTrue);
+      expect(pause.toJson().containsKey('s'), isFalse);
+    });
   });
 }
