@@ -41,6 +41,8 @@ class IntervalEditForm extends StatefulWidget {
 }
 
 class _IntervalEditFormState extends State<IntervalEditForm> {
+  // Resets automatically when this widget is recreated (key change).
+  // Known: stale picker state when same row is collapsed and re-expanded without key change.
   String? _openPicker;
 
   void _update(VoidCallback fn) {
@@ -178,12 +180,13 @@ class _IntervalEditFormState extends State<IntervalEditForm> {
           if (!eq.validExercises.contains(iv.exercise)) {
             iv.exercise = eq.defaultExercise;
           }
-          if (iv.exercise.isOneArm && iv.side == null) {
+          final resolvedExercise = iv.exercise;
+          if (resolvedExercise.isOneArm && iv.side == null) {
             iv.side = (widget.index ?? 0) % 2 == 0
                 ? ExerciseSide.links
                 : ExerciseSide.rechts;
           }
-          if (!iv.exercise.isOneArm) iv.side = null;
+          if (!resolvedExercise.isOneArm) iv.side = null;
         });
 
     void selectExercise(Exercise ex) => _update(() {
