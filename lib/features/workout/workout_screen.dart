@@ -66,13 +66,13 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
       ),
     );
     if (!mounted) return;
-    ref.read(workoutNotifierProvider.notifier).updateSettings(
-      ref.read(settingsNotifierProvider).requireValue,
+    ref.read(workoutProvider.notifier).updateSettings(
+      ref.read(settingsProvider).requireValue,
     );
   }
 
   void _startStop(WorkoutState state) {
-    final notifier = ref.read(workoutNotifierProvider.notifier);
+    final notifier = ref.read(workoutProvider.notifier);
     if (state.isFinished) {
       notifier.reset();
       return;
@@ -113,7 +113,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
         ],
       ),
     ) ?? false;
-    if (doReset) ref.read(workoutNotifierProvider.notifier).reset();
+    if (doReset) ref.read(workoutProvider.notifier).reset();
   }
 
   void _showHistory() {
@@ -130,7 +130,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
 
   @override
   Widget build(BuildContext context) {
-    final workoutAsync = ref.watch(workoutNotifierProvider);
+    final workoutAsync = ref.watch(workoutProvider);
 
     if (workoutAsync.isLoading) {
       return const Scaffold(
@@ -146,7 +146,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   }
 
   Widget _buildPageView(WorkoutState state) {
-    final notifier = ref.read(workoutNotifierProvider.notifier);
+    final notifier = ref.read(workoutProvider.notifier);
 
     return PageView(
       controller: _pageController,
@@ -160,7 +160,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
           if (state.isRunning) notifier.pause();
         }
         if (page == AppPage.plans.index) {
-          final lib = ref.read(planLibraryNotifierProvider).requireValue;
+          final lib = ref.read(planLibraryProvider).requireValue;
           setState(() {
             _planLibWasOpened = true;
             _wasRunningBeforePlanLib = state.isRunning || state.waitingForConfirmation;
@@ -170,14 +170,14 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
         }
         if (page == AppPage.workout.index && _planLibWasOpened) {
           setState(() => _planLibWasOpened = false);
-          final newLib = ref.read(planLibraryNotifierProvider).requireValue;
+          final newLib = ref.read(planLibraryProvider).requireValue;
           final planChanged = newLib.activePlan.planKey != _planKeySnapshot;
           if (planChanged) {
             final wasActive = _wasRunningBeforePlanLib || state.currentMinute > 0;
             if (wasActive) {
               _showResetConfirmDialog();
             } else {
-              ref.read(workoutNotifierProvider.notifier).reset();
+              ref.read(workoutProvider.notifier).reset();
             }
           } else if (_wasRunningBeforePlanLib && !state.isFinished) {
             notifier.start();
@@ -221,7 +221,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   }
 
   Widget _buildWorkoutScreen(WorkoutState state) {
-    final notifier = ref.read(workoutNotifierProvider.notifier);
+    final notifier = ref.read(workoutProvider.notifier);
     final isPauseInterval = state.intervals[state.currentMinute].isPause;
     final phaseColor = isPauseInterval
         ? Colors.white24
@@ -249,7 +249,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
           ),
           const SizedBox(height: 8),
           PlanIndicator(
-            planName: ref.watch(planLibraryNotifierProvider).valueOrNull?.activePlan.name ?? '',
+            planName: ref.watch(planLibraryProvider).value?.activePlan.name ?? '',
             onTap: () => _pageController.animateToPage(
               AppPage.plans.index,
               duration: const Duration(milliseconds: 380),
@@ -318,7 +318,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   }
 
   Widget _buildConfirmationOverlay(WorkoutState state) {
-    final notifier = ref.read(workoutNotifierProvider.notifier);
+    final notifier = ref.read(workoutProvider.notifier);
     final nextMinute = state.currentMinute + 1;
     final nextInterval = state.intervals[nextMinute];
     final nextColor = nextInterval.isPause
@@ -338,7 +338,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   }
 
   Widget _buildFinishedScreen(WorkoutState state) {
-    final notifier = ref.read(workoutNotifierProvider.notifier);
+    final notifier = ref.read(workoutProvider.notifier);
     return FinishedScreen(
       totalReps: state.totalReps,
       workoutLabel: _lastNonPauseLabel(state, notifier),

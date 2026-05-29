@@ -34,12 +34,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       });
 
   void _openDay(DateTime date) {
-    final calendarAsync = ref.read(calendarNotifierProvider);
-    final libAsync = ref.read(planLibraryNotifierProvider);
+    final calendarAsync = ref.read(calendarProvider);
+    final libAsync = ref.read(planLibraryProvider);
     if (!calendarAsync.hasValue || !libAsync.hasValue) return;
     final plans = libAsync.requireValue.plans;
     if (plans.isEmpty) return;
-    final existing = ref.read(calendarNotifierProvider.notifier).entryFor(date);
+    final existing = ref.read(calendarProvider.notifier).entryFor(date);
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF0D0D0D),
@@ -52,14 +52,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         plans: plans,
         existing: existing,
         onSave: (entry) {
-          ref.read(calendarNotifierProvider.notifier).setEntry(entry);
+          ref.read(calendarProvider.notifier).setEntry(entry);
           Navigator.pop(context);
         },
         onDelete: existing == null
             ? null
             : () {
                 ref
-                    .read(calendarNotifierProvider.notifier)
+                    .read(calendarProvider.notifier)
                     .removeEntry(date);
                 Navigator.pop(context);
               },
@@ -69,8 +69,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final entriesAsync = ref.watch(calendarNotifierProvider);
-    final entries = entriesAsync.valueOrNull ?? [];
+    final entriesAsync = ref.watch(calendarProvider);
+    final entries = entriesAsync.value ?? [];
 
     final monthNames = [
       '', 'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',

@@ -19,26 +19,26 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
   @override
   void initState() {
     super.initState();
-    _s = ref.read(settingsNotifierProvider).requireValue;
+    _s = ref.read(settingsProvider).requireValue;
   }
 
   @override
   void didUpdateWidget(ConfigScreen old) {
     super.didUpdateWidget(old);
     if (old.visitCount != widget.visitCount) {
-      _s = ref.read(settingsNotifierProvider).requireValue;
+      _s = ref.read(settingsProvider).requireValue;
     }
   }
 
   void _save() {
-    ref.read(settingsNotifierProvider.notifier).replace(_s);
-    ref.read(settingsNotifierProvider.notifier).save();
+    ref.read(settingsProvider.notifier).replace(_s);
+    ref.read(settingsProvider.notifier).save();
   }
 
   @override
   Widget build(BuildContext context) {
-    final settingsAsync = ref.watch(settingsNotifierProvider);
-    if (settingsAsync.valueOrNull == null) return const SizedBox();
+    final settingsAsync = ref.watch(settingsProvider);
+    if (settingsAsync.value == null) return const SizedBox();
     return Scaffold(
       backgroundColor: const Color(0xFF000000),
       appBar: AppBar(

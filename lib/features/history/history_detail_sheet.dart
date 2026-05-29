@@ -65,9 +65,13 @@ class HistoryDetailSheet extends StatelessWidget {
                             color: Colors.white,
                             fontSize: 14,
                             fontWeight: FontWeight.bold)),
-                    Text('$repBreakdown  ·  $durStr',
-                        style: const TextStyle(
-                            color: Color(0xFFFF6B00), fontSize: 13)),
+                    Flexible(
+                      child: Text('$repBreakdown  ·  $durStr',
+                          textAlign: TextAlign.end,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              color: Color(0xFFFF6B00), fontSize: 13)),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),

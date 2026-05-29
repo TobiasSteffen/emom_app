@@ -35,7 +35,7 @@ Future<void> _pumpEditor(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        planLibraryNotifierProvider.overrideWith(() =>
+        planLibraryProvider.overrideWith(() =>
             _FakePlanLibraryNotifier(library)),
       ],
       child: MaterialApp(
@@ -138,7 +138,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          planLibraryNotifierProvider.overrideWith(
+          planLibraryProvider.overrideWith(
               () => _FakePlanLibraryNotifier(library)),
         ],
         child: MaterialApp(home: PlanEditorScreen(plan: plan)),

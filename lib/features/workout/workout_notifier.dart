@@ -86,8 +86,8 @@ class WorkoutNotifier extends _$WorkoutNotifier {
 
   @override
   Future<WorkoutState> build() async {
-    _settings = await ref.read(settingsNotifierProvider.future);
-    final library = await ref.read(planLibraryNotifierProvider.future);
+    _settings = await ref.read(settingsProvider.future);
+    final library = await ref.read(planLibraryProvider.future);
     _activePlan = library.activePlan;
     _hasVibrator = await Vibration.hasVibrator();
 
@@ -132,7 +132,7 @@ class WorkoutNotifier extends _$WorkoutNotifier {
     _alarmLoopSub = null;
     _alarmPlayer.stop();
     WakelockPlus.disable();
-    final library = await ref.read(planLibraryNotifierProvider.future);
+    final library = await ref.read(planLibraryProvider.future);
     _activePlan = library.activePlan;
     state = AsyncData(WorkoutState(
       intervals: _activePlan.intervals,
@@ -287,6 +287,6 @@ class WorkoutNotifier extends _$WorkoutNotifier {
       planMode: 1,
       intervals: List.from(ivs),
     );
-    await ref.read(historyNotifierProvider.notifier).addOrUpdate(record);
+    await ref.read(historyProvider.notifier).addOrUpdate(record);
   }
 }

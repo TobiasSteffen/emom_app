@@ -28,7 +28,7 @@ class CalendarNotifier extends _$CalendarNotifier {
   }
 
   CalendarEntry? entryFor(DateTime date) {
-    final entries = state.valueOrNull ?? [];
+    final entries = state.value ?? [];
     for (final e in entries) {
       if (_sameDay(e.date, date)) return e;
     }

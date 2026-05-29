@@ -6,21 +6,49 @@ part of 'workout_notifier.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$workoutNotifierHash() => r'12a0a3bfe0de92f778b0c45596c4a110566866db';
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
 
-/// See also [WorkoutNotifier].
 @ProviderFor(WorkoutNotifier)
-final workoutNotifierProvider =
-    AutoDisposeAsyncNotifierProvider<WorkoutNotifier, WorkoutState>.internal(
-      WorkoutNotifier.new,
-      name: r'workoutNotifierProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$workoutNotifierHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
+final workoutProvider = WorkoutNotifierProvider._();
 
-typedef _$WorkoutNotifier = AutoDisposeAsyncNotifier<WorkoutState>;
-// ignore_for_file: type=lint
-// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
+final class WorkoutNotifierProvider
+    extends $AsyncNotifierProvider<WorkoutNotifier, WorkoutState> {
+  WorkoutNotifierProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'workoutProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$workoutNotifierHash();
+
+  @$internal
+  @override
+  WorkoutNotifier create() => WorkoutNotifier();
+}
+
+String _$workoutNotifierHash() => r'acd6f388d63399de6197cd1212424bab058a7947';
+
+abstract class _$WorkoutNotifier extends $AsyncNotifier<WorkoutState> {
+  FutureOr<WorkoutState> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<AsyncValue<WorkoutState>, WorkoutState>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<WorkoutState>, WorkoutState>,
+              AsyncValue<WorkoutState>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}

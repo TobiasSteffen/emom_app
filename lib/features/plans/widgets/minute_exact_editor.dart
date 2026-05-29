@@ -57,7 +57,7 @@ class PlanMinuteExactEditor extends StatelessWidget {
           ),
         ),
       ),
-      onReorder: onReorder,
+      onReorderItem: onReorder,
     );
   }
 }
