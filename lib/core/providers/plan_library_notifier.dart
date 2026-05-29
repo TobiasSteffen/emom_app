@@ -36,9 +36,12 @@ class PlanLibraryNotifier extends _$PlanLibraryNotifier {
 
   Future<void> deletePlan(String id) async {
     final lib = state.requireValue;
-    if (lib.plans.length <= 1 || lib.activePlanId == id) return;
+    if (lib.plans.length <= 1) return;
     final updatedPlans = lib.plans.where((p) => p.id != id).toList();
-    final updated = PlanLibrary(plans: updatedPlans, activePlanId: lib.activePlanId);
+    final newActiveId = lib.activePlanId == id
+        ? updatedPlans.first.id
+        : lib.activePlanId;
+    final updated = PlanLibrary(plans: updatedPlans, activePlanId: newActiveId);
     await PlanLibraryStorage.save(updated);
     state = AsyncData(updated);
   }
