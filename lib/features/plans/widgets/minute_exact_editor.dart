@@ -8,6 +8,7 @@ class PlanMinuteExactEditor extends StatelessWidget {
   final int? selectedRow;
   final ValueChanged<int?> onRowSelected;
   final VoidCallback onChanged;
+  final VoidCallback onBeforeFieldChange;
   final void Function(int oldIndex, int newIndex) onReorder;
   final void Function(int index) onDelete;
   final Future<bool> Function(int index)? onConfirmDelete;
@@ -18,6 +19,7 @@ class PlanMinuteExactEditor extends StatelessWidget {
     required this.selectedRow,
     required this.onRowSelected,
     required this.onChanged,
+    required this.onBeforeFieldChange,
     required this.onReorder,
     required this.onDelete,
     this.onConfirmDelete,
@@ -55,6 +57,7 @@ class PlanMinuteExactEditor extends StatelessWidget {
             isSelected: selectedRow == i,
             onSelect: () => onRowSelected(selectedRow == i ? null : i),
             onChanged: onChanged,
+            onBeforeFieldChange: onBeforeFieldChange,
           ),
         ),
       ),

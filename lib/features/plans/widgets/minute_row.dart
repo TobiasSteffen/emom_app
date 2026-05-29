@@ -7,6 +7,7 @@ class PlanMinuteRow extends StatefulWidget {
   final int index;
   final TrainingPlan plan;
   final VoidCallback onChanged;
+  final VoidCallback onBeforeFieldChange;
   final bool isSelected;
   final VoidCallback onSelect;
 
@@ -15,6 +16,7 @@ class PlanMinuteRow extends StatefulWidget {
     required this.index,
     required this.plan,
     required this.onChanged,
+    required this.onBeforeFieldChange,
     required this.isSelected,
     required this.onSelect,
   });
@@ -107,6 +109,7 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
               behavior: HitTestBehavior.opaque,
               child: IntervalEditForm(
                 iv: iv,
+                onBeforeChange: widget.onBeforeFieldChange,
                 onChanged: () => _update(() {}),
                 index: widget.index,
                 onCollapse: widget.onSelect,
