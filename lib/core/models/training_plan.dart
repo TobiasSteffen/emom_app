@@ -5,18 +5,20 @@ import 'package:path_provider/path_provider.dart';
 import 'settings.dart';
 
 class IntervalConfig {
+  String equipmentTypeId;
+  String? variantId;
+  String exerciseTypeId;
+  ExerciseSide? side;
   int reps;
   int durationSeconds;
-  Equipment equipment;
-  Exercise exercise;
-  ExerciseSide? side;
   bool isPause;
 
   IntervalConfig({
+    required this.equipmentTypeId,
+    required this.exerciseTypeId,
     required this.reps,
     required this.durationSeconds,
-    required this.equipment,
-    required this.exercise,
+    this.variantId,
     this.side,
     this.isPause = false,
   });
@@ -25,53 +27,103 @@ class IntervalConfig {
     final m = <String, dynamic>{
       'r': reps,
       'd': durationSeconds,
-      'e': equipment.index,
-      'x': exercise.index,
+      'et': equipmentTypeId,
+      'x': exerciseTypeId,
     };
+    if (variantId != null) m['v'] = variantId;
     if (side != null) m['s'] = side!.index;
     if (isPause) m['p'] = 1;
     return m;
   }
 
   factory IntervalConfig.fromJson(Map<String, dynamic> j) {
-    final Equipment eq;
-    final Exercise ex;
-    if (j.containsKey('x')) {
-      // New format: e = new Equipment index, x = Exercise index
-      eq = Equipment.values.elementAtOrNull(j['e'] as int) ?? Equipment.kb24;
-      ex = Exercise.values.elementAtOrNull(j['x'] as int) ?? eq.defaultExercise;
-    } else {
-      // Old format migration: e=0 → kb24+swingBeidarmig, e=1 → sm12+mace360
-      final oldE = j['e'] as int;
-      eq = oldE == 0 ? Equipment.kb24 : Equipment.sm12;
-      ex = eq.defaultExercise;
+    if (j.containsKey('et')) {
+      // v3: new format with string IDs
+      final sideIdx = j['s'] as int?;
+      return IntervalConfig(
+        reps: j['r'] as int,
+        durationSeconds: j['d'] as int,
+        equipmentTypeId: j['et'] as String,
+        variantId: j['v'] as String?,
+        exerciseTypeId: j['x'] as String,
+        side: sideIdx != null ? ExerciseSide.values.elementAtOrNull(sideIdx) : null,
+        isPause: (j['p'] as int?) == 1,
+      );
     }
-    final sideIndex = j['s'] as int?;
+    final eIdx = j['e'] as int;
+    if (!j.containsKey('x')) {
+      // v1: only e key, two possible values
+      return IntervalConfig(
+        reps: j['r'] as int,
+        durationSeconds: j['d'] as int,
+        equipmentTypeId: eIdx == 0 ? 'kettlebell' : 'steelmace',
+        variantId: eIdx == 0 ? 'kb_24' : 'sm_12',
+        exerciseTypeId: eIdx == 0 ? 'swing_beidarmig' : 'mace_360',
+      );
+    }
+    // v2: e = Equipment enum index, x = Exercise enum index (both ints)
+    final xIdx = j['x'] as int;
+    final sideIdx = j['s'] as int?;
     return IntervalConfig(
       reps: j['r'] as int,
       durationSeconds: j['d'] as int,
-      equipment: eq,
-      exercise: ex,
-      side: sideIndex != null ? ExerciseSide.values.elementAtOrNull(sideIndex) : null,
+      equipmentTypeId: migrateEqType(eIdx),
+      variantId: migrateVariant(eIdx),
+      exerciseTypeId: migrateExercise(xIdx),
+      side: sideIdx != null ? ExerciseSide.values.elementAtOrNull(sideIdx) : null,
       isPause: (j['p'] as int?) == 1,
     );
   }
 
+  static String migrateEqType(int e) => switch (e) {
+    0 || 1 || 2 => 'kettlebell',
+    3 || 4       => 'steelmace',
+    _            => 'pezziball',
+  };
+
+  static String? migrateVariant(int e) => switch (e) {
+    0 => 'kb_16',
+    1 => 'kb_20',
+    2 => 'kb_24',
+    3 => 'sm_8',
+    4 => 'sm_12',
+    5 => 'pb_0',
+    6 => 'pb_2_5',
+    7 => 'pb_5',
+    8 => 'pb_7_5',
+    9 => 'pb_10',
+    _ => null,
+  };
+
+  static String migrateExercise(int x) => switch (x) {
+    0 => 'swing_beidarmig',
+    1 => 'swing_einarmig',
+    2 => 'snatch',
+    3 => 'push_press',
+    4 => 'mace_360',
+    5 => 'myotatischer_crunch',
+    6 => 'schulter_heben',
+    _ => 'swing_beidarmig',
+  };
+
   IntervalConfig copyWith({
-    int? reps,
-    int? durationSeconds,
-    Equipment? equipment,
-    Exercise? exercise,
+    String? equipmentTypeId,
+    String? variantId,
+    bool clearVariant = false,
+    String? exerciseTypeId,
     ExerciseSide? side,
     bool clearSide = false,
+    int? reps,
+    int? durationSeconds,
     bool? isPause,
   }) =>
       IntervalConfig(
+        equipmentTypeId: equipmentTypeId ?? this.equipmentTypeId,
+        variantId: clearVariant ? null : (variantId ?? this.variantId),
+        exerciseTypeId: exerciseTypeId ?? this.exerciseTypeId,
+        side: clearSide ? null : (side ?? this.side),
         reps: reps ?? this.reps,
         durationSeconds: durationSeconds ?? this.durationSeconds,
-        equipment: equipment ?? this.equipment,
-        exercise: exercise ?? this.exercise,
-        side: clearSide ? null : (side ?? this.side),
         isPause: isPause ?? this.isPause,
       );
 }
@@ -95,7 +147,7 @@ class TrainingPlan {
 
   String get planKey => intervals
       .map((iv) =>
-          '${iv.reps},${iv.durationSeconds},${iv.equipment.index},${iv.exercise.index},${iv.side?.index ?? -1},${iv.isPause ? 1 : 0}')
+          '${iv.reps},${iv.durationSeconds},${iv.equipmentTypeId},${iv.variantId ?? ''},${iv.exerciseTypeId},${iv.side?.index ?? -1},${iv.isPause ? 1 : 0}')
       .join('|');
 
   static String _newId() {
@@ -113,10 +165,11 @@ class TrainingPlan {
       id: _newId(),
       name: name,
       intervals: List.generate(30, (i) => IntervalConfig(
+        equipmentTypeId: 'kettlebell',
+        variantId: 'kb_24',
+        exerciseTypeId: 'swing_beidarmig',
         reps: reps[i],
         durationSeconds: 60,
-        equipment: Equipment.kb24,
-        exercise: Exercise.swingBeidarmig,
       )),
     );
   }
