@@ -123,5 +123,41 @@ void main() {
       final iv = IntervalRecord.fromJson(json);
       expect(iv.exercise, Exercise.swingBeidarmig);
     });
+
+    test('IntervalRecord: side und isPause werden serialisiert und wiederhergestellt', () {
+      final original = IntervalRecord(
+        reps: 10,
+        durationSeconds: 60,
+        equipment: Equipment.kb24,
+        exercise: Exercise.snatch,
+        side: ExerciseSide.links,
+        isPause: false,
+      );
+      final restored = IntervalRecord.fromJson(original.toJson());
+      expect(restored.side, ExerciseSide.links);
+      expect(restored.isPause, false);
+      expect(restored.reps, 10);
+      expect(restored.exercise, Exercise.snatch);
+    });
+
+    test('IntervalRecord: isPause=true wird korrekt serialisiert', () {
+      final original = IntervalRecord(
+        reps: 0,
+        durationSeconds: 60,
+        equipment: Equipment.kb24,
+        exercise: Exercise.swingBeidarmig,
+        isPause: true,
+      );
+      final restored = IntervalRecord.fromJson(original.toJson());
+      expect(restored.isPause, true);
+      expect(restored.side, isNull);
+    });
+
+    test('IntervalRecord: fromJson ohne side/isPause ergibt Standardwerte (Rückwärtskompatibilität)', () {
+      final json = {'r': 10, 'd': 60, 'e': 2, 'x': 0}; // altes Format ohne 's' oder 'p'
+      final iv = IntervalRecord.fromJson(json);
+      expect(iv.side, isNull);
+      expect(iv.isPause, false);
+    });
   });
 }
