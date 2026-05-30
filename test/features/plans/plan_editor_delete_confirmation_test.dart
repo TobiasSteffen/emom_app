@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:emom_app/core/models/settings.dart';
 import 'package:emom_app/core/models/training_plan.dart';
 import 'package:emom_app/core/providers/plan_library_notifier.dart';
 import 'package:emom_app/features/plans/plan_editor_screen.dart';
@@ -11,8 +10,9 @@ import 'package:emom_app/features/shared/widgets/swipe_to_reveal_row.dart';
 List<IntervalConfig> _fourIntervals() => List.generate(
       4,
       (i) => IntervalConfig(
-        equipment: Equipment.kb16,
-        exercise: Exercise.swingBeidarmig,
+        equipmentTypeId: 'kettlebell',
+        variantId: 'kb_16',
+        exerciseTypeId: 'swing_beidarmig',
         reps: 10,
         durationSeconds: 60,
       ),
@@ -126,8 +126,9 @@ void main() {
       intervals: List.generate(
         TrainingPlan.minIntervals,
         (_) => IntervalConfig(
-          equipment: Equipment.kb16,
-          exercise: Exercise.swingBeidarmig,
+          equipmentTypeId: 'kettlebell',
+          variantId: 'kb_16',
+          exerciseTypeId: 'swing_beidarmig',
           reps: 5,
           durationSeconds: 60,
         ),

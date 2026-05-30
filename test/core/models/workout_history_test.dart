@@ -19,8 +19,8 @@ void main() {
         timestamp: 1000,
         planMode: 1,
         intervals: [
-          IntervalRecord(reps: 10, durationSeconds: 60, equipment: Equipment.kb16),
-          IntervalRecord(reps: 12, durationSeconds: 60, equipment: Equipment.kb16),
+          IntervalRecord(reps: 10, durationSeconds: 60, equipmentTypeId: 'kettlebell', exerciseTypeId: 'swing_beidarmig'),
+          IntervalRecord(reps: 12, durationSeconds: 60, equipmentTypeId: 'kettlebell', exerciseTypeId: 'swing_beidarmig'),
         ],
       );
 
@@ -39,17 +39,17 @@ void main() {
         timestamp: t,
         planMode: 1,
         intervals: [
-          IntervalRecord(reps: 5, durationSeconds: 60, equipment: Equipment.kb16),
-          IntervalRecord(reps: 6, durationSeconds: 60, equipment: Equipment.kb16),
+          IntervalRecord(reps: 5, durationSeconds: 60, equipmentTypeId: 'kettlebell', exerciseTypeId: 'swing_beidarmig'),
+          IntervalRecord(reps: 6, durationSeconds: 60, equipmentTypeId: 'kettlebell', exerciseTypeId: 'swing_beidarmig'),
         ],
       ));
       await WorkoutHistory.addOrUpdateRecord(WorkoutRecord(
         timestamp: t,
         planMode: 1,
         intervals: [
-          IntervalRecord(reps: 5, durationSeconds: 60, equipment: Equipment.kb16),
-          IntervalRecord(reps: 6, durationSeconds: 60, equipment: Equipment.kb16),
-          IntervalRecord(reps: 7, durationSeconds: 60, equipment: Equipment.kb16),
+          IntervalRecord(reps: 5, durationSeconds: 60, equipmentTypeId: 'kettlebell', exerciseTypeId: 'swing_beidarmig'),
+          IntervalRecord(reps: 6, durationSeconds: 60, equipmentTypeId: 'kettlebell', exerciseTypeId: 'swing_beidarmig'),
+          IntervalRecord(reps: 7, durationSeconds: 60, equipmentTypeId: 'kettlebell', exerciseTypeId: 'swing_beidarmig'),
         ],
       ));
 
@@ -63,16 +63,16 @@ void main() {
         timestamp: 1000,
         planMode: 1,
         intervals: [
-          IntervalRecord(reps: 5, durationSeconds: 60, equipment: Equipment.kb16),
-          IntervalRecord(reps: 5, durationSeconds: 60, equipment: Equipment.kb16),
+          IntervalRecord(reps: 5, durationSeconds: 60, equipmentTypeId: 'kettlebell', exerciseTypeId: 'swing_beidarmig'),
+          IntervalRecord(reps: 5, durationSeconds: 60, equipmentTypeId: 'kettlebell', exerciseTypeId: 'swing_beidarmig'),
         ],
       ));
       await WorkoutHistory.addOrUpdateRecord(WorkoutRecord(
         timestamp: 2000,
         planMode: 1,
         intervals: [
-          IntervalRecord(reps: 8, durationSeconds: 60, equipment: Equipment.kb16),
-          IntervalRecord(reps: 8, durationSeconds: 60, equipment: Equipment.kb16),
+          IntervalRecord(reps: 8, durationSeconds: 60, equipmentTypeId: 'kettlebell', exerciseTypeId: 'swing_beidarmig'),
+          IntervalRecord(reps: 8, durationSeconds: 60, equipmentTypeId: 'kettlebell', exerciseTypeId: 'swing_beidarmig'),
         ],
       ));
 
@@ -81,30 +81,28 @@ void main() {
       expect(records[1].timestamp, 1000);
     });
 
-    test('totalReps, kettlebellReps, steelMaceReps computed correctly', () async {
+    test('totalReps and totalDurationSeconds computed correctly', () async {
       final record = WorkoutRecord(
         timestamp: 3000,
         planMode: 1,
         intervals: [
-          IntervalRecord(reps: 10, durationSeconds: 60, equipment: Equipment.kb24), // kb24
-          IntervalRecord(reps: 8, durationSeconds: 60, equipment: Equipment.sm8, exercise: Exercise.mace360),  // sm8
-          IntervalRecord(reps: 6, durationSeconds: 60, equipment: Equipment.kb24), // kb24
+          IntervalRecord(reps: 10, durationSeconds: 60, equipmentTypeId: 'kettlebell', exerciseTypeId: 'swing_beidarmig'),
+          IntervalRecord(reps: 8, durationSeconds: 60, equipmentTypeId: 'steelmace', exerciseTypeId: 'mace_360'),
+          IntervalRecord(reps: 6, durationSeconds: 60, equipmentTypeId: 'kettlebell', exerciseTypeId: 'swing_beidarmig'),
         ],
       );
 
       expect(record.totalReps, 24);
-      expect(record.kettlebellReps, 16); // equipment < 3
-      expect(record.steelMaceReps, 8);   // equipment >= 3
       expect(record.totalDurationSeconds, 180);
     });
 
-    test('serialization round-trip preserves all fields including exercise', () {
+    test('serialization round-trip preserves all fields including exerciseTypeId', () {
       final original = WorkoutRecord(
         timestamp: 9999,
         planMode: 1,
         intervals: [
-          IntervalRecord(reps: 15, durationSeconds: 45, equipment: Equipment.sm12, exercise: Exercise.mace360), // sm12, mace360
-          IntervalRecord(reps: 10, durationSeconds: 60, equipment: Equipment.kb20, exercise: Exercise.snatch), // kb20, snatch
+          IntervalRecord(reps: 15, durationSeconds: 45, equipmentTypeId: 'steelmace', variantId: 'sm_12', exerciseTypeId: 'mace_360'),
+          IntervalRecord(reps: 10, durationSeconds: 60, equipmentTypeId: 'kettlebell', variantId: 'kb_20', exerciseTypeId: 'snatch'),
         ],
       );
       final restored = WorkoutRecord.fromJson(original.toJson());
@@ -113,23 +111,24 @@ void main() {
       expect(restored.planMode, 1);
       expect(restored.intervals.length, 2);
       expect(restored.intervals[0].reps, 15);
-      expect(restored.intervals[0].equipment, Equipment.sm12);
-      expect(restored.intervals[0].exercise, Exercise.mace360);
-      expect(restored.intervals[1].exercise, Exercise.snatch);
+      expect(restored.intervals[0].equipmentTypeId, 'steelmace');
+      expect(restored.intervals[0].exerciseTypeId, 'mace_360');
+      expect(restored.intervals[1].exerciseTypeId, 'snatch');
     });
 
-    test('fromJson with missing exercise key defaults to 0 (swingBeidarmig)', () {
+    test('fromJson with missing exercise key defaults to swing_beidarmig', () {
       final json = {'r': 10, 'd': 60, 'e': 2}; // old record without 'x'
       final iv = IntervalRecord.fromJson(json);
-      expect(iv.exercise, Exercise.swingBeidarmig);
+      expect(iv.exerciseTypeId, 'swing_beidarmig');
     });
 
     test('IntervalRecord: side und isPause werden serialisiert und wiederhergestellt', () {
       final original = IntervalRecord(
         reps: 10,
         durationSeconds: 60,
-        equipment: Equipment.kb24,
-        exercise: Exercise.snatch,
+        equipmentTypeId: 'kettlebell',
+        variantId: 'kb_24',
+        exerciseTypeId: 'snatch',
         side: ExerciseSide.links,
         isPause: false,
       );
@@ -137,15 +136,15 @@ void main() {
       expect(restored.side, ExerciseSide.links);
       expect(restored.isPause, false);
       expect(restored.reps, 10);
-      expect(restored.exercise, Exercise.snatch);
+      expect(restored.exerciseTypeId, 'snatch');
     });
 
     test('IntervalRecord: isPause=true wird korrekt serialisiert', () {
       final original = IntervalRecord(
         reps: 0,
         durationSeconds: 60,
-        equipment: Equipment.kb24,
-        exercise: Exercise.swingBeidarmig,
+        equipmentTypeId: 'kettlebell',
+        exerciseTypeId: 'swing_beidarmig',
         isPause: true,
       );
       final restored = IntervalRecord.fromJson(original.toJson());
@@ -164,7 +163,8 @@ void main() {
       final iv = IntervalRecord(
         reps: 5,
         durationSeconds: 60,
-        equipment: Equipment.kb16,
+        equipmentTypeId: 'kettlebell',
+        exerciseTypeId: 'swing_beidarmig',
       );
       final json = iv.toJson();
       expect(json.containsKey('s'), isFalse);
@@ -175,8 +175,9 @@ void main() {
       final iv = IntervalRecord(
         reps: 5,
         durationSeconds: 60,
-        equipment: Equipment.kb24,
-        exercise: Exercise.snatch,
+        equipmentTypeId: 'kettlebell',
+        variantId: 'kb_24',
+        exerciseTypeId: 'snatch',
         side: ExerciseSide.rechts,
         isPause: false,
       );
@@ -185,7 +186,8 @@ void main() {
       final pause = IntervalRecord(
         reps: 0,
         durationSeconds: 60,
-        equipment: Equipment.kb24,
+        equipmentTypeId: 'kettlebell',
+        exerciseTypeId: 'swing_beidarmig',
         isPause: true,
       );
       expect(pause.toJson().containsKey('p'), isTrue);

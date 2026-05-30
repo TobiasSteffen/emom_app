@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/training_plan.dart';
 import '../../../core/models/settings.dart';
+import '../../../core/providers/equipment_catalog_notifier.dart';
 import '../../shared/widgets/interval_edit_form.dart';
 
-class PlanMinuteRow extends StatefulWidget {
+class PlanMinuteRow extends ConsumerStatefulWidget {
   final int index;
   final TrainingPlan plan;
   final VoidCallback onChanged;
@@ -22,10 +24,10 @@ class PlanMinuteRow extends StatefulWidget {
   });
 
   @override
-  State<PlanMinuteRow> createState() => _PlanMinuteRowState();
+  ConsumerState<PlanMinuteRow> createState() => _PlanMinuteRowState();
 }
 
-class _PlanMinuteRowState extends State<PlanMinuteRow> {
+class _PlanMinuteRowState extends ConsumerState<PlanMinuteRow> {
   void _update(VoidCallback fn) {
     setState(fn);
     widget.onChanged();
@@ -36,6 +38,17 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
     final iv = widget.plan.intervals[widget.index];
     final i = widget.index;
     final color = iv.isPause ? Colors.white24 : phaseColorForMinute(i);
+
+    final catalogAsync = ref.watch(equipmentCatalogProvider);
+    final catalog = catalogAsync.value;
+    final eqType = catalog?.findType(iv.equipmentTypeId);
+    final exerciseType = eqType?.exercises
+        .where((e) => e.id == iv.exerciseTypeId)
+        .firstOrNull;
+
+    final iconAsset = eqType?.iconAsset ?? 'assets/icon/kettlebell.png';
+    final equipmentLabel = eqType?.name ?? iv.equipmentTypeId;
+    final exerciseLabel = exerciseType?.name ?? iv.exerciseTypeId;
 
     return GestureDetector(
       onTap: widget.onSelect,
@@ -78,17 +91,17 @@ class _PlanMinuteRowState extends State<PlanMinuteRow> {
                       style: const TextStyle(
                           fontSize: 12, color: Colors.white38)),
                 ] else ...[
-                  Image.asset(iv.equipment.iconPath,
+                  Image.asset(iconAsset,
                       width: 14, height: 14, color: Colors.white38),
                   const SizedBox(width: 4),
-                  Text(iv.equipment.label,
+                  Text(equipmentLabel,
                       style: const TextStyle(
                           fontSize: 11, color: Colors.white38)),
                   const SizedBox(width: 6),
                   Text(
                     iv.side != null
-                        ? '${iv.exercise.label} ${iv.side!.shortLabel}'
-                        : iv.exercise.label,
+                        ? '$exerciseLabel ${iv.side!.shortLabel}'
+                        : exerciseLabel,
                     style: const TextStyle(
                         fontSize: 11, color: Colors.white38)),
                   const SizedBox(width: 6),

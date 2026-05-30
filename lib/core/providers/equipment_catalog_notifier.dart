@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/equipment_catalog.dart';
+import 'plan_library_notifier.dart';
 
 part 'equipment_catalog_notifier.g.dart';
 
@@ -15,11 +16,26 @@ class EquipmentCatalogNotifier extends _$EquipmentCatalogNotifier {
     await EquipmentCatalogStorage.save(catalog);
   }
 
-  // TODO(task3): replace with real plan-usage checks once IntervalConfig gains
-  // equipmentTypeId / variantId / exerciseTypeId fields.
-  bool _equipmentUsedInPlans(String equipmentTypeId) => false;
-  bool _variantUsedInPlans(String variantId) => false;
-  bool _exerciseUsedInPlans(String exerciseId) => false;
+  bool _equipmentUsedInPlans(String equipmentTypeId) {
+    final library = ref.read(planLibraryProvider).value;
+    if (library == null) return false;
+    return library.plans.any((p) =>
+        p.intervals.any((iv) => iv.equipmentTypeId == equipmentTypeId));
+  }
+
+  bool _variantUsedInPlans(String variantId) {
+    final library = ref.read(planLibraryProvider).value;
+    if (library == null) return false;
+    return library.plans.any((p) =>
+        p.intervals.any((iv) => iv.variantId == variantId));
+  }
+
+  bool _exerciseUsedInPlans(String exerciseId) {
+    final library = ref.read(planLibraryProvider).value;
+    if (library == null) return false;
+    return library.plans.any((p) =>
+        p.intervals.any((iv) => iv.exerciseTypeId == exerciseId));
+  }
 
   Future<void> addEquipmentType(EquipmentType t) async {
     final catalog = await _current();

@@ -2,13 +2,13 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:emom_app/features/plans/undo_manager.dart';
 import 'package:emom_app/core/models/training_plan.dart';
-import 'package:emom_app/core/models/settings.dart';
 
 IntervalConfig _iv({int reps = 10}) => IntervalConfig(
       reps: reps,
       durationSeconds: 60,
-      equipment: Equipment.kb16,
-      exercise: Exercise.swingBeidarmig,
+      equipmentTypeId: 'kettlebell',
+      variantId: 'kb_16',
+      exerciseTypeId: 'swing_beidarmig',
     );
 
 void main() {
