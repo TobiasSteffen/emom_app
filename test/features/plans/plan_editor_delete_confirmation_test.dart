@@ -58,7 +58,7 @@ class _FakePlanLibraryNotifier extends PlanLibraryNotifier {
 /// Swipe row at [index] open (reveal trash button), then settle.
 Future<void> _swipeOpen(WidgetTester tester, int index) async {
   final rowFinder = find.byType(SwipeToRevealRow).at(index);
-  await tester.drag(rowFinder, const Offset(80, 0));
+  await tester.drag(rowFinder, const Offset(-80, 0));
   await tester.pumpAndSettle();
 }
 
