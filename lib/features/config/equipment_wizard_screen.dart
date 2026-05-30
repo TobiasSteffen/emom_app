@@ -47,6 +47,7 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
   List<_EditableVariant> _variants = [];
   List<_EditableExercise> _exercises = [];
 
+  final _nameCtrl = TextEditingController();
   final _newVariantCtrl = TextEditingController();
   final _newExerciseCtrl = TextEditingController();
   bool _addingVariant = false;
@@ -74,6 +75,7 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
 
   @override
   void dispose() {
+    _nameCtrl.dispose();
     _newVariantCtrl.dispose();
     _newExerciseCtrl.dispose();
     super.dispose();
@@ -84,11 +86,14 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
   void _goForward() {
     if (_step == 1) {
       if (_isNewSelected) {
+        _nameCtrl.clear();
         setState(() {
           _name = '';
           _iconAsset = _kIconAssets.first;
           _variants = [];
           _exercises = [];
+          _addingVariant = false;
+          _addingExercise = false;
           _step = 2;
         });
       } else {
@@ -100,6 +105,8 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
           _exercises = t.exercises
               .map((e) => _EditableExercise(id: e.id, name: e.name, hasSide: e.hasSide))
               .toList();
+          _addingVariant = false;
+          _addingExercise = false;
           _step = 3;
         });
       }
@@ -110,7 +117,10 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
 
   void _goBack() {
     if (_step == 3 && !_isNewSelected) {
-      setState(() => _step = 1);
+      setState(() {
+        _addingVariant = false;
+        _step = 1;
+      });
     } else if (_step > 1) {
       setState(() => _step--);
     }
@@ -236,11 +246,9 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
       );
 
   Widget _nameField({bool autofocus = false}) {
-    final ctrl = TextEditingController(text: _name)
-      ..selection = TextSelection.collapsed(offset: _name.length);
     return TextField(
       autofocus: autofocus,
-      controller: ctrl,
+      controller: _nameCtrl,
       onChanged: (v) => setState(() => _name = v),
       style: const TextStyle(color: Colors.white, fontSize: 14),
       decoration: InputDecoration(
