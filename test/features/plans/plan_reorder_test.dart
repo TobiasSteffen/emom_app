@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:emom_app/core/models/training_plan.dart';
-import 'package:emom_app/core/models/settings.dart';
 
 List<IntervalConfig> _makeIntervals() => List.generate(30, (i) => IntervalConfig(
   reps: i + 1,
   durationSeconds: 60,
-  equipment: Equipment.kb24,
-  exercise: Exercise.swingBeidarmig,
+  equipmentTypeId: 'kettlebell',
+  variantId: 'kb_24',
+  exerciseTypeId: 'swing_beidarmig',
 ));
 
 ({List<IntervalConfig> intervals, int? selectedRow}) _applyReorder(
