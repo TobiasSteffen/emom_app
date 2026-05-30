@@ -9,7 +9,7 @@ class EquipmentCatalogScreen extends ConsumerWidget {
 
   Future<void> _delete(BuildContext context, WidgetRef ref, EquipmentType t) async {
     try {
-      await ref.read(equipmentCatalogNotifierProvider.notifier).deleteEquipmentType(t.id);
+      await ref.read(equipmentCatalogProvider.notifier).deleteEquipmentType(t.id);
     } on StateError catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -51,7 +51,7 @@ class EquipmentCatalogScreen extends ConsumerWidget {
         data: (catalog) => ListView.separated(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
           itemCount: catalog.types.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 8),
+          separatorBuilder: (_, _) => const SizedBox(height: 8),
           itemBuilder: (context, idx) {
             final t = catalog.types[idx];
             return _EquipmentRow(
@@ -82,7 +82,7 @@ class _EquipmentRow extends StatefulWidget {
   });
 
   @override
-  State<_EquipmentRowState> createState() => _EquipmentRowState();
+  State<_EquipmentRow> createState() => _EquipmentRowState();
 }
 
 class _EquipmentRowState extends State<_EquipmentRow> {
