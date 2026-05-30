@@ -79,7 +79,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.fitness_center, color: Color(0xFFFF6B00), size: 18),
+                  Icon(Icons.fitness_center, color: Color(0xFF4CAF50), size: 18),
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
