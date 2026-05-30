@@ -90,6 +90,17 @@ class EquipmentCatalog {
     }
   }
 
+  static EquipmentCatalog addMissingDefaults(EquipmentCatalog catalog) {
+    final defaults = defaultCatalog();
+    var types = List<EquipmentType>.from(catalog.types);
+    for (final d in defaults.types) {
+      if (!types.any((t) => t.id == d.id)) {
+        types.add(d);
+      }
+    }
+    return EquipmentCatalog(types: types);
+  }
+
   Map<String, dynamic> toJson() => {
         'types': types.map((t) => t.toJson()).toList(),
       };
@@ -172,7 +183,12 @@ class EquipmentCatalogStorage {
         return catalog;
       }
       final json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
-      return EquipmentCatalog.fromJson(json);
+      final catalog = EquipmentCatalog.fromJson(json);
+      final migrated = EquipmentCatalog.addMissingDefaults(catalog);
+      if (migrated.types.length != catalog.types.length) {
+        await save(migrated);
+      }
+      return migrated;
     } catch (_) {
       return EquipmentCatalog.defaultCatalog();
     }

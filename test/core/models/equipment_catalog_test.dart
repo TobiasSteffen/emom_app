@@ -47,5 +47,42 @@ void main() {
       expect(id1, isNotEmpty);
       expect(id1, isNot(equals(id2)));
     });
+
+    group('addMissingDefaults migration', () {
+      test('adds bodyweight to catalog that lacks it', () {
+        final old = EquipmentCatalog(types: [
+          const EquipmentType(
+            id: 'kettlebell',
+            name: 'Kettlebell',
+            iconAsset: 'assets/icon/kettlebell.png',
+            variants: [],
+            exercises: [],
+          ),
+        ]);
+        final result = EquipmentCatalog.addMissingDefaults(old);
+        expect(result.types.any((t) => t.id == 'bodyweight'), isTrue);
+        expect(result.types.length, 4);
+      });
+
+      test('does not duplicate existing types', () {
+        final full = EquipmentCatalog.defaultCatalog();
+        final result = EquipmentCatalog.addMissingDefaults(full);
+        expect(result.types.length, full.types.length);
+      });
+
+      test('preserves original type order', () {
+        final old = EquipmentCatalog(types: [
+          const EquipmentType(
+            id: 'kettlebell',
+            name: 'Kettlebell',
+            iconAsset: 'assets/icon/kettlebell.png',
+            variants: [],
+            exercises: [],
+          ),
+        ]);
+        final result = EquipmentCatalog.addMissingDefaults(old);
+        expect(result.types.first.id, 'kettlebell');
+      });
+    });
   });
 }
