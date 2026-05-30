@@ -1,4 +1,32 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+
+// Only claims leftward drags (or rightward when row is already open).
+// This allows right-swipe navigation to pass through to the PageView.
+class _LeftOnlyDragRecognizer extends HorizontalDragGestureRecognizer {
+  _LeftOnlyDragRecognizer({super.debugOwner});
+  bool _rejected = false;
+  bool Function()? isClosedFn;
+
+  @override
+  void handleEvent(PointerEvent event) {
+    if (_rejected) return;
+    if (event is PointerMoveEvent &&
+        event.delta.dx > 1.0 &&
+        (isClosedFn?.call() ?? true)) {
+      _rejected = true;
+      resolve(GestureDisposition.rejected);
+      return;
+    }
+    super.handleEvent(event);
+  }
+
+  @override
+  void didStopTrackingLastPointer(int pointer) {
+    _rejected = false;
+    super.didStopTrackingLastPointer(pointer);
+  }
+}
 
 class SwipeToRevealRow extends StatefulWidget {
   final bool canDelete;
@@ -40,9 +68,6 @@ class _SwipeToRevealRowState extends State<SwipeToRevealRow>
   }
 
   void _onDragUpdate(DragUpdateDetails d) {
-    if (!widget.canDelete) return;
-    // Ignore rightward drag when closed — prevents accidental micro-drift.
-    if (d.delta.dx > 0 && _ctrl.value <= 0) return;
     _ctrl.value =
         (_ctrl.value - d.delta.dx / _revealWidth).clamp(0.0, 1.0);
   }
@@ -69,12 +94,23 @@ class _SwipeToRevealRowState extends State<SwipeToRevealRow>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onHorizontalDragUpdate: _onDragUpdate,
-      onHorizontalDragEnd: _onDragEnd,
-      onHorizontalDragCancel: () {
-        if (_ctrl.value != 0.0) _ctrl.animateTo(0.0);
-      },
+    return RawGestureDetector(
+      gestures: widget.canDelete
+          ? {
+              _LeftOnlyDragRecognizer:
+                  GestureRecognizerFactoryWithHandlers<_LeftOnlyDragRecognizer>(
+                () => _LeftOnlyDragRecognizer(debugOwner: this),
+                (r) {
+                  r.isClosedFn = () => _ctrl.value <= 0;
+                  r.onUpdate = _onDragUpdate;
+                  r.onEnd = _onDragEnd;
+                  r.onCancel = () {
+                    if (_ctrl.value != 0.0) _ctrl.animateTo(0.0);
+                  };
+                },
+              ),
+            }
+          : {},
       child: AnimatedBuilder(
         animation: _ctrl,
         builder: (_, child) {
