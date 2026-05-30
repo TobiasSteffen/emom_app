@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/settings.dart';
 import '../../core/providers/settings_provider.dart';
 import 'widgets/feedback_tab.dart';
+import 'equipment_catalog_screen.dart';
 
 class ConfigScreen extends ConsumerStatefulWidget {
   final int visitCount;
@@ -59,6 +60,39 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
         children: [
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8, top: 4),
+            child: Text(
+              'GERÄTE & ÜBUNGEN',
+              style: TextStyle(fontSize: 11, letterSpacing: 2, color: Colors.white24),
+            ),
+          ),
+          GestureDetector(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const EquipmentCatalogScreen()),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A1A),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.fitness_center, color: Color(0xFFFF6B00), size: 18),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Geräte & Übungen verwalten',
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                  ),
+                  Icon(Icons.chevron_right, color: Colors.white24, size: 18),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
           FeedbackTab(
             settings: _s,
             onChanged: () => setState(() {}),
