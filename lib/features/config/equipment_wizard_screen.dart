@@ -39,41 +39,36 @@ class EquipmentWizardScreen extends ConsumerStatefulWidget {
 }
 
 class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
-  late String _name;
-  late String _iconAsset;
-  late bool _hasVariants;
-  late List<_EditableVariant> _variants;
-  late List<_EditableExercise> _exercises;
-
   int _step = 1;
+  bool _isNewSelected = false;
+  EquipmentType? _selectedType;
+  String _name = '';
+  String _iconAsset = _kIconAssets.first;
+  List<_EditableVariant> _variants = [];
+  List<_EditableExercise> _exercises = [];
 
   final _newVariantCtrl = TextEditingController();
   final _newExerciseCtrl = TextEditingController();
   bool _addingVariant = false;
   bool _addingExercise = false;
 
-  bool get _isEdit => widget.editType != null;
+  // ── Computed properties ───────────────────────────────────────────────────
+
+  bool get _hasSelection => _isNewSelected || _selectedType != null;
+
+  int get _displayStep {
+    if (_isNewSelected) return _step;
+    if (_step == 1) return 1;
+    return _step - 1; // Step 3→2, 4→3, 5→4 when editing existing
+  }
+
+  int get _totalSteps => _isNewSelected ? 5 : 4;
 
   @override
   void initState() {
     super.initState();
-    final t = widget.editType;
-    if (t != null) {
-      _name = t.name;
-      _iconAsset = t.iconAsset;
-      _hasVariants = t.variants.isNotEmpty;
-      _variants = t.variants
-          .map((v) => _EditableVariant(id: v.id, label: v.label, shortLabel: v.shortLabel))
-          .toList();
-      _exercises = t.exercises
-          .map((e) => _EditableExercise(id: e.id, name: e.name, hasSide: e.hasSide))
-          .toList();
-    } else {
-      _name = '';
-      _iconAsset = _kIconAssets.first;
-      _hasVariants = true;
-      _variants = [];
-      _exercises = [];
+    if (widget.editType != null) {
+      _selectedType = widget.editType;
     }
   }
 
@@ -84,24 +79,59 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
     super.dispose();
   }
 
+  // ── Navigation ────────────────────────────────────────────────────────────
+
+  void _goForward() {
+    if (_step == 1) {
+      if (_isNewSelected) {
+        setState(() {
+          _name = '';
+          _iconAsset = _kIconAssets.first;
+          _variants = [];
+          _exercises = [];
+          _step = 2;
+        });
+      } else {
+        final t = _selectedType!;
+        setState(() {
+          _variants = t.variants
+              .map((v) => _EditableVariant(id: v.id, label: v.label, shortLabel: v.shortLabel))
+              .toList();
+          _exercises = t.exercises
+              .map((e) => _EditableExercise(id: e.id, name: e.name, hasSide: e.hasSide))
+              .toList();
+          _step = 3;
+        });
+      }
+    } else if (_step < 5) {
+      setState(() => _step++);
+    }
+  }
+
+  void _goBack() {
+    if (_step == 3 && !_isNewSelected) {
+      setState(() => _step = 1);
+    } else if (_step > 1) {
+      setState(() => _step--);
+    }
+  }
+
   // ── Save ─────────────────────────────────────────────────────────────────
 
   Future<void> _save() async {
-    final t = widget.editType;
+    final isEdit = _selectedType != null && !_isNewSelected;
     final newType = EquipmentType(
-      id: t?.id ?? EquipmentCatalog.newId(),
-      name: _name.trim(),
-      iconAsset: _iconAsset,
-      variants: _hasVariants
-          ? _variants
-              .map((v) => EquipmentVariant(id: v.id, label: v.label, shortLabel: v.shortLabel))
-              .toList()
-          : [],
+      id: isEdit ? _selectedType!.id : EquipmentCatalog.newId(),
+      name: isEdit ? _selectedType!.name : _name.trim(),
+      iconAsset: isEdit ? _selectedType!.iconAsset : _iconAsset,
+      variants: _variants
+          .map((v) => EquipmentVariant(id: v.id, label: v.label, shortLabel: v.shortLabel))
+          .toList(),
       exercises: _exercises
           .map((e) => ExerciseType(id: e.id, name: e.name, hasSide: e.hasSide))
           .toList(),
     );
-    if (t != null) {
+    if (isEdit) {
       await ref.read(equipmentCatalogProvider.notifier).updateEquipmentType(newType);
     } else {
       await ref.read(equipmentCatalogProvider.notifier).addEquipmentType(newType);
@@ -109,7 +139,7 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
     if (mounted) Navigator.of(context).pop();
   }
 
-  // ── Delete checks (edit mode only) ───────────────────────────────────────
+  // ── Delete checks ─────────────────────────────────────────────────────────
 
   bool _variantUsed(String variantId) {
     final library = ref.read(planLibraryProvider).value;
@@ -145,13 +175,32 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
     setState(() => _exercises.removeAt(i));
   }
 
-  // ── Validation ────────────────────────────────────────────────────────────
-
-  bool get _step1Valid => _name.trim().isNotEmpty;
-  bool get _step4Valid => _exercises.isNotEmpty;
-  bool get _editValid => _name.trim().isNotEmpty && _exercises.isNotEmpty;
-
   // ── UI helpers ────────────────────────────────────────────────────────────
+
+  Widget _stepHeader() => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Text(
+          'Schritt $_displayStep von $_totalSteps',
+          style: const TextStyle(fontSize: 11, letterSpacing: 2, color: Colors.white24),
+        ),
+      );
+
+  Widget _summaryPill(String label) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+      );
+
+  String _catalogSubtitle(EquipmentType t) {
+    final variantPart = t.variants.isEmpty
+        ? 'kein Gewicht'
+        : t.variants.map((v) => v.label).join(' · ');
+    final exercisePart = t.exercises.length == 1 ? '1 Übung' : '${t.exercises.length} Übungen';
+    return '$variantPart · $exercisePart';
+  }
 
   Widget _sectionLabel(String text) => Padding(
         padding: const EdgeInsets.only(top: 20, bottom: 8),
@@ -243,7 +292,7 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
 
   Widget _stepNav({
     required bool canGoForward,
-    required VoidCallback onForward,
+    required VoidCallback? onForward,
     required String forwardLabel,
   }) =>
       Padding(
@@ -252,10 +301,11 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             if (_step > 1)
-              _ghostButton('← Zurück', () => setState(() => _step--))
+              _ghostButton('← Zurück', _goBack)
             else
               const SizedBox(),
-            _orangeButton(forwardLabel, canGoForward ? onForward : null),
+            if (forwardLabel.isNotEmpty)
+              _orangeButton(forwardLabel, canGoForward ? onForward : null),
           ],
         ),
       );
@@ -418,17 +468,46 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
 
   // ── Wizard steps ──────────────────────────────────────────────────────────
 
-  Widget _buildStep1() => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  // Step 1 needs its own Scaffold with Expanded ListView — called via catalogAsync.when(data: _buildStep1)
+  Widget _buildStep1(EquipmentCatalog catalog) => Column(
         children: [
-          _sectionLabel('NAME'),
-          _nameField(autofocus: true),
-          _sectionLabel('ICON WÄHLEN'),
-          _iconGrid(),
-          _stepNav(
-            canGoForward: _step1Valid,
-            onForward: () => setState(() => _step = 2),
-            forwardLabel: 'Weiter →',
+          _stepHeader(),
+          Expanded(
+            child: ListView.separated(
+              itemCount: catalog.types.length,
+              separatorBuilder: (context, i) => const SizedBox(height: 8),
+              itemBuilder: (context, i) {
+                final t = catalog.types[i];
+                return _SelectionCard(
+                  title: t.name,
+                  subtitle: _catalogSubtitle(t),
+                  selected: _selectedType?.id == t.id,
+                  onTap: () => setState(() {
+                    _selectedType = t;
+                    _isNewSelected = false;
+                  }),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          _SelectionCard(
+            title: '＋ Neues Gerät erstellen',
+            subtitle: 'eigener Name & Icon',
+            selected: _isNewSelected,
+            onTap: () => setState(() {
+              _isNewSelected = true;
+              _selectedType = null;
+            }),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                _orangeButton('Weiter →', _hasSelection ? _goForward : null),
+              ],
+            ),
           ),
         ],
       );
@@ -436,26 +515,14 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
   Widget _buildStep2() => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 8),
-          const Text('Hat dieses Gerät Gewichtsvarianten?',
-              style: TextStyle(color: Colors.white70, fontSize: 14)),
-          const SizedBox(height: 16),
-          _SelectionCard(
-            title: 'Ja, mit Gewichten',
-            subtitle: 'z.B. 16 kg, 20 kg …',
-            selected: _hasVariants,
-            onTap: () => setState(() => _hasVariants = true),
-          ),
-          const SizedBox(height: 8),
-          _SelectionCard(
-            title: 'Nein, Körpergewicht',
-            subtitle: 'keine Varianten',
-            selected: !_hasVariants,
-            onTap: () => setState(() => _hasVariants = false),
-          ),
+          _stepHeader(),
+          _sectionLabel('NAME'),
+          _nameField(autofocus: true),
+          _sectionLabel('ICON WÄHLEN'),
+          _iconGrid(),
           _stepNav(
-            canGoForward: true,
-            onForward: () => setState(() => _step = _hasVariants ? 3 : 4),
+            canGoForward: _name.trim().isNotEmpty,
+            onForward: _goForward,
             forwardLabel: 'Weiter →',
           ),
         ],
@@ -464,16 +531,25 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
   Widget _buildStep3() => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _stepHeader(),
           _sectionLabel('VARIANTEN'),
-          ..._variants.asMap().entries.map((entry) =>
-              _variantRow(entry.value, () => setState(() => _variants.removeAt(entry.key)))),
+          ..._variants.asMap().entries.map(
+                (entry) => _variantRow(entry.value, () => _tryDeleteVariant(entry.key)),
+              ),
           if (_addingVariant)
             _inlineAddVariant()
           else
             _addButton('+ Variante hinzufügen', () => setState(() => _addingVariant = true)),
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 8),
+            child: const Text(
+              'Leer lassen für kein Gewicht',
+              style: TextStyle(fontSize: 10, color: Colors.white24),
+            ),
+          ),
           _stepNav(
             canGoForward: true,
-            onForward: () => setState(() => _step = 4),
+            onForward: _goForward,
             forwardLabel: 'Weiter →',
           ),
         ],
@@ -482,44 +558,8 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
   Widget _buildStep4() => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _stepHeader(),
           _sectionLabel('ÜBUNGEN (mind. 1)'),
-          ..._exercises.asMap().entries.map((entry) => _exerciseRow(
-                entry.value,
-                _exercises.length > 1
-                    ? () => setState(() => _exercises.removeAt(entry.key))
-                    : null,
-              )),
-          if (_addingExercise)
-            _inlineAddExercise()
-          else
-            _addButton('+ Übung hinzufügen', () => setState(() => _addingExercise = true)),
-          _stepNav(
-            canGoForward: _step4Valid,
-            onForward: _save,
-            forwardLabel: 'Fertig ✓',
-          ),
-        ],
-      );
-
-  // ── Edit mode flat form ───────────────────────────────────────────────────
-
-  Widget _buildEditMode() => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _sectionLabel('NAME'),
-          _nameField(),
-          _sectionLabel('ICON'),
-          _iconGrid(),
-          if (_hasVariants) ...[
-            _sectionLabel('VARIANTEN'),
-            ..._variants.asMap().entries.map((entry) =>
-                _variantRow(entry.value, () => _tryDeleteVariant(entry.key))),
-            if (_addingVariant)
-              _inlineAddVariant()
-            else
-              _addButton('+ Variante hinzufügen', () => setState(() => _addingVariant = true)),
-          ],
-          _sectionLabel('ÜBUNGEN'),
           ..._exercises.asMap().entries.map((entry) => _exerciseRow(
                 entry.value,
                 _exercises.length > 1 ? () => _tryDeleteExercise(entry.key) : null,
@@ -528,31 +568,127 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
             _inlineAddExercise()
           else
             _addButton('+ Übung hinzufügen', () => setState(() => _addingExercise = true)),
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            child: _orangeButton('Speichern', _editValid ? _save : null),
+          _stepNav(
+            canGoForward: _exercises.isNotEmpty,
+            onForward: _goForward,
+            forwardLabel: 'Weiter →',
           ),
-          const SizedBox(height: 40),
         ],
       );
+
+  Widget _buildStep5() {
+    final isEdit = _selectedType != null && !_isNewSelected;
+    final iconAsset = isEdit ? _selectedType!.iconAsset : _iconAsset;
+    final name = isEdit ? _selectedType!.name : _name.trim();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _stepHeader(),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1A1A),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              Image.asset(iconAsset, width: 22, height: 22, color: const Color(0xFFFF6B00)),
+              const SizedBox(width: 12),
+              Text(name,
+                  style: const TextStyle(
+                      color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
+        if (_variants.isNotEmpty) ...[
+          _sectionLabel('GEWICHTE'),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: _variants.map((v) => _summaryPill(v.label)).toList(),
+          ),
+        ],
+        _sectionLabel('ÜBUNGEN'),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: _exercises.map((e) => _summaryPill(e.name)).toList(),
+        ),
+        const SizedBox(height: 24),
+        GestureDetector(
+          onTap: _save,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF4CAF50),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Text(
+              '✓ Speichern',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: Colors.black, fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+          ),
+        ),
+        _stepNav(
+          canGoForward: false,
+          onForward: null,
+          forwardLabel: '',
+        ),
+      ],
+    );
+  }
 
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final title = _isEdit
-        ? 'GERÄT BEARBEITEN'
-        : ['NAME & ICON', 'VARIANTEN?', 'VARIANTEN', 'ÜBUNGEN'][_step - 1];
+    final catalogAsync = ref.watch(equipmentCatalogProvider);
 
-    final body = _isEdit
-        ? _buildEditMode()
-        : switch (_step) {
-            1 => _buildStep1(),
-            2 => _buildStep2(),
-            3 => _buildStep3(),
-            _ => _buildStep4(),
-          };
+    final title = switch (_step) {
+      1 => 'GERÄT WÄHLEN',
+      2 => 'NAME & ICON',
+      3 => 'GEWICHTE',
+      4 => 'ÜBUNGEN',
+      _ => 'ZUSAMMENFASSUNG',
+    };
+
+    // Step 1 needs Expanded ListView — own layout without SingleChildScrollView
+    if (_step == 1) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF000000),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF000000),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white38),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: Text(title,
+              style: const TextStyle(
+                  fontSize: 15, letterSpacing: 4, color: Colors.white38)),
+        ),
+        body: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+          child: catalogAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) =>
+                Center(child: Text('Fehler: $e', style: const TextStyle(color: Colors.white38))),
+            data: _buildStep1,
+          ),
+        ),
+      );
+    }
+
+    final body = switch (_step) {
+      2 => _buildStep2(),
+      3 => _buildStep3(),
+      4 => _buildStep4(),
+      _ => _buildStep5(),
+    };
 
     return Scaffold(
       backgroundColor: const Color(0xFF000000),
