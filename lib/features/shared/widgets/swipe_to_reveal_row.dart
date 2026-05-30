@@ -41,13 +41,15 @@ class _SwipeToRevealRowState extends State<SwipeToRevealRow>
 
   void _onDragUpdate(DragUpdateDetails d) {
     if (!widget.canDelete) return;
+    // Ignore rightward drag when closed — prevents accidental micro-drift.
+    if (d.delta.dx > 0 && _ctrl.value <= 0) return;
     _ctrl.value =
-        (_ctrl.value + d.delta.dx / _revealWidth).clamp(0.0, 1.0);
+        (_ctrl.value - d.delta.dx / _revealWidth).clamp(0.0, 1.0);
   }
 
   void _onDragEnd(DragEndDetails d) {
     if (!widget.canDelete) return;
-    if (_ctrl.value > 0.45 || d.velocity.pixelsPerSecond.dx > 250) {
+    if (_ctrl.value > 0.45 || d.velocity.pixelsPerSecond.dx < -250) {
       _ctrl.animateTo(1.0);
     } else {
       _ctrl.animateTo(0.0);
@@ -82,7 +84,7 @@ class _SwipeToRevealRowState extends State<SwipeToRevealRow>
             children: [
               if (widget.canDelete)
                 Positioned(
-                  left: 0,
+                  right: 0,
                   top: 0,
                   bottom: 0,
                   width: offset.clamp(0.0, _revealWidth),
@@ -103,7 +105,7 @@ class _SwipeToRevealRowState extends State<SwipeToRevealRow>
                   ),
                 ),
               Transform.translate(
-                offset: Offset(offset, 0),
+                offset: Offset(-offset, 0),
                 child: child,
               ),
             ],
