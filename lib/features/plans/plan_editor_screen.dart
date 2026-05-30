@@ -140,11 +140,10 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) async {
-        if (didPop) return;
-        await _save();
-        if (context.mounted) Navigator.of(context).pop();
+      canPop: true,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) return;
+        _save(); // fire-and-forget — planLibraryProvider ist keepAlive
       },
       child: Scaffold(
         backgroundColor: const Color(0xFF000000),
@@ -153,10 +152,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white38),
-            onPressed: () async {
-              await _save();
-              if (context.mounted) Navigator.of(context).pop();
-            },
+            onPressed: () => Navigator.of(context).pop(),
           ),
           title: Text(
             _plan.name.toUpperCase(),
