@@ -143,7 +143,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
       canPop: true,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) return;
-        _save(); // fire-and-forget — planLibraryProvider ist keepAlive
+        _save().ignore();
       },
       child: Scaffold(
         backgroundColor: const Color(0xFF000000),
