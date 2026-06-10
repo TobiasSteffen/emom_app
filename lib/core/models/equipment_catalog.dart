@@ -101,6 +101,41 @@ class EquipmentCatalog {
     return EquipmentCatalog(types: types);
   }
 
+  /// Upgrades a loaded catalog in place: adds missing default equipment types,
+  /// adds missing default exercises into existing default types, and renames
+  /// the legacy "Push Press" default exercise to "Press". Idempotent — running
+  /// it twice yields the same result, and it never overwrites a user-renamed
+  /// exercise or touches user-created (non-default) equipment types.
+  static EquipmentCatalog migrate(EquipmentCatalog catalog) {
+    final withTypes = addMissingDefaults(catalog);
+    final defaults = defaultCatalog();
+    return EquipmentCatalog(
+      types: withTypes.types.map((t) {
+        final def = defaults.findType(t.id);
+        if (def == null) return t; // user-created type — leave untouched
+        // Rename legacy "Push Press" default → "Press".
+        final exercises = t.exercises
+            .map((e) => e.id == 'push_press' && e.name == 'Push Press'
+                ? ExerciseType(id: e.id, name: 'Press', hasSide: e.hasSide)
+                : e)
+            .toList();
+        // Add any default exercises missing from this type (by id).
+        for (final de in def.exercises) {
+          if (!exercises.any((e) => e.id == de.id)) {
+            exercises.add(de);
+          }
+        }
+        return EquipmentType(
+          id: t.id,
+          name: t.name,
+          iconAsset: t.iconAsset,
+          variants: t.variants,
+          exercises: exercises,
+        );
+      }).toList(),
+    );
+  }
+
   Map<String, dynamic> toJson() => {
         'types': types.map((t) => t.toJson()).toList(),
       };
@@ -125,7 +160,8 @@ class EquipmentCatalog {
             ExerciseType(id: 'swing_beidarmig', name: 'Swing beidarmig', hasSide: false),
             ExerciseType(id: 'swing_einarmig', name: 'Swing einarmig', hasSide: true),
             ExerciseType(id: 'snatch', name: 'Snatch', hasSide: true),
-            ExerciseType(id: 'push_press', name: 'Push Press', hasSide: true),
+            ExerciseType(id: 'push_press', name: 'Press', hasSide: true),
+            ExerciseType(id: 'clean_press', name: 'Clean & Press', hasSide: true),
           ],
         ),
         EquipmentType(
@@ -184,8 +220,8 @@ class EquipmentCatalogStorage {
       }
       final json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
       final catalog = EquipmentCatalog.fromJson(json);
-      final migrated = EquipmentCatalog.addMissingDefaults(catalog);
-      if (migrated.types.length != catalog.types.length) {
+      final migrated = EquipmentCatalog.migrate(catalog);
+      if (jsonEncode(migrated.toJson()) != jsonEncode(catalog.toJson())) {
         await save(migrated);
       }
       return migrated;

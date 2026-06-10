@@ -10,10 +10,22 @@ void main() {
           ['kettlebell', 'steelmace', 'pezziball', 'bodyweight']);
     });
 
-    test('kettlebell has 3 variants and 4 exercises', () {
+    test('kettlebell has 3 variants and 5 exercises', () {
       final kb = EquipmentCatalog.defaultCatalog().types[0];
       expect(kb.variants.length, 3);
-      expect(kb.exercises.length, 4);
+      expect(kb.exercises.length, 5);
+    });
+
+    test('push_press default is named "Press"', () {
+      final kb = EquipmentCatalog.defaultCatalog().types[0];
+      expect(kb.exercises.firstWhere((e) => e.id == 'push_press').name, 'Press');
+    });
+
+    test('clean_press default exists and is one-armed', () {
+      final kb = EquipmentCatalog.defaultCatalog().types[0];
+      final cp = kb.exercises.firstWhere((e) => e.id == 'clean_press');
+      expect(cp.name, 'Clean & Press');
+      expect(cp.hasSide, true);
     });
 
     test('bodyweight has no variants and 1 exercise', () {
@@ -82,6 +94,59 @@ void main() {
         ]);
         final result = EquipmentCatalog.addMissingDefaults(old);
         expect(result.types.first.id, 'kettlebell');
+      });
+    });
+
+    group('migrate', () {
+      EquipmentCatalog legacyKettlebell(List<ExerciseType> exercises) =>
+          EquipmentCatalog(types: [
+            EquipmentType(
+              id: 'kettlebell',
+              name: 'Kettlebell',
+              iconAsset: 'assets/icon/kettlebell.png',
+              variants: const [],
+              exercises: exercises,
+            ),
+          ]);
+
+      test('renames legacy "Push Press" to "Press"', () {
+        final old = legacyKettlebell(const [
+          ExerciseType(id: 'push_press', name: 'Push Press', hasSide: true),
+        ]);
+        final result = EquipmentCatalog.migrate(old);
+        final kb = result.findType('kettlebell')!;
+        expect(kb.exercises.firstWhere((e) => e.id == 'push_press').name,
+            'Press');
+      });
+
+      test('adds missing clean_press to existing kettlebell', () {
+        final old = legacyKettlebell(const [
+          ExerciseType(id: 'push_press', name: 'Press', hasSide: true),
+        ]);
+        final result = EquipmentCatalog.migrate(old);
+        final kb = result.findType('kettlebell')!;
+        final cp = kb.exercises.firstWhere((e) => e.id == 'clean_press');
+        expect(cp.name, 'Clean & Press');
+        expect(cp.hasSide, true);
+      });
+
+      test('is idempotent', () {
+        final old = legacyKettlebell(const [
+          ExerciseType(id: 'push_press', name: 'Push Press', hasSide: true),
+        ]);
+        final once = EquipmentCatalog.migrate(old);
+        final twice = EquipmentCatalog.migrate(once);
+        expect(twice.toJson(), once.toJson());
+      });
+
+      test('does not overwrite a user-renamed push_press', () {
+        final old = legacyKettlebell(const [
+          ExerciseType(id: 'push_press', name: 'Mein Press', hasSide: true),
+        ]);
+        final result = EquipmentCatalog.migrate(old);
+        final kb = result.findType('kettlebell')!;
+        expect(kb.exercises.firstWhere((e) => e.id == 'push_press').name,
+            'Mein Press');
       });
     });
   });
