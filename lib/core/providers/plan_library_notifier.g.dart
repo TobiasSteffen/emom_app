@@ -34,7 +34,7 @@ final class PlanLibraryNotifierProvider
 }
 
 String _$planLibraryNotifierHash() =>
-    r'b43fba43c1d2594287aa1654178592c2178d6b3a';
+    r'efe37d69a0c940e288511defb90d29be3fe64de6';
 
 abstract class _$PlanLibraryNotifier extends $AsyncNotifier<PlanLibrary> {
   FutureOr<PlanLibrary> build();
