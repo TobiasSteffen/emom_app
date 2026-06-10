@@ -45,10 +45,15 @@ class _PlanMinuteRowState extends ConsumerState<PlanMinuteRow> {
     final exerciseType = eqType?.exercises
         .where((e) => e.id == iv.exerciseTypeId)
         .firstOrNull;
+    final variant = eqType?.variants
+        .where((v) => v.id == iv.variantId)
+        .firstOrNull;
 
     final iconAsset = eqType?.iconAsset ?? 'assets/icon/kettlebell.png';
     final equipmentLabel = eqType?.name ?? iv.equipmentTypeId;
+    final variantLabel = variant?.shortLabel ?? iv.variantId ?? '';
     final exerciseLabel = exerciseType?.name ?? iv.exerciseTypeId;
+    final sideLabel = iv.side?.shortLabel ?? '';
 
     return GestureDetector(
       onTap: widget.onSelect,
@@ -64,54 +69,91 @@ class _PlanMinuteRowState extends ConsumerState<PlanMinuteRow> {
                   width: 6,
                   height: 6,
                   margin: const EdgeInsets.only(right: 6),
-                  decoration:
-                      BoxDecoration(color: color, shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
                 ),
                 SizedBox(
                   width: 42,
                   child: Text(
                     'Min ${i + 1}',
                     style: TextStyle(
-                        fontSize: 11,
-                        color: widget.isSelected
-                            ? Colors.white70
-                            : Colors.white38,
-                        letterSpacing: 1),
+                      fontSize: 11,
+                      color: widget.isSelected
+                          ? Colors.white70
+                          : Colors.white38,
+                      letterSpacing: 1,
+                    ),
                   ),
                 ),
                 const Spacer(),
                 if (iv.isPause) ...[
-                  const Text('PAUSE',
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.white38,
-                          letterSpacing: 1)),
-                  const SizedBox(width: 6),
-                  Text('${iv.durationSeconds}s',
-                      style: const TextStyle(
-                          fontSize: 12, color: Colors.white38)),
-                ] else ...[
-                  Image.asset(iconAsset,
-                      width: 14, height: 14, color: Colors.white38),
-                  const SizedBox(width: 4),
-                  Text(equipmentLabel,
-                      style: const TextStyle(
-                          fontSize: 11, color: Colors.white38)),
+                  const Text(
+                    'PAUSE',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.white38,
+                      letterSpacing: 1,
+                    ),
+                  ),
                   const SizedBox(width: 6),
                   Text(
-                    iv.side != null
-                        ? '$exerciseLabel ${iv.side!.shortLabel}'
-                        : exerciseLabel,
-                    style: const TextStyle(
-                        fontSize: 11, color: Colors.white38)),
+                    '${iv.durationSeconds}s',
+                    style: const TextStyle(fontSize: 12, color: Colors.white38),
+                  ),
+                ] else ...[
+                  Image.asset(
+                    iconAsset,
+                    width: 14,
+                    height: 14,
+                    color: Colors.white38,
+                  ),
+                  const SizedBox(width: 4),
+
+                  Text(
+                    equipmentLabel,
+                    style: const TextStyle(fontSize: 11, color: Colors.white38),
+                  ),
                   const SizedBox(width: 6),
-                  Text('${iv.reps}W',
+
+                  if (variantLabel.isNotEmpty) ...[
+                    Text(
+                      variantLabel,
                       style: const TextStyle(
-                          fontSize: 12, color: Colors.white38)),
+                        fontSize: 11,
+                        color: Colors.white38,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+
+                  Text(
+                    exerciseLabel,
+                    style: const TextStyle(fontSize: 11, color: Colors.white38),
+                  ),
                   const SizedBox(width: 6),
-                  Text('${iv.durationSeconds}s',
+
+                  if (sideLabel.isNotEmpty) ...[
+                    Text(
+                      sideLabel,
                       style: const TextStyle(
-                          fontSize: 12, color: Colors.white38)),
+                        fontSize: 11,
+                        color: Colors.white38,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+
+                  Text(
+                    '${iv.reps}W',
+                    style: const TextStyle(fontSize: 12, color: Colors.white38),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${iv.durationSeconds}s',
+                    style: const TextStyle(fontSize: 12, color: Colors.white38),
+                  ),
                 ],
               ],
             ),
