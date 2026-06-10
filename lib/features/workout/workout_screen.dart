@@ -35,6 +35,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   bool _wasRunningBeforePlanLib = false;
   bool _wasRunningBeforeCalendar = false;
   String _planKeySnapshot = '';
+  int _currentPage = AppPage.workout.index;
 
   @override
   void initState() {
@@ -43,9 +44,10 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeOut),
-    );
+    _pulseAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.15,
+    ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeOut));
     _pageController = PageController(initialPage: AppPage.workout.index);
   }
 
@@ -60,15 +62,13 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ConfigScreen(
-          onBack: () => Navigator.pop(context),
-        ),
+        builder: (_) => ConfigScreen(onBack: () => Navigator.pop(context)),
       ),
     );
     if (!mounted) return;
-    ref.read(workoutProvider.notifier).updateSettings(
-      ref.read(settingsProvider).requireValue,
-    );
+    ref
+        .read(workoutProvider.notifier)
+        .updateSettings(ref.read(settingsProvider).requireValue);
   }
 
   void _startStop(WorkoutState state) {
@@ -86,33 +86,42 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   }
 
   Future<void> _showResetConfirmDialog() async {
-    final doReset = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text(
-          'Training zurücksetzen?',
-          style: TextStyle(
-              color: Colors.white54, fontSize: 15, letterSpacing: 1),
-        ),
-        content: const Text(
-          'Die Einstellungen wurden geändert. Das laufende Training zurücksetzen?',
-          style: TextStyle(color: Colors.white38, fontSize: 13),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Weiter',
-                style: TextStyle(color: Colors.white38)),
+    final doReset =
+        await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: const Color(0xFF1A1A1A),
+            title: const Text(
+              'Training zurücksetzen?',
+              style: TextStyle(
+                color: Colors.white54,
+                fontSize: 15,
+                letterSpacing: 1,
+              ),
+            ),
+            content: const Text(
+              'Die Einstellungen wurden geändert. Das laufende Training zurücksetzen?',
+              style: TextStyle(color: Colors.white38, fontSize: 13),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text(
+                  'Weiter',
+                  style: TextStyle(color: Colors.white38),
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text(
+                  'Zurücksetzen',
+                  style: TextStyle(color: Color(0xFFFF6B00)),
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Zurücksetzen',
-                style: TextStyle(color: Color(0xFFFF6B00))),
-          ),
-        ],
-      ),
-    ) ?? false;
+        ) ??
+        false;
     if (doReset) ref.read(workoutProvider.notifier).reset();
   }
 
@@ -135,7 +144,9 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     if (workoutAsync.isLoading) {
       return const Scaffold(
         backgroundColor: Color(0xFF000000),
-        body: Center(child: CircularProgressIndicator(color: Color(0xFFFF6B00))),
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFFFF6B00)),
+        ),
       );
     }
     if (workoutAsync.hasError) {
@@ -148,75 +159,105 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   Widget _buildPageView(WorkoutState state) {
     final notifier = ref.read(workoutProvider.notifier);
 
-    return PageView(
-      controller: _pageController,
-      physics: const BouncingScrollPhysics(parent: PageScrollPhysics()),
-      dragStartBehavior: DragStartBehavior.down,
-      onPageChanged: (page) {
-        if (page == AppPage.calendar.index) {
-          setState(() {
-            _wasRunningBeforeCalendar = state.isRunning || state.waitingForConfirmation;
-          });
-          if (state.isRunning) notifier.pause();
-        }
-        if (page == AppPage.plans.index) {
-          final lib = ref.read(planLibraryProvider).requireValue;
-          setState(() {
-            _planLibWasOpened = true;
-            _wasRunningBeforePlanLib = state.isRunning || state.waitingForConfirmation;
-            _planKeySnapshot = lib.activePlan.planKey;
-          });
-          if (state.isRunning) notifier.pause();
-        }
-        if (page == AppPage.workout.index && _planLibWasOpened) {
-          setState(() => _planLibWasOpened = false);
-          final newLib = ref.read(planLibraryProvider).requireValue;
-          final planChanged = newLib.activePlan.planKey != _planKeySnapshot;
-          if (planChanged) {
-            final wasActive = _wasRunningBeforePlanLib || state.currentMinute > 0;
-            if (wasActive) {
-              _showResetConfirmDialog();
-            } else {
-              ref.read(workoutProvider.notifier).reset();
-            }
-          } else if (_wasRunningBeforePlanLib && !state.isFinished) {
-            notifier.start();
-          }
-        }
-        if (page == AppPage.workout.index && _wasRunningBeforeCalendar) {
-          setState(() => _wasRunningBeforeCalendar = false);
-          if (!state.isFinished) notifier.start();
-        }
+    // PageView pages are not Navigator routes — intercept system back to
+    // navigate to the workout page instead of exiting the app.
+    return PopScope(
+      canPop: _currentPage == AppPage.workout.index,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _pageController.animateToPage(
+          AppPage.workout.index,
+          duration: const Duration(milliseconds: 380),
+          curve: Curves.easeInOutCubic,
+        );
       },
-      children: [
-        CalendarScreen(
-          onBack: () => _pageController.animateToPage(
-            AppPage.workout.index,
-            duration: const Duration(milliseconds: 380),
-            curve: Curves.easeInOutCubic,
-          ),
-        ),
-        Scaffold(
-          body: SafeArea(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                state.isFinished
-                    ? _buildFinishedScreen(state)
-                    : _buildWorkoutScreen(state),
-                if (state.waitingForConfirmation) _buildConfirmationOverlay(state),
-              ],
+      child: PageView(
+        controller: _pageController,
+        physics: const BouncingScrollPhysics(parent: PageScrollPhysics()),
+        dragStartBehavior: DragStartBehavior.down,
+        onPageChanged: (page) {
+          // Snapshot pre-setState values used in side-effects below.
+          final prevPlanLibOpened = _planLibWasOpened;
+          final prevRunningBeforeCalendar = _wasRunningBeforeCalendar;
+          final prevRunningBeforePlanLib = _wasRunningBeforePlanLib;
+          final prevPlanKeySnapshot = _planKeySnapshot;
+          final lib = page == AppPage.plans.index
+              ? ref.read(planLibraryProvider).requireValue
+              : null;
+          setState(() {
+            _currentPage = page;
+            if (page == AppPage.calendar.index) {
+              _wasRunningBeforeCalendar =
+                  state.isRunning || state.waitingForConfirmation;
+            }
+            if (page == AppPage.plans.index) {
+              _planLibWasOpened = true;
+              _wasRunningBeforePlanLib =
+                  state.isRunning || state.waitingForConfirmation;
+              _planKeySnapshot = lib!.activePlan.planKey;
+            }
+            if (page == AppPage.workout.index) {
+              _planLibWasOpened = false;
+              _wasRunningBeforeCalendar = false;
+            }
+          });
+          if (page == AppPage.calendar.index && state.isRunning) {
+            notifier.pause();
+          }
+          if (page == AppPage.plans.index && state.isRunning) {
+            notifier.pause();
+          }
+          if (page == AppPage.workout.index && prevPlanLibOpened) {
+            final newLib = ref.read(planLibraryProvider).requireValue;
+            final planChanged =
+                newLib.activePlan.planKey != prevPlanKeySnapshot;
+            if (planChanged) {
+              final wasActive =
+                  prevRunningBeforePlanLib || state.currentMinute > 0;
+              if (wasActive) {
+                _showResetConfirmDialog();
+              } else {
+                ref.read(workoutProvider.notifier).reset();
+              }
+            } else if (prevRunningBeforePlanLib && !state.isFinished) {
+              notifier.start();
+            }
+          }
+          if (page == AppPage.workout.index && prevRunningBeforeCalendar) {
+            if (!state.isFinished) notifier.start();
+          }
+        },
+        children: [
+          CalendarScreen(
+            onBack: () => _pageController.animateToPage(
+              AppPage.workout.index,
+              duration: const Duration(milliseconds: 380),
+              curve: Curves.easeInOutCubic,
             ),
           ),
-        ),
-        PlanLibraryScreen(
-          onBack: () => _pageController.animateToPage(
-            AppPage.workout.index,
-            duration: const Duration(milliseconds: 380),
-            curve: Curves.easeInOutCubic,
+          Scaffold(
+            body: SafeArea(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  state.isFinished
+                      ? _buildFinishedScreen(state)
+                      : _buildWorkoutScreen(state),
+                  if (state.waitingForConfirmation)
+                    _buildConfirmationOverlay(state),
+                ],
+              ),
+            ),
           ),
-        ),
-      ],
+          PlanLibraryScreen(
+            onBack: () => _pageController.animateToPage(
+              AppPage.workout.index,
+              duration: const Duration(milliseconds: 380),
+              curve: Curves.easeInOutCubic,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -246,7 +287,8 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
           ),
           const SizedBox(height: 8),
           PlanIndicator(
-            planName: ref.watch(planLibraryProvider).value?.activePlan.name ?? '',
+            planName:
+                ref.watch(planLibraryProvider).value?.activePlan.name ?? '',
             onTap: () => _pageController.animateToPage(
               AppPage.plans.index,
               duration: const Duration(milliseconds: 380),
@@ -279,7 +321,11 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
             children: [
               IconButton(
                 onPressed: () => notifier.reset(),
-                icon: const Icon(Icons.refresh, color: Colors.white38, size: 28),
+                icon: const Icon(
+                  Icons.refresh,
+                  color: Colors.white38,
+                  size: 28,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -292,14 +338,17 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                            color: phaseColor.withValues(alpha: 0.4),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8)),
+                          color: phaseColor.withValues(alpha: 0.4),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
                       ],
                     ),
                     child: Center(
                       child: Icon(
-                        state.isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                        state.isRunning
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
                         color: Colors.white,
                         size: 36,
                       ),
