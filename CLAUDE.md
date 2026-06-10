@@ -94,7 +94,7 @@ One-arm exercises (`swingEinarmig`, `snatch`, `pushPress`) carry an optional `Ex
 
 ### WorkoutNotifier / WorkoutState
 
-`WorkoutNotifier` is a Riverpod notifier that owns the timer (`dart:async` `Timer`), two `AudioPlayer` instances (tick + alarm), and wakelock. Key patterns:
+`WorkoutNotifier` is a Riverpod notifier that owns the timer (`dart:async` `Timer`) and two `AudioPlayer` instances (tick + alarm). Wakelock is **not** owned here — `KettlebellApp` (`app.dart`) holds it for the whole app via `WidgetsBindingObserver`: enabled while `AppLifecycleState.resumed`, released when backgrounded, so the screen stays awake whenever the app is in the foreground. Key patterns:
 
 - Alarm loops via `_alarmPlayer.onPlayerComplete` listener + 800ms delay, not `ReleaseMode.loop`
 - Volume boost on countdown (last 5s): reads current volume and raises it only if below `volumeBoostLevel`

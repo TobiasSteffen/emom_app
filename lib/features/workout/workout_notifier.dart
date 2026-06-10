@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:vibration/vibration.dart';
 import 'package:volume_controller/volume_controller.dart';
-import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../core/models/equipment_catalog.dart';
 import '../../core/models/settings.dart';
 import '../../core/models/training_plan.dart';
@@ -100,7 +99,6 @@ class WorkoutNotifier extends _$WorkoutNotifier {
       _alarmLoopSub?.cancel();
       _tickPlayer.dispose();
       _alarmPlayer.dispose();
-      WakelockPlus.disable();
     });
 
     return WorkoutState(
@@ -120,13 +118,11 @@ class WorkoutNotifier extends _$WorkoutNotifier {
   void start() {
     final now = _s.workoutStartTime == null ? DateTime.now() : null;
     state = AsyncData(_s.copyWith(isRunning: true, workoutStartTime: now));
-    WakelockPlus.enable();
     _timer = Timer.periodic(const Duration(seconds: 1), _tick);
   }
 
   void pause() {
     _timer?.cancel();
-    WakelockPlus.disable();
     state = AsyncData(_s.copyWith(isRunning: false));
   }
 
@@ -135,7 +131,6 @@ class WorkoutNotifier extends _$WorkoutNotifier {
     _alarmLoopSub?.cancel();
     _alarmLoopSub = null;
     _alarmPlayer.stop();
-    WakelockPlus.disable();
     final library = await ref.read(planLibraryProvider.future);
     _activePlan = library.activePlan;
     _catalog = await ref.read(equipmentCatalogProvider.future);
@@ -241,7 +236,6 @@ class WorkoutNotifier extends _$WorkoutNotifier {
         totalRepsDone: newTotalReps,
         completedIntervals: newIntervals,
       ));
-      WakelockPlus.disable();
       _vibrate(600);
       _saveHistory(intervals: newIntervals, startTime: s.workoutStartTime);
     } else {
