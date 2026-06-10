@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:path_provider/path_provider.dart';
+import 'equipment_catalog.dart';
 import 'settings.dart';
 
 class IntervalConfig {
@@ -56,9 +57,13 @@ class IntervalConfig {
       return IntervalConfig(
         reps: j['r'] as int,
         durationSeconds: j['d'] as int,
-        equipmentTypeId: eIdx == 0 ? 'kettlebell' : 'steelmace',
-        variantId: eIdx == 0 ? 'kb_24' : 'sm_12',
-        exerciseTypeId: eIdx == 0 ? 'swing_beidarmig' : 'mace_360',
+        equipmentTypeId: eIdx == 0
+            ? BuiltInEquipment.kettlebell.id
+            : BuiltInEquipment.steelmace.id,
+        variantId: eIdx == 0 ? BuiltInVariant.kb24.id : BuiltInVariant.sm12.id,
+        exerciseTypeId: eIdx == 0
+            ? BuiltInExercise.swingBeidarmig.id
+            : BuiltInExercise.mace360.id,
       );
     }
     // v2: e = Equipment enum index, x = Exercise enum index (both ints)
@@ -76,34 +81,34 @@ class IntervalConfig {
   }
 
   static String migrateEqType(int e) => switch (e) {
-    0 || 1 || 2 => 'kettlebell',
-    3 || 4       => 'steelmace',
-    _            => 'pezziball',
+    0 || 1 || 2 => BuiltInEquipment.kettlebell.id,
+    3 || 4      => BuiltInEquipment.steelmace.id,
+    _           => BuiltInEquipment.pezziball.id,
   };
 
   static String? migrateVariant(int e) => switch (e) {
-    0 => 'kb_16',
-    1 => 'kb_20',
-    2 => 'kb_24',
-    3 => 'sm_8',
-    4 => 'sm_12',
-    5 => 'pb_0',
-    6 => 'pb_2_5',
-    7 => 'pb_5',
-    8 => 'pb_7_5',
-    9 => 'pb_10',
+    0 => BuiltInVariant.kb16.id,
+    1 => BuiltInVariant.kb20.id,
+    2 => BuiltInVariant.kb24.id,
+    3 => BuiltInVariant.sm8.id,
+    4 => BuiltInVariant.sm12.id,
+    5 => BuiltInVariant.pbNone.id,
+    6 => BuiltInVariant.pbPlus2.id,
+    7 => BuiltInVariant.pbPlus5.id,
+    8 => BuiltInVariant.pbPlus7.id,
+    9 => BuiltInVariant.pbPlus10.id,
     _ => null,
   };
 
   static String migrateExercise(int x) => switch (x) {
-    0 => 'swing_beidarmig',
-    1 => 'swing_einarmig',
-    2 => 'snatch',
-    3 => 'push_press',
-    4 => 'mace_360',
-    5 => 'myotatischer_crunch',
-    6 => 'schulter_heben',
-    _ => 'swing_beidarmig',
+    0 => BuiltInExercise.swingBeidarmig.id,
+    1 => BuiltInExercise.swingEinarmig.id,
+    2 => BuiltInExercise.snatch.id,
+    3 => BuiltInExercise.pushPress.id,
+    4 => BuiltInExercise.mace360.id,
+    5 => BuiltInExercise.myotatischerCrunch.id,
+    6 => BuiltInExercise.schulterHeben.id,
+    _ => BuiltInExercise.swingBeidarmig.id,
   };
 
   IntervalConfig copyWith({
@@ -165,9 +170,9 @@ class TrainingPlan {
       id: _newId(),
       name: name,
       intervals: List.generate(30, (i) => IntervalConfig(
-        equipmentTypeId: 'kettlebell',
-        variantId: 'kb_24',
-        exerciseTypeId: 'swing_beidarmig',
+        equipmentTypeId: BuiltInEquipment.kettlebell.id,
+        variantId: BuiltInVariant.kb24.id,
+        exerciseTypeId: BuiltInExercise.swingBeidarmig.id,
         reps: reps[i],
         durationSeconds: 60,
       )),

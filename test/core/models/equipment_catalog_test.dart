@@ -2,6 +2,26 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:emom_app/core/models/equipment_catalog.dart';
 
 void main() {
+  group('Built-in registry', () {
+    test('byId resolves built-in ids and returns null for custom ids', () {
+      expect(BuiltInExercise.byId('push_press'), BuiltInExercise.pushPress);
+      expect(BuiltInExercise.byId('clean_press'), BuiltInExercise.cleanPress);
+      expect(BuiltInExercise.byId('a3f9custom'), isNull);
+    });
+
+    test('defaultCatalog is derived from the built-in enums', () {
+      final catalog = EquipmentCatalog.defaultCatalog();
+      // Every built-in exercise appears under its equipment in the catalog.
+      for (final ex in BuiltInExercise.values) {
+        final type = catalog.findType(ex.equipment.id);
+        expect(type, isNotNull, reason: '${ex.equipment.id} missing');
+        final entry = type!.exercises.firstWhere((e) => e.id == ex.id);
+        expect(entry.name, ex.displayName);
+        expect(entry.hasSide, ex.hasSide);
+      }
+    });
+  });
+
   group('EquipmentCatalog', () {
     test('defaultCatalog has 4 equipment types', () {
       final catalog = EquipmentCatalog.defaultCatalog();

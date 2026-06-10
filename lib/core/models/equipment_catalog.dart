@@ -113,13 +113,16 @@ class EquipmentCatalog {
       types: withTypes.types.map((t) {
         final def = defaults.findType(t.id);
         if (def == null) return t; // user-created type — leave untouched
-        // Rename legacy default names ("Push Press", "Press") → "Overhead Press".
-        final exercises = t.exercises
-            .map((e) => e.id == 'push_press' &&
-                    (e.name == 'Push Press' || e.name == 'Press')
-                ? ExerciseType(id: e.id, name: 'Overhead Press', hasSide: e.hasSide)
-                : e)
-            .toList();
+        // Upgrade any built-in exercise still carrying a legacy display name
+        // to its current name (leaves user-renamed entries untouched).
+        final exercises = t.exercises.map((e) {
+          final builtIn = BuiltInExercise.byId(e.id);
+          if (builtIn != null && builtIn.legacyNames.contains(e.name)) {
+            return ExerciseType(
+                id: e.id, name: builtIn.displayName, hasSide: e.hasSide);
+          }
+          return e;
+        }).toList();
         // Add any default exercises missing from this type (by id).
         for (final de in def.exercises) {
           if (!exercises.any((e) => e.id == de.id)) {
@@ -147,62 +150,25 @@ class EquipmentCatalog {
             .toList(),
       );
 
-  static EquipmentCatalog defaultCatalog() => const EquipmentCatalog(types: [
-        EquipmentType(
-          id: 'kettlebell',
-          name: 'Kettlebell',
-          iconAsset: 'assets/icon/kettlebell.png',
-          variants: [
-            EquipmentVariant(id: 'kb_16', label: '16 kg', shortLabel: '16 kg'),
-            EquipmentVariant(id: 'kb_20', label: '20 kg', shortLabel: '20 kg'),
-            EquipmentVariant(id: 'kb_24', label: '24 kg', shortLabel: '24 kg'),
-          ],
-          exercises: [
-            ExerciseType(id: 'swing_beidarmig', name: 'Swing beidarmig', hasSide: false),
-            ExerciseType(id: 'swing_einarmig', name: 'Swing einarmig', hasSide: true),
-            ExerciseType(id: 'snatch', name: 'Snatch', hasSide: true),
-            ExerciseType(id: 'push_press', name: 'Overhead Press', hasSide: true),
-            ExerciseType(id: 'clean_press', name: 'Clean & Press', hasSide: true),
-          ],
-        ),
-        EquipmentType(
-          id: 'steelmace',
-          name: 'Steel Mace',
-          iconAsset: 'assets/icon/steelmace.png',
-          variants: [
-            EquipmentVariant(id: 'sm_8', label: '8 kg', shortLabel: '8 kg'),
-            EquipmentVariant(id: 'sm_12', label: '12 kg', shortLabel: '12 kg'),
-          ],
-          exercises: [
-            ExerciseType(id: 'mace_360', name: '360s', hasSide: true),
-            ExerciseType(id: 'schulter_heben', name: 'Schulterheben', hasSide: true),
-          ],
-        ),
-        EquipmentType(
-          id: 'pezziball',
-          name: 'Pezziball',
-          iconAsset: 'assets/icon/pezziball.png',
-          variants: [
-            EquipmentVariant(id: 'pb_0', label: 'ohne', shortLabel: 'ohne'),
-            EquipmentVariant(id: 'pb_2_5', label: '+2,5 kg', shortLabel: '+2,5 kg'),
-            EquipmentVariant(id: 'pb_5', label: '+5 kg', shortLabel: '+5 kg'),
-            EquipmentVariant(id: 'pb_7_5', label: '+7,5 kg', shortLabel: '+7,5 kg'),
-            EquipmentVariant(id: 'pb_10', label: '+10 kg', shortLabel: '+10 kg'),
-          ],
-          exercises: [
-            ExerciseType(id: 'myotatischer_crunch', name: 'Myotatischer Crunch', hasSide: false),
-          ],
-        ),
-        EquipmentType(
-          id: 'bodyweight',
-          name: 'Körpergewicht',
-          iconAsset: 'assets/icon/liegestuetz.png',
-          variants: [],
-          exercises: [
-            ExerciseType(id: 'liegestuetz', name: 'Liegestütz', hasSide: false),
-          ],
-        ),
-      ]);
+  /// Seeded built-in catalog, composed from the [BuiltInEquipment],
+  /// [BuiltInVariant] and [BuiltInExercise] registries (single source of truth).
+  static EquipmentCatalog defaultCatalog() => EquipmentCatalog(
+        types: BuiltInEquipment.values
+            .map((eq) => EquipmentType(
+                  id: eq.id,
+                  name: eq.displayName,
+                  iconAsset: eq.iconAsset,
+                  variants: BuiltInVariant.values
+                      .where((v) => v.equipment == eq)
+                      .map((v) => v.toVariant())
+                      .toList(),
+                  exercises: BuiltInExercise.values
+                      .where((x) => x.equipment == eq)
+                      .map((x) => x.toType())
+                      .toList(),
+                ))
+            .toList(),
+      );
 }
 
 class EquipmentCatalogStorage {
@@ -236,5 +202,102 @@ class EquipmentCatalogStorage {
       final file = await _file();
       await file.writeAsString(jsonEncode(catalog.toJson()));
     } catch (_) {}
+  }
+}
+
+/// Type-safe registry of the built-in equipment categories.
+///
+/// These enums are the single source of truth for the seeded [defaultCatalog]
+/// and the catalog migration. They cover **built-ins only** — equipment and
+/// exercises a user creates via the wizard live purely as catalog data with
+/// generated ids and are intentionally not represented here. The stable
+/// serialized key is always [id]; [displayName] is just a label.
+enum BuiltInEquipment {
+  kettlebell('kettlebell', 'Kettlebell', 'assets/icon/kettlebell.png'),
+  steelmace('steelmace', 'Steel Mace', 'assets/icon/steelmace.png'),
+  pezziball('pezziball', 'Pezziball', 'assets/icon/pezziball.png'),
+  bodyweight('bodyweight', 'Körpergewicht', 'assets/icon/liegestuetz.png');
+
+  const BuiltInEquipment(this.id, this.displayName, this.iconAsset);
+
+  final String id;
+  final String displayName;
+  final String iconAsset;
+}
+
+/// Built-in equipment variants (weights), each tied to its [equipment].
+enum BuiltInVariant {
+  kb16(BuiltInEquipment.kettlebell, 'kb_16', '16 kg', '16 kg'),
+  kb20(BuiltInEquipment.kettlebell, 'kb_20', '20 kg', '20 kg'),
+  kb24(BuiltInEquipment.kettlebell, 'kb_24', '24 kg', '24 kg'),
+  sm8(BuiltInEquipment.steelmace, 'sm_8', '8 kg', '8 kg'),
+  sm12(BuiltInEquipment.steelmace, 'sm_12', '12 kg', '12 kg'),
+  pbNone(BuiltInEquipment.pezziball, 'pb_0', 'ohne', 'ohne'),
+  pbPlus2(BuiltInEquipment.pezziball, 'pb_2_5', '+2,5 kg', '+2,5 kg'),
+  pbPlus5(BuiltInEquipment.pezziball, 'pb_5', '+5 kg', '+5 kg'),
+  pbPlus7(BuiltInEquipment.pezziball, 'pb_7_5', '+7,5 kg', '+7,5 kg'),
+  pbPlus10(BuiltInEquipment.pezziball, 'pb_10', '+10 kg', '+10 kg');
+
+  const BuiltInVariant(this.equipment, this.id, this.label, this.shortLabel);
+
+  final BuiltInEquipment equipment;
+  final String id;
+  final String label;
+  final String shortLabel;
+
+  EquipmentVariant toVariant() =>
+      EquipmentVariant(id: id, label: label, shortLabel: shortLabel);
+}
+
+/// Built-in exercises, each tied to its [equipment].
+///
+/// [legacyNames] lists former default display names for the same [id]; the
+/// migration upgrades any catalog entry still carrying one of them to the
+/// current [displayName] (without touching user-renamed entries).
+enum BuiltInExercise {
+  swingBeidarmig(
+      BuiltInEquipment.kettlebell, 'swing_beidarmig', 'Swing beidarmig',
+      hasSide: false),
+  swingEinarmig(
+      BuiltInEquipment.kettlebell, 'swing_einarmig', 'Swing einarmig',
+      hasSide: true),
+  snatch(BuiltInEquipment.kettlebell, 'snatch', 'Snatch', hasSide: true),
+  pushPress(BuiltInEquipment.kettlebell, 'push_press', 'Overhead Press',
+      hasSide: true, legacyNames: ['Push Press', 'Press']),
+  cleanPress(BuiltInEquipment.kettlebell, 'clean_press', 'Clean & Press',
+      hasSide: true),
+  mace360(BuiltInEquipment.steelmace, 'mace_360', '360s', hasSide: true),
+  schulterHeben(
+      BuiltInEquipment.steelmace, 'schulter_heben', 'Schulterheben',
+      hasSide: true),
+  myotatischerCrunch(BuiltInEquipment.pezziball, 'myotatischer_crunch',
+      'Myotatischer Crunch',
+      hasSide: false),
+  liegestuetz(BuiltInEquipment.bodyweight, 'liegestuetz', 'Liegestütz',
+      hasSide: false);
+
+  const BuiltInExercise(
+    this.equipment,
+    this.id,
+    this.displayName, {
+    required this.hasSide,
+    this.legacyNames = const [],
+  });
+
+  final BuiltInEquipment equipment;
+  final String id;
+  final String displayName;
+  final bool hasSide;
+  final List<String> legacyNames;
+
+  ExerciseType toType() =>
+      ExerciseType(id: id, name: displayName, hasSide: hasSide);
+
+  /// The built-in exercise with [id], or null if [id] is a custom exercise.
+  static BuiltInExercise? byId(String id) {
+    for (final e in values) {
+      if (e.id == id) return e;
+    }
+    return null;
   }
 }
