@@ -113,10 +113,11 @@ class EquipmentCatalog {
       types: withTypes.types.map((t) {
         final def = defaults.findType(t.id);
         if (def == null) return t; // user-created type — leave untouched
-        // Rename legacy "Push Press" default → "Press".
+        // Rename legacy default names ("Push Press", "Press") → "Overhead Press".
         final exercises = t.exercises
-            .map((e) => e.id == 'push_press' && e.name == 'Push Press'
-                ? ExerciseType(id: e.id, name: 'Press', hasSide: e.hasSide)
+            .map((e) => e.id == 'push_press' &&
+                    (e.name == 'Push Press' || e.name == 'Press')
+                ? ExerciseType(id: e.id, name: 'Overhead Press', hasSide: e.hasSide)
                 : e)
             .toList();
         // Add any default exercises missing from this type (by id).
@@ -160,7 +161,7 @@ class EquipmentCatalog {
             ExerciseType(id: 'swing_beidarmig', name: 'Swing beidarmig', hasSide: false),
             ExerciseType(id: 'swing_einarmig', name: 'Swing einarmig', hasSide: true),
             ExerciseType(id: 'snatch', name: 'Snatch', hasSide: true),
-            ExerciseType(id: 'push_press', name: 'Press', hasSide: true),
+            ExerciseType(id: 'push_press', name: 'Overhead Press', hasSide: true),
             ExerciseType(id: 'clean_press', name: 'Clean & Press', hasSide: true),
           ],
         ),

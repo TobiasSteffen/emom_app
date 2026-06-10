@@ -16,9 +16,10 @@ void main() {
       expect(kb.exercises.length, 5);
     });
 
-    test('push_press default is named "Press"', () {
+    test('push_press default is named "Overhead Press"', () {
       final kb = EquipmentCatalog.defaultCatalog().types[0];
-      expect(kb.exercises.firstWhere((e) => e.id == 'push_press').name, 'Press');
+      expect(kb.exercises.firstWhere((e) => e.id == 'push_press').name,
+          'Overhead Press');
     });
 
     test('clean_press default exists and is one-armed', () {
@@ -109,14 +110,24 @@ void main() {
             ),
           ]);
 
-      test('renames legacy "Push Press" to "Press"', () {
+      test('renames legacy "Push Press" to "Overhead Press"', () {
         final old = legacyKettlebell(const [
           ExerciseType(id: 'push_press', name: 'Push Press', hasSide: true),
         ]);
         final result = EquipmentCatalog.migrate(old);
         final kb = result.findType('kettlebell')!;
         expect(kb.exercises.firstWhere((e) => e.id == 'push_press').name,
-            'Press');
+            'Overhead Press');
+      });
+
+      test('renames intermediate "Press" to "Overhead Press"', () {
+        final old = legacyKettlebell(const [
+          ExerciseType(id: 'push_press', name: 'Press', hasSide: true),
+        ]);
+        final result = EquipmentCatalog.migrate(old);
+        final kb = result.findType('kettlebell')!;
+        expect(kb.exercises.firstWhere((e) => e.id == 'push_press').name,
+            'Overhead Press');
       });
 
       test('adds missing clean_press to existing kettlebell', () {
