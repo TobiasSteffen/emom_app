@@ -190,6 +190,22 @@ void main() {
       expect(plan.intervals[0].exerciseTypeId, 'swing_beidarmig');
     });
 
+    test('fresh() creates exactly minIntervals intervals', () {
+      final plan = TrainingPlan.fresh('Test');
+      expect(plan.intervals.length, TrainingPlan.minIntervals);
+    });
+
+    test('fresh() defaults each interval to swing 60s / 10 reps', () {
+      final plan = TrainingPlan.fresh('Test');
+      for (final iv in plan.intervals) {
+        expect(iv.equipmentTypeId, 'kettlebell');
+        expect(iv.variantId, 'kb_24');
+        expect(iv.exerciseTypeId, 'swing_beidarmig');
+        expect(iv.reps, 10);
+        expect(iv.durationSeconds, 60);
+      }
+    });
+
     test('totalReps sums all interval reps', () {
       final plan = TrainingPlan.pyramid('Test');
       const expected = 5*5 + (6+7+8+9+10+11+12+13+14+15) + 15*5 + (14+13+12+11+10) + 10*5;

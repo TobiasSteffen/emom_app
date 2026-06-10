@@ -430,7 +430,7 @@ Standardwerte: Dauer `60` s, Warm Up `5`, Peak `15`, Cool Down `10` Reps.
 
 #### Modus 2: Minuten-genau
 
-Variable Anzahl Intervalle (**min. 3, max. 30**), je eine Zeile pro Intervall. Standard beim Anlegen eines neuen Plans: 30 Intervalle.
+Variable Anzahl Intervalle (**min. 3, max. 30**), je eine Zeile pro Intervall. Ein neu angelegter Plan (`TrainingPlan.fresh`) startet mit 3 Intervallen (Kettlebell 24 kg, Swing beidarmig, 60 s, 10 Wdh.), die der Nutzer aufbaut. Der initiale „Standard"-Plan bleibt das volle 30-Intervall-Pyramiden-Beispiel (`TrainingPlan.pyramid`).
 
 **Selektions-Modell:** Immer nur eine Zeile ist gleichzeitig editierbar. Tippen auf eine nicht-ausgewählte Zeile selektiert sie; Tippen auf die bereits ausgewählte Zeile de-selektiert sie. Der Inhalt der Zeile wechselt zwischen kompakter Anzeige und erweiterter Editier-Ansicht mit `AnimatedCrossFade` für das Gerät/Übung/Reps-Formular.
 

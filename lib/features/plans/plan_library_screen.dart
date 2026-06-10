@@ -51,7 +51,7 @@ class PlanLibraryScreen extends ConsumerWidget {
       },
     );
     if (name == null || name.isEmpty) return;
-    final plan = TrainingPlan.pyramid(name);
+    final plan = TrainingPlan.fresh(name);
     await ref.read(planLibraryProvider.notifier).addPlan(plan);
     if (!context.mounted) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {

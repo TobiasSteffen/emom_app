@@ -174,6 +174,20 @@ class TrainingPlan {
     );
   }
 
+  /// A freshly created user plan: starts with [minIntervals] intervals so the
+  /// user builds it up from a minimal base (vs. the full pyramid example).
+  factory TrainingPlan.fresh(String name) => TrainingPlan(
+    id: _newId(),
+    name: name,
+    intervals: List.generate(minIntervals, (_) => IntervalConfig(
+      equipmentTypeId: 'kettlebell',
+      variantId: 'kb_24',
+      exerciseTypeId: 'swing_beidarmig',
+      reps: 10,
+      durationSeconds: 60,
+    )),
+  );
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'name': name,
