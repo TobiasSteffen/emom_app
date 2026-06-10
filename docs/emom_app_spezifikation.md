@@ -37,8 +37,8 @@ Reps und Dauer sind vollständig konfigurierbar (phasenbasiert oder minutengenau
 - **Abschluss-Screen**: Zeigt Gesamtzahl der Wiederholungen nach Beendigung
 - **Config Screen**: Einstellungen erreichbar über Zahnrad-Icon oben rechts oder Wischgeste nach links auf dem Hauptscreen
 - **Sportgerät-Auswahl**: Kettlebell (16/20/24 kg), Steel Mace (8/12 kg) oder Pezziball (0–10 kg); beeinflusst Übungsbezeichnung in der gesamten UI
-- **Übungs-Auswahl**: Kettlebell → Swing beidarmig / Swing einarmig / Snatch / Push Press; Steel Mace → 360s; Pezziball → Myotatischer Crunch
-- **Seite-Auswahl**: Bei einarmigen Kettlebell-Übungen (Swing einarmig, Snatch, Push Press) ist die Seite (Links/Rechts) pro Intervall konfigurierbar
+- **Übungs-Auswahl**: Kettlebell → Swing beidarmig / Swing einarmig / Snatch / Press / Clean & Press; Steel Mace → 360s; Pezziball → Myotatischer Crunch
+- **Seite-Auswahl**: Bei einarmigen Kettlebell-Übungen (Swing einarmig, Snatch, Press, Clean & Press) ist die Seite (Links/Rechts) pro Intervall konfigurierbar
 - **Pause-Intervall**: Einzelne Intervalle können als „Pause" markiert werden — kein Gerät, keine Übung, keine Reps; nur Countdown. Im Workout-Screen grau dargestellt mit „PAUSE"-Label statt Reps
 - **Editierbarer Workout-Plan**: Wiederholungen und Intervalldauer je Intervall konfigurierbar (phasenbasiert oder minutengenau)
 - **Bildschirm-Wachhalten**: Die App verhindert, dass der Bildschirm während eines laufenden Workouts in den Ruhezustand geht (Wake Lock via `wakelock_plus`). Der Wake Lock wird beim Starten aktiviert (`_start()`), beim Pausieren (`_pause()`) und beim Beenden des Workouts deaktiviert.
@@ -249,11 +249,12 @@ emom_app/
 | `swingBeidarmig` | Swing beidarmig | Kettlebell |
 | `swingEinarmig` | Swing einarmig | Kettlebell (einarmig) |
 | `snatch` | Snatch | Kettlebell (einarmig) |
-| `pushPress` | Push Press | Kettlebell (einarmig) |
+| `pushPress` | Press | Kettlebell (einarmig) |
+| `cleanPress` | Clean & Press | Kettlebell (einarmig) |
 | `mace360` | 360s | Steel Mace |
 | `myotatischerCrunch` | Myotatischer Crunch | Pezziball |
 
-Einarmige Übungen (`swingEinarmig`, `snatch`, `pushPress`) aktivieren die **Seite-Auswahl** (Links/Rechts) pro Intervall.
+Einarmige Übungen (`swingEinarmig`, `snatch`, `pushPress`, `cleanPress`) aktivieren die **Seite-Auswahl** (Links/Rechts) pro Intervall.
 
 ### `TrainingPlan` – Konstanten
 
