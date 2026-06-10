@@ -629,6 +629,12 @@ Kopfzeile der Detailansicht: Datum, `X/30 Intervalle`, Gesamtreps-Aufschlüsselu
 
 ## TODO
 
+- **Kotlin Gradle Plugin (KGP) Migration**: Sechs transitive Flutter-Plugins wenden das Kotlin Gradle Plugin noch manuell an. Flutter wird dieses Verhalten in einer zukünftigen Version als Build-Fehler werten. Folgende Pakete müssen auf Major-Versionen aktualisiert werden, sobald die API-Kompatibilität geprüft ist:
+  - `audioplayers`: 5.x → 6.x (`WorkoutNotifier` nutzt `AudioPlayer` und `onPlayerComplete`-Listener)
+  - `volume_controller`: 2.x → 3.x (Lautstärke-Boost in `WorkoutNotifier._volumeBoost`)
+  - Transitive Abhängigkeiten (`device_info_plus`, `package_info_plus`, `shared_preferences_android`, `wakelock_plus`) werden durch die obigen Upgrades mitgezogen.
+  - App-Level KGP bereits behoben: `id("kotlin-android")` aus `android/app/build.gradle.kts` entfernt.
+
 - **Trainingshistorie – Editierbarkeit**: Historische Einträge sollen nachträglich bearbeitbar sein (z.B. einzelne Intervall-Werte korrigieren).
 - **Trainingshistorie – Kommentar**: Pro Workout-Eintrag soll ein freier Kommentar erfassbar und editierbar sein (z.B. Notizen zur Session).
 
