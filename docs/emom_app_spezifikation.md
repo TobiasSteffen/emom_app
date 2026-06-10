@@ -227,34 +227,44 @@ emom_app/
 
 ## Datenmodell: Training
 
-### `Equipment`-Enum (10 Varianten)
+### Equipment-Katalog (dynamisch)
 
-| Wert | Label | Gruppe |
-|---|---|---|
-| `kb16` | Kettlebell 16kg | Kettlebell |
-| `kb20` | Kettlebell 20kg | Kettlebell |
-| `kb24` | Kettlebell 24kg | Kettlebell |
-| `sm8` | Steel Mace 8kg | Steel Mace |
-| `sm12` | Steel Mace 12kg | Steel Mace |
-| `pb0` | Pezziball | Pezziball |
-| `pb2_5` | Pezziball + 2,5kg | Pezziball |
-| `pb5` | Pezziball + 5kg | Pezziball |
-| `pb7_5` | Pezziball + 7,5kg | Pezziball |
-| `pb10` | Pezziball + 10kg | Pezziball |
+Geräte, Varianten (Gewichte) und Übungen sind **keine festen Enums mehr**, sondern Daten im `EquipmentCatalog` (`lib/core/models/equipment_catalog.dart`), den der Nutzer im Equipment-Wizard frei anlegen/bearbeiten/löschen kann. Persistenz: `documents/equipment_catalog.json`. Jeder Eintrag hat eine stabile `id` (serialisierter Schlüssel) und einen `name` (Anzeige-Label):
 
-### `Exercise`-Enum (6 Varianten)
+- `EquipmentType` — `id`, `name`, `iconAsset`, `variants[]`, `exercises[]`
+- `EquipmentVariant` — `id`, `label`, `shortLabel`
+- `ExerciseType` — `id`, `name`, `hasSide`
 
-| Wert | Label | Gültig für |
-|---|---|---|
-| `swingBeidarmig` | Swing beidarmig | Kettlebell |
-| `swingEinarmig` | Swing einarmig | Kettlebell (einarmig) |
-| `snatch` | Snatch | Kettlebell (einarmig) |
-| `pushPress` | Overhead Press | Kettlebell (einarmig) |
-| `cleanPress` | Clean & Press | Kettlebell (einarmig) |
-| `mace360` | 360s | Steel Mace |
-| `myotatischerCrunch` | Myotatischer Crunch | Pezziball |
+Custom-Geräte/-Übungen aus dem Wizard bekommen zufällige Hex-ids (`EquipmentCatalog.newId()`).
 
-Einarmige Übungen (`swingEinarmig`, `snatch`, `pushPress`, `cleanPress`) aktivieren die **Seite-Auswahl** (Links/Rechts) pro Intervall.
+### Built-in-Registry (Seeds + Migration)
+
+Die mitgelieferten Defaults sind als typsichere Enhanced Enums modelliert (`BuiltInEquipment` / `BuiltInVariant` / `BuiltInExercise`) — **einzige Quelle der Wahrheit** für `defaultCatalog()` und die Katalog-Migration. Sie decken **nur** Built-ins ab; Custom-Einträge bleiben reine Daten. Im Code werden Built-ins typsicher referenziert (z.B. `BuiltInExercise.pushPress.id` statt Literal `'push_press'`).
+
+**Built-in-Geräte & Varianten:**
+
+| Equipment (id) | Varianten (id → Label) |
+|---|---|
+| `kettlebell` | `kb_16` 16 kg, `kb_20` 20 kg, `kb_24` 24 kg |
+| `steelmace` | `sm_8` 8 kg, `sm_12` 12 kg |
+| `pezziball` | `pb_0` ohne, `pb_2_5` +2,5 kg, `pb_5` +5 kg, `pb_7_5` +7,5 kg, `pb_10` +10 kg |
+| `bodyweight` | – |
+
+**Built-in-Übungen:**
+
+| Enum | id | Label | Equipment | hasSide |
+|---|---|---|---|---|
+| `swingBeidarmig` | `swing_beidarmig` | Swing beidarmig | kettlebell | nein |
+| `swingEinarmig` | `swing_einarmig` | Swing einarmig | kettlebell | ja |
+| `snatch` | `snatch` | Snatch | kettlebell | ja |
+| `pushPress` | `push_press` | Overhead Press | kettlebell | ja |
+| `cleanPress` | `clean_press` | Clean & Press | kettlebell | ja |
+| `mace360` | `mace_360` | 360s | steelmace | ja |
+| `schulterHeben` | `schulter_heben` | Schulterheben | steelmace | ja |
+| `myotatischerCrunch` | `myotatischer_crunch` | Myotatischer Crunch | pezziball | nein |
+| `liegestuetz` | `liegestuetz` | Liegestütz | bodyweight | nein |
+
+Übungen mit `hasSide: true` aktivieren die **Seite-Auswahl** (Links/Rechts) pro Intervall. `BuiltInExercise.legacyNames` listet frühere Default-Namen (z.B. `push_press`: „Push Press", „Press"); die Migration hebt einen noch vorhandenen Alt-Namen automatisch auf den aktuellen.
 
 ### `TrainingPlan` – Konstanten
 
