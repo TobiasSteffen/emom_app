@@ -460,9 +460,9 @@ Immer sichtbar (unabhängig von Pause):
 
 **Drag-to-Reorder:** Intervalle können per Drag-and-Drop umsortiert werden. Langes Gedrückthalten einer Zeile startet den Drag-Modus (`ReorderableDelayedDragStartListener`). Beim Loslassen wird die neue Reihenfolge sofort übernommen. Die Selektion (`_selectedRow`) folgt der verschobenen Zeile automatisch.
 
-**Swipe-to-Delete:** Nach rechts swipen zeigt einen roten Hintergrund-Streifen mit Trash-Icon (`Icons.delete_outline`). Beim Loslassen wird das Intervall gelöscht — sofern danach noch mindestens 3 Intervalle verbleiben. Bei weniger als 3 verbleibenden Intervallen wird der Swipe geblockt (kein Löschen möglich).
+**Swipe-to-Delete:** Eine Intervall-Zeile nach **links** wischen gibt einen roten Streifen mit Trash-Icon (`Icons.delete_outline`) frei (`SwipeToRevealRow`). Gelöscht wird erst beim **Tippen auf das Trash-Icon** — der freigelegte Button ist die eigentliche Lösch-Aktion. Rechts-Wischen wird ignoriert, damit die PageView-Zurück-Geste funktioniert. Der Reveal ist nur aktiv (`canDelete`), solange danach noch mindestens 3 Intervalle verbleiben (`TrainingPlan.minIntervals = 3`).
 
-**Bestätigungsdialog bei aktivem Plan:** Ist der bearbeitete Plan der aktuell aktive Trainingsplan, erscheint vor dem Löschen ein `AlertDialog` mit den Optionen „Abbrechen" und „Löschen" (rot). Nur nach Bestätigung wird das Intervall entfernt. Bei nicht-aktivem Plan wird direkt gelöscht.
+**Bestätigung beim aktiven Plan:** Ist der bearbeitete Plan der aktuell aktive Trainingsplan (`PlanLibrary.activePlanId == plan.id`), erscheint nach Tippen auf das Trash-Icon ein `AlertDialog` mit „Abbrechen" und „Löschen" (rot); nur nach Bestätigung wird das Intervall entfernt (`_confirmDelete`). Bei nicht-aktivem Plan wird direkt gelöscht.
 
 **Intervall hinzufügen:** Unterhalb der Liste (oberhalb der Fußzeile) erscheint ein orangefarbener „Intervall hinzufügen"-Button, solange die Anzahl der Intervalle unter dem Maximum (30) liegt. Das neue Intervall ist eine Kopie des letzten vorhandenen Intervalls.
 
