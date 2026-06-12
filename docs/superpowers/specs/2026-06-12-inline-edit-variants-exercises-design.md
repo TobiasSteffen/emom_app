@@ -32,7 +32,7 @@ Im Bereich Geräte & Übungen können bestehende Varianten (Gewichte) und Übung
 
 In `lib/features/config/widgets/equipment_edit_widgets.dart`:
 
-- Neues Widget `InlineEditRow` — wie `InlineAddRow`, aber mit `initialText`-Parameter (Controller wird vom Screen vorbefüllt). Alternativ wird `InlineAddRow` so generalisiert, dass beide Fälle eine Implementierung teilen (eine Stelle, kein Duplikat).
+- **Kein neues Widget:** `InlineAddRow` nimmt bereits einen `TextEditingController` und deckt den Edit-Fall unverändert ab — der Screen befüllt den Controller vor dem Anzeigen mit dem aktuellen Label. (Optional wird das Widget in den Doc-Kommentaren als Add/Edit-Zeile beschrieben.)
 - `VariantRow` und `ExerciseRow` bekommen einen `onTap`-Callback (Tap auf den Text-Bereich).
 
 In den beiden Screens:
