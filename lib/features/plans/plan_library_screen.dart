@@ -4,6 +4,7 @@ import '../../core/models/training_plan.dart';
 import '../../core/providers/plan_library_notifier.dart';
 import '../shared/widgets/swipe_to_reveal_row.dart';
 import 'plan_editor_screen.dart';
+import '../config/equipment_catalog_screen.dart';
 
 class PlanLibraryScreen extends ConsumerWidget {
   final VoidCallback? onBack;
@@ -117,6 +118,17 @@ class PlanLibraryScreen extends ConsumerWidget {
         ),
         title: const Text('TRAININGSPLÄNE',
             style: TextStyle(fontSize: 15, letterSpacing: 4, color: Colors.white38)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.fitness_center, color: Color(0xFFFF6B00)),
+            tooltip: 'Geräte & Übungen',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const EquipmentCatalogScreen(),
+              ),
+            ),
+          ),
+        ],
       ),
       body: libraryAsync.when(
         loading: () => const Center(
