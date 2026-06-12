@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/equipment_catalog.dart';
 import '../../core/providers/equipment_catalog_notifier.dart';
-import '../../core/providers/plan_library_notifier.dart';
 import 'widgets/equipment_edit_widgets.dart';
 
 /// Detail-Editor für ein bestehendes Gerät. Alle Sektionen (Name & Icon,
@@ -65,23 +64,9 @@ class _EquipmentDetailScreenState extends ConsumerState<EquipmentDetailScreen> {
 
   // ── Delete checks (Verwendung in Plänen blockiert Löschen) ──────────────
 
-  bool _variantUsed(String variantId) {
-    final library = ref.read(planLibraryProvider).value;
-    return library?.plans
-            .any((p) => p.intervals.any((iv) => iv.variantId == variantId)) ??
-        false;
-  }
-
-  bool _exerciseUsed(String exerciseId) {
-    final library = ref.read(planLibraryProvider).value;
-    return library?.plans.any(
-            (p) => p.intervals.any((iv) => iv.exerciseTypeId == exerciseId)) ??
-        false;
-  }
-
   void _tryDeleteVariant(int i) {
     final v = _variants[i];
-    if (_variantUsed(v.id)) {
+    if (ref.read(equipmentCatalogProvider.notifier).variantUsedInPlans(v.id)) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Variante "${v.label}" wird in einem Plan verwendet.'),
         backgroundColor: Colors.red[900],
@@ -93,7 +78,7 @@ class _EquipmentDetailScreenState extends ConsumerState<EquipmentDetailScreen> {
 
   void _tryDeleteExercise(int i) {
     final e = _exercises[i];
-    if (_exerciseUsed(e.id)) {
+    if (ref.read(equipmentCatalogProvider.notifier).exerciseUsedInPlans(e.id)) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Übung "${e.name}" wird in einem Plan verwendet.'),
         backgroundColor: Colors.red[900],
@@ -107,6 +92,8 @@ class _EquipmentDetailScreenState extends ConsumerState<EquipmentDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final liveName = _nameCtrl.text.trim();
+    final title = (liveName.isEmpty ? widget.type.name : liveName).toUpperCase();
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, _) {
@@ -122,7 +109,7 @@ class _EquipmentDetailScreenState extends ConsumerState<EquipmentDetailScreen> {
             icon: const Icon(Icons.arrow_back, color: Colors.white38),
             onPressed: () => Navigator.of(context).pop(),
           ),
-          title: Text(widget.type.name.toUpperCase(),
+          title: Text(title,
               style: const TextStyle(
                   fontSize: 15, letterSpacing: 4, color: Colors.white38)),
         ),
@@ -134,7 +121,7 @@ class _EquipmentDetailScreenState extends ConsumerState<EquipmentDetailScreen> {
               const SectionLabel('NAME'),
               EquipmentNameField(
                 controller: _nameCtrl,
-                onChanged: (_) {},
+                onChanged: (_) => setState(() {}),
               ),
               const SectionLabel('ICON'),
               EquipmentIconGrid(

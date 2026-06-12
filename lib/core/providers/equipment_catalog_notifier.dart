@@ -23,14 +23,14 @@ class EquipmentCatalogNotifier extends _$EquipmentCatalogNotifier {
         p.intervals.any((iv) => iv.equipmentTypeId == equipmentTypeId));
   }
 
-  bool _variantUsedInPlans(String variantId) {
+  bool variantUsedInPlans(String variantId) {
     final library = ref.read(planLibraryProvider).value;
     if (library == null) return false;
     return library.plans.any((p) =>
         p.intervals.any((iv) => iv.variantId == variantId));
   }
 
-  bool _exerciseUsedInPlans(String exerciseId) {
+  bool exerciseUsedInPlans(String exerciseId) {
     final library = ref.read(planLibraryProvider).value;
     if (library == null) return false;
     return library.plans.any((p) =>
@@ -100,7 +100,7 @@ class EquipmentCatalogNotifier extends _$EquipmentCatalogNotifier {
 
   /// Throws [StateError] if variant is referenced in any plan interval.
   Future<void> deleteVariant(String equipmentTypeId, String variantId) async {
-    if (_variantUsedInPlans(variantId)) {
+    if (variantUsedInPlans(variantId)) {
       throw StateError(
           'Variante "$variantId" wird in einem Plan verwendet und kann nicht gelöscht werden.');
     }
@@ -157,7 +157,7 @@ class EquipmentCatalogNotifier extends _$EquipmentCatalogNotifier {
   /// Throws [StateError] if exercise is referenced in any plan interval.
   Future<void> deleteExercise(
       String equipmentTypeId, String exerciseId) async {
-    if (_exerciseUsedInPlans(exerciseId)) {
+    if (exerciseUsedInPlans(exerciseId)) {
       throw StateError(
           'Übung "$exerciseId" wird in einem Plan verwendet und kann nicht gelöscht werden.');
     }
