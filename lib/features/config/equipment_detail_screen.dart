@@ -27,6 +27,9 @@ class _EquipmentDetailScreenState extends ConsumerState<EquipmentDetailScreen> {
   late List<EditableExercise> _exercises;
   bool _addingVariant = false;
   bool _addingExercise = false;
+  final _editCtrl = TextEditingController();
+  int? _editingVariantIndex;
+  int? _editingExerciseIndex;
 
   @override
   void initState() {
@@ -42,6 +45,7 @@ class _EquipmentDetailScreenState extends ConsumerState<EquipmentDetailScreen> {
     _nameCtrl.dispose();
     _newVariantCtrl.dispose();
     _newExerciseCtrl.dispose();
+    _editCtrl.dispose();
     super.dispose();
   }
 
@@ -88,6 +92,28 @@ class _EquipmentDetailScreenState extends ConsumerState<EquipmentDetailScreen> {
     setState(() => _exercises.removeAt(i));
   }
 
+  // ── Inline-Edit (nur eine Edit-/Add-Zeile gleichzeitig) ─────────────────
+
+  void _startEditVariant(int i) {
+    setState(() {
+      _addingVariant = false;
+      _addingExercise = false;
+      _editingExerciseIndex = null;
+      _editingVariantIndex = i;
+      _editCtrl.text = _variants[i].label;
+    });
+  }
+
+  void _startEditExercise(int i) {
+    setState(() {
+      _addingVariant = false;
+      _addingExercise = false;
+      _editingVariantIndex = null;
+      _editingExerciseIndex = i;
+      _editCtrl.text = _exercises[i].name;
+    });
+  }
+
   // ── Build ───────────────────────────────────────────────────────────────
 
   @override
@@ -130,10 +156,27 @@ class _EquipmentDetailScreenState extends ConsumerState<EquipmentDetailScreen> {
               ),
               const SectionLabel('GEWICHTE'),
               ..._variants.asMap().entries.map(
-                    (entry) => VariantRow(
-                      variant: entry.value,
-                      onDelete: () => _tryDeleteVariant(entry.key),
-                    ),
+                    (entry) => entry.key == _editingVariantIndex
+                        ? InlineAddRow(
+                            controller: _editCtrl,
+                            hintText: 'z.B. 16 kg',
+                            onSubmit: () {
+                              final text = _editCtrl.text.trim();
+                              if (text.isEmpty) return;
+                              setState(() {
+                                entry.value.label = text;
+                                entry.value.shortLabel = text;
+                                _editingVariantIndex = null;
+                              });
+                            },
+                            onCancel: () =>
+                                setState(() => _editingVariantIndex = null),
+                          )
+                        : VariantRow(
+                            variant: entry.value,
+                            onTap: () => _startEditVariant(entry.key),
+                            onDelete: () => _tryDeleteVariant(entry.key),
+                          ),
                   ),
               if (_addingVariant)
                 InlineAddRow(
@@ -159,18 +202,38 @@ class _EquipmentDetailScreenState extends ConsumerState<EquipmentDetailScreen> {
               else
                 AddEntryButton(
                   label: '+ Gewicht hinzufügen',
-                  onTap: () => setState(() => _addingVariant = true),
+                  onTap: () => setState(() {
+                    _addingVariant = true;
+                    _editingVariantIndex = null;
+                    _editingExerciseIndex = null;
+                  }),
                 ),
               const SectionLabel('ÜBUNGEN'),
               ..._exercises.asMap().entries.map(
-                    (entry) => ExerciseRow(
-                      exercise: entry.value,
-                      onToggleSide: () => setState(
-                          () => entry.value.hasSide = !entry.value.hasSide),
-                      onDelete: _exercises.length > 1
-                          ? () => _tryDeleteExercise(entry.key)
-                          : null,
-                    ),
+                    (entry) => entry.key == _editingExerciseIndex
+                        ? InlineAddRow(
+                            controller: _editCtrl,
+                            hintText: 'z.B. Clean and Press',
+                            onSubmit: () {
+                              final text = _editCtrl.text.trim();
+                              if (text.isEmpty) return;
+                              setState(() {
+                                entry.value.name = text;
+                                _editingExerciseIndex = null;
+                              });
+                            },
+                            onCancel: () =>
+                                setState(() => _editingExerciseIndex = null),
+                          )
+                        : ExerciseRow(
+                            exercise: entry.value,
+                            onTap: () => _startEditExercise(entry.key),
+                            onToggleSide: () => setState(
+                                () => entry.value.hasSide = !entry.value.hasSide),
+                            onDelete: _exercises.length > 1
+                                ? () => _tryDeleteExercise(entry.key)
+                                : null,
+                          ),
                   ),
               if (_addingExercise)
                 InlineAddRow(
@@ -196,7 +259,11 @@ class _EquipmentDetailScreenState extends ConsumerState<EquipmentDetailScreen> {
               else
                 AddEntryButton(
                   label: '+ Übung hinzufügen',
-                  onTap: () => setState(() => _addingExercise = true),
+                  onTap: () => setState(() {
+                    _addingExercise = true;
+                    _editingVariantIndex = null;
+                    _editingExerciseIndex = null;
+                  }),
                 ),
             ],
           ),

@@ -282,4 +282,98 @@ void main() {
     );
     expect(closeIcon.color, Colors.white12);
   });
+
+  // ── Inline-Editieren ──────────────────────────────────────────────────────
+
+  testWidgets('Tap auf Variante editiert Label und shortLabel, id bleibt',
+      (tester) async {
+    final type = _testType();
+    final container = await _pumpScreen(tester, type: type);
+
+    await tester.tap(find.text('10 kg'));
+    await tester.pumpAndSettle();
+
+    // Edit-Zeile ist mit dem aktuellen Label vorbefüllt
+    expect(find.widgetWithText(TextField, '10 kg'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).last, '12 kg');
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('12 kg'), findsOneWidget);
+    expect(find.text('10 kg'), findsNothing);
+
+    // Pop → Save-on-Leave persistiert
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+
+    final saved = container
+        .read(equipmentCatalogProvider)
+        .value!
+        .types
+        .firstWhere((t) => t.id == type.id);
+    final v = saved.variants.firstWhere((v) => v.id == 'var_a');
+    expect(v.label, '12 kg');
+    expect(v.shortLabel, '12 kg');
+  });
+
+  testWidgets('✕ verwirft die Inline-Bearbeitung', (tester) async {
+    final type = _testType();
+    await _pumpScreen(tester, type: type);
+
+    await tester.tap(find.text('10 kg'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'XYZ');
+    await tester.tap(find.text('✕'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('10 kg'), findsOneWidget);
+    expect(find.text('XYZ'), findsNothing);
+  });
+
+  testWidgets('OK mit leerem Text übernimmt nichts', (tester) async {
+    final type = _testType();
+    await _pumpScreen(tester, type: type);
+
+    await tester.tap(find.text('10 kg'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, '');
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    // Edit-Zeile bleibt offen (OK weiterhin sichtbar), nichts übernommen
+    expect(find.text('OK'), findsOneWidget);
+    await tester.tap(find.text('✕'));
+    await tester.pumpAndSettle();
+    expect(find.text('10 kg'), findsOneWidget);
+  });
+
+  testWidgets('Übung umbenennen behält hasSide', (tester) async {
+    final type = _testType();
+    final container = await _pumpScreen(tester, type: type);
+
+    // Scroll nach unten, um Übung B zu sehen
+    await tester.dragUntilVisible(
+      find.text('Übung B'),
+      find.byType(SingleChildScrollView),
+      const Offset(0, -50),
+    );
+    await tester.tap(find.text('Übung B'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'Übung B2');
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+
+    final saved = container
+        .read(equipmentCatalogProvider)
+        .value!
+        .types
+        .firstWhere((t) => t.id == type.id);
+    final e = saved.exercises.firstWhere((e) => e.id == 'ex_b');
+    expect(e.name, 'Übung B2');
+    expect(e.hasSide, isTrue);
+  });
 }
