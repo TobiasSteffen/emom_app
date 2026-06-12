@@ -35,36 +35,64 @@ class EquipmentCatalogScreen extends ConsumerWidget {
           'GERÄTE & ÜBUNGEN',
           style: TextStyle(fontSize: 15, letterSpacing: 4, color: Colors.white38),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add, color: Color(0xFFFF6B00)),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const EquipmentWizardScreen()),
-            ),
-          ),
-        ],
       ),
       body: catalogAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
           child: Text('Fehler: $e', style: const TextStyle(color: Colors.white38)),
         ),
-        data: (catalog) => ListView.separated(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-          itemCount: catalog.types.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 8),
-          itemBuilder: (context, idx) {
-            final t = catalog.types[idx];
-            return _EquipmentRow(
-              equipment: t,
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => EquipmentDetailScreen(type: t),
+        data: (catalog) => Column(
+          children: [
+            Expanded(
+              child: ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                itemCount: catalog.types.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                itemBuilder: (context, idx) {
+                  final t = catalog.types[idx];
+                  return _EquipmentRow(
+                    equipment: t,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => EquipmentDetailScreen(type: t),
+                      ),
+                    ),
+                    onDelete: () => _delete(context, ref, t),
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (_) => const EquipmentWizardScreen()),
+                ),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                        color: const Color(0xFFFF6B00).withValues(alpha: 0.4)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add, color: Color(0xFFFF6B00), size: 18),
+                      SizedBox(width: 8),
+                      Text('Neues Gerät',
+                          style: TextStyle(
+                              color: Color(0xFFFF6B00),
+                              fontSize: 14,
+                              letterSpacing: 2)),
+                    ],
+                  ),
                 ),
               ),
-              onDelete: () => _delete(context, ref, t),
-            );
-          },
+            ),
+          ],
         ),
       ),
     );
