@@ -11,7 +11,7 @@ Der Kalender-Bereich wird vom rohen Monats-Grid zur Trainings-Kommandozentrale a
 2. **Erinnerungen**: Optionale lokale Benachrichtigung an Trainingstagen zu einer globalen Uhrzeit.
 3. **Notiz**: Ein freies Notizfeld pro Tag (ersetzt die zwei Ernährungsfelder).
 4. **Workout-Kopplung**: Heute geplantes Training mit einem Tap im Workout-Screen aktivieren.
-5. **Visuelles Redesign**: Kalender-Screen im Stil „Monat + Agenda" (Variante A), Tag-Editor mit kompakter Plan-Auswahl (Variante B).
+5. **Visuelles Redesign**: Kalender-Screen im Stil „Monat + Agenda" (Variante A), Tag-Editor mit Plan-Auswahl als vertikale Liste (Variante A).
 
 ## Getroffene Entscheidungen
 
@@ -22,7 +22,7 @@ Der Kalender-Bereich wird vom rohen Monats-Grid zur Trainings-Kommandozentrale a
 | Tageskommentar | Ein freies Notizfeld statt „Ernährung Vortag/Nachtag" |
 | Workout-Kopplung | Hinweis + 1-Tap (kein automatischer Planwechsel) |
 | Kalender-Layout | Variante A: kompaktes Monatsgrid oben + „Anstehend"-Agenda darunter, Heute-Karte mit Start-Button |
-| Plan-Auswahl im Editor | Variante B: Kompaktfeld mit gewähltem Plan, Antippen klappt die Liste inline auf |
+| Plan-Auswahl im Editor | Variante A: vertikale Liste — jeder Plan eine Zeile mit Eckdaten und Radio-Ring, scrollbar |
 
 ## Datenmodell
 
@@ -88,7 +88,7 @@ Regeln (Vorrang absteigend):
 ### Tag-Editor (Bottom Sheet, überarbeitet)
 
 - **Header**: Datum; bei Serientag zusätzlich Badge `🔁 SERIE · DI/DO/SA`.
-- **Plan-Auswahl (Kompaktfeld)**: Eine Zeile zeigt den gewählten Plan (Name + Eckdaten: Minuten, Equipment-Kurzlabels) mit `▾`. Antippen klappt die Liste aller Pläne inline auf (gewählter Plan orange markiert), Auswahl klappt wieder zu. Ohne Auswahl: Platzhalter „Plan wählen ▾". Speichern bleibt ohne Plan deaktiviert.
+- **Plan-Auswahl (vertikale Liste)**: Jeder Plan eine Zeile mit Name + Eckdaten (Minuten, Equipment-Kurzlabels) und Radio-Ring rechts; der gewählte Plan ist orange hervorgehoben. Die Liste zeigt max. ~4 Zeilen und scrollt intern bei mehr Plänen. Speichern bleibt ohne Plan-Auswahl deaktiviert.
 - **Serien-Toggle** `🔁 Wöchentlich wiederholen` (nur bei Neuanlage oder bestehendem Einzeleintrag, **nicht** bei Serientag): aktiviert eingeblendete Wochentag-Kreise Mo–So, der Wochentag des geöffneten Tags ist vorausgewählt. Speichern mit Toggle an → legt `TrainingSeries` an (startDate = geöffneter Tag, Notiz wird als Tages-Override nur gespeichert, wenn nicht leer). War der Tag vorher ein Einzeleintrag, wird dieser entfernt und durch die Serie ersetzt.
 - **Notizfeld**: ein mehrzeiliges Feld „Notiz" (Hint: „z.B. Ernährung: abends Kohlenhydrate auffüllen").
 - **Aktionen**:
