@@ -118,7 +118,9 @@ class EquipmentNameField extends StatelessWidget {
 class VariantRow extends StatelessWidget {
   final EditableVariant variant;
   final VoidCallback onDelete;
-  const VariantRow({super.key, required this.variant, required this.onDelete});
+  final VoidCallback? onTap;
+  const VariantRow(
+      {super.key, required this.variant, required this.onDelete, this.onTap});
 
   @override
   Widget build(BuildContext context) => Container(
@@ -131,8 +133,13 @@ class VariantRow extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onTap,
                 child: Text(variant.label,
-                    style: const TextStyle(color: Colors.white70, fontSize: 13))),
+                    style: const TextStyle(color: Colors.white70, fontSize: 13)),
+              ),
+            ),
             GestureDetector(
               onTap: onDelete,
               child: const Icon(Icons.close, size: 16, color: Colors.white38),
@@ -146,11 +153,13 @@ class ExerciseRow extends StatelessWidget {
   final EditableExercise exercise;
   final VoidCallback onToggleSide;
   final VoidCallback? onDelete;
+  final VoidCallback? onTap;
   const ExerciseRow(
       {super.key,
       required this.exercise,
       required this.onToggleSide,
-      required this.onDelete});
+      required this.onDelete,
+      this.onTap});
 
   @override
   Widget build(BuildContext context) => Container(
@@ -163,8 +172,13 @@ class ExerciseRow extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onTap,
                 child: Text(exercise.name,
-                    style: const TextStyle(color: Colors.white70, fontSize: 13))),
+                    style: const TextStyle(color: Colors.white70, fontSize: 13)),
+              ),
+            ),
             GestureDetector(
               onTap: onToggleSide,
               child: Container(
@@ -194,6 +208,8 @@ class ExerciseRow extends StatelessWidget {
       );
 }
 
+/// Eingabezeile mit OK/✕ — dient sowohl dem Hinzufügen (leerer Controller)
+/// als auch dem Inline-Editieren (vorbefüllter Controller).
 class InlineAddRow extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
