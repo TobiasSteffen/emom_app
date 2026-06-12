@@ -77,7 +77,12 @@ class _EquipmentDetailScreenState extends ConsumerState<EquipmentDetailScreen> {
       ));
       return;
     }
-    setState(() => _variants.removeAt(i));
+    setState(() {
+      _variants.removeAt(i);
+      // Löschen bricht eine laufende Inline-Bearbeitung ab (Indizes verschieben sich).
+      _editingVariantIndex = null;
+      _editingExerciseIndex = null;
+    });
   }
 
   void _tryDeleteExercise(int i) {
@@ -89,7 +94,11 @@ class _EquipmentDetailScreenState extends ConsumerState<EquipmentDetailScreen> {
       ));
       return;
     }
-    setState(() => _exercises.removeAt(i));
+    setState(() {
+      _exercises.removeAt(i);
+      _editingVariantIndex = null;
+      _editingExerciseIndex = null;
+    });
   }
 
   // ── Inline-Edit (nur eine Edit-/Add-Zeile gleichzeitig) ─────────────────

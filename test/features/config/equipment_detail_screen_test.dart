@@ -6,10 +6,13 @@ import 'package:emom_app/core/models/training_plan.dart';
 import 'package:emom_app/core/providers/equipment_catalog_notifier.dart';
 import 'package:emom_app/core/providers/plan_library_notifier.dart';
 import 'package:emom_app/features/config/equipment_detail_screen.dart';
+import 'package:emom_app/features/config/widgets/equipment_edit_widgets.dart';
 
 // ── Test-Fixtures ────────────────────────────────────────────────────────────
 
-/// Minimales Gerät mit zwei Varianten und zwei Übungen für die meisten Tests.
+/// Gerät mit drei Varianten und zwei Übungen für die meisten Tests.
+/// Die dritte Variante ist nötig, um den Bug zu triggern:
+/// Edit auf Index 2, Löschen von Index 0/1 verschiebt die Indizes.
 EquipmentType _testType() => const EquipmentType(
       id: 'test_geraet',
       name: 'Testgerät',
@@ -17,6 +20,7 @@ EquipmentType _testType() => const EquipmentType(
       variants: [
         EquipmentVariant(id: 'var_a', label: '10 kg', shortLabel: '10'),
         EquipmentVariant(id: 'var_b', label: '20 kg', shortLabel: '20'),
+        EquipmentVariant(id: 'var_c', label: '30 kg', shortLabel: '30'),
       ],
       exercises: [
         ExerciseType(id: 'ex_a', name: 'Übung A', hasSide: false),
@@ -375,5 +379,43 @@ void main() {
     final e = saved.exercises.firstWhere((e) => e.id == 'ex_b');
     expect(e.name, 'Übung B2');
     expect(e.hasSide, isTrue);
+  });
+
+  testWidgets('Löschen einer anderen Zeile bricht aktive Bearbeitung ab',
+      (tester) async {
+    final type = _testType();
+    final container = await _pumpScreen(tester, type: type);
+
+    // Edit auf '20 kg' (var_b, Index 1) starten
+    await tester.tap(find.text('20 kg'));
+    await tester.pumpAndSettle();
+    final editFieldBefore = find.widgetWithText(TextField, '20 kg');
+    expect(editFieldBefore, findsOneWidget);
+
+    // '10 kg' (var_a, Index 0) löschen — erstes ✕ gehört zur ersten Variante
+    // Das würde _editingVariantIndex=1 (20kg) zu einem falschen Index machen,
+    // wenn nicht explizit gelöscht
+    await tester.tap(find.byIcon(Icons.close).first);
+    await tester.pumpAndSettle();
+
+    // Edit-Modus wurde abgebrochen: kein OK-Button mehr
+    expect(find.text('OK'), findsNothing);
+    // Der Edit-Modus sollte abgebrochen sein (InlineAddRow nicht sichtbar)
+    expect(find.byType(InlineAddRow), findsNothing);
+
+    // '20 kg' und '30 kg' sollten noch vorhanden sein
+    expect(find.text('20 kg'), findsOneWidget);
+    expect(find.text('30 kg'), findsOneWidget);
+    expect(find.text('10 kg'), findsNothing);
+
+    // Persistenz: var_b und var_c unverändert, var_a gelöscht
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+    final saved = container
+        .read(equipmentCatalogProvider)
+        .value!
+        .types
+        .firstWhere((t) => t.id == type.id);
+    expect(saved.variants.map((v) => v.id), ['var_b', 'var_c']);
   });
 }
