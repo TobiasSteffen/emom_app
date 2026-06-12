@@ -116,20 +116,17 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
         ),
         actions: [
           TextButton(
-            style: TextButton.styleFrom(
-              splashFactory: NoSplash.splashFactory,
-            ),
+            style: TextButton.styleFrom(splashFactory: NoSplash.splashFactory),
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Abbrechen',
-                style: TextStyle(color: Colors.white38)),
+            child: const Text(
+              'Abbrechen',
+              style: TextStyle(color: Colors.white38),
+            ),
           ),
           TextButton(
-            style: TextButton.styleFrom(
-              splashFactory: NoSplash.splashFactory,
-            ),
+            style: TextButton.styleFrom(splashFactory: NoSplash.splashFactory),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Löschen',
-                style: TextStyle(color: Colors.red)),
+            child: const Text('Löschen', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -157,7 +154,10 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
           title: Text(
             _plan.name.toUpperCase(),
             style: const TextStyle(
-                fontSize: 15, letterSpacing: 4, color: Colors.white38),
+              fontSize: 15,
+              letterSpacing: 4,
+              color: Colors.white38,
+            ),
           ),
           actions: [
             if (_undoManager.canUndo)
@@ -167,81 +167,111 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
               ),
           ],
         ),
-        body: Column(
-          children: [
-            Expanded(
-              child: PlanMinuteExactEditor(
-                plan: _plan,
-                selectedRow: _selectedRow,
-                onRowSelected: (i) => setState(() => _selectedRow = i),
-                onChanged: () => setState(() {}),
-                onBeforeFieldChange: () =>
-                    _undoManager.pushDebounced(_plan.intervals),
-                onReorder: _onReorder,
-                onDelete: _onDelete,
-                onConfirmDelete: _confirmDelete,
+        // Right-fling = app-wide back gesture (matches PageView navigation);
+        // interval rows reject rightward drags while closed, so this wins
+        // the arena there and loses to an open row (which closes instead).
+        body: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onHorizontalDragEnd: (details) {
+            if ((details.primaryVelocity ?? 0) > 200) {
+              Navigator.of(context).pop();
+            }
+          },
+          child: Column(
+            children: [
+              Expanded(
+                child: PlanMinuteExactEditor(
+                  plan: _plan,
+                  selectedRow: _selectedRow,
+                  onRowSelected: (i) => setState(() => _selectedRow = i),
+                  onChanged: () => setState(() {}),
+                  onBeforeFieldChange: () =>
+                      _undoManager.pushDebounced(_plan.intervals),
+                  onReorder: _onReorder,
+                  onDelete: _onDelete,
+                  onConfirmDelete: _confirmDelete,
+                ),
               ),
-            ),
-            if (_plan.intervals.length < TrainingPlan.maxIntervals)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-                child: GestureDetector(
-                  onTap: _onAdd,
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                          color: const Color(0xFFFF6B00).withValues(alpha: 0.4)),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.add, color: Color(0xFFFF6B00), size: 16),
-                        SizedBox(width: 6),
-                        Text('Intervall hinzufügen',
+              if (_plan.intervals.length < TrainingPlan.maxIntervals)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                  child: GestureDetector(
+                    onTap: _onAdd,
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: const Color(0xFFFF6B00).withValues(alpha: 0.4),
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add, color: Color(0xFFFF6B00), size: 16),
+                          SizedBox(width: 6),
+                          Text(
+                            'Intervall hinzufügen',
                             style: TextStyle(
-                                color: Color(0xFFFF6B00),
-                                fontSize: 13,
-                                letterSpacing: 1)),
-                      ],
+                              color: Color(0xFFFF6B00),
+                              fontSize: 13,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF111111),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('GESAMT',
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF111111),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'GESAMT',
                         style: TextStyle(
-                            fontSize: 10, letterSpacing: 3, color: Colors.white24)),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text('${_plan.totalReps} Wdh.',
+                          fontSize: 10,
+                          letterSpacing: 3,
+                          color: Colors.white24,
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '${_plan.totalReps} Wdh.',
                             style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white38)),
-                        Text(_formatDuration(_plan.totalDurationSeconds),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white38,
+                            ),
+                          ),
+                          Text(
+                            _formatDuration(_plan.totalDurationSeconds),
                             style: const TextStyle(
-                                fontSize: 13, color: Colors.white24)),
-                      ],
-                    ),
-                  ],
+                              fontSize: 13,
+                              color: Colors.white24,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
