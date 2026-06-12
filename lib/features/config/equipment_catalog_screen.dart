@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/equipment_catalog.dart';
 import '../../core/providers/equipment_catalog_notifier.dart';
 import 'equipment_wizard_screen.dart';
+import 'equipment_detail_screen.dart';
 
 class EquipmentCatalogScreen extends ConsumerWidget {
   const EquipmentCatalogScreen({super.key});
@@ -58,7 +59,7 @@ class EquipmentCatalogScreen extends ConsumerWidget {
               equipment: t,
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => EquipmentWizardScreen(editType: t),
+                  builder: (_) => EquipmentDetailScreen(type: t),
                 ),
               ),
               onDelete: () => _delete(context, ref, t),
