@@ -28,16 +28,12 @@ class _KettlebellAppState extends ConsumerState<KettlebellApp>
 
   Future<void> _initReminders() async {
     // Erst alle Provider laden — beim Kaltstart sind sie noch leer.
-    final settings = await ref.read(settingsProvider.future);
-    final entries = await ref.read(calendarProvider.future);
-    final series = await ref.read(seriesProvider.future);
-    final library = await ref.read(planLibraryProvider.future);
-    await NotificationService.instance.rescheduleAll(
-      settings: settings,
-      entries: entries,
-      series: series,
-      plans: library.plans,
-    );
+    await ref.read(settingsProvider.future);
+    await ref.read(calendarProvider.future);
+    await ref.read(seriesProvider.future);
+    await ref.read(planLibraryProvider.future);
+    // KettlebellApp hält einen WidgetRef, daher die Widget-Variante.
+    await rescheduleRemindersWidget(ref);
   }
 
   @override

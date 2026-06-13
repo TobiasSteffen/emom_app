@@ -1,10 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../core/models/settings.dart';
+import '../../../core/services/notification_service.dart';
 import 'sound_picker_dialog.dart';
 
-class FeedbackTab extends StatelessWidget {
+class FeedbackTab extends ConsumerWidget {
   final AppSettings settings;
   final VoidCallback onChanged;
   final VoidCallback? onSaved;
@@ -139,6 +141,48 @@ class FeedbackTab extends StatelessWidget {
         ),
       );
 
+  String _formatMinutes(int m) =>
+      '${(m ~/ 60).toString().padLeft(2, '0')}:${(m % 60).toString().padLeft(2, '0')}';
+
+  Widget _reminderTimeRow(BuildContext context, WidgetRef ref) => InkWell(
+        onTap: () async {
+          final picked = await showTimePicker(
+            context: context,
+            initialTime: TimeOfDay(
+              hour: settings.trainingReminderMinutes ~/ 60,
+              minute: settings.trainingReminderMinutes % 60,
+            ),
+          );
+          if (picked == null) return;
+          settings.trainingReminderMinutes = picked.hour * 60 + picked.minute;
+          onChanged();
+          onSaved?.call();
+          await rescheduleRemindersWidget(ref);
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Uhrzeit',
+                  style: TextStyle(color: Colors.white54, fontSize: 15)),
+              Row(
+                children: [
+                  Text(
+                    _formatMinutes(settings.trainingReminderMinutes),
+                    style: const TextStyle(color: Colors.white24, fontSize: 13),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.chevron_right,
+                      color: Colors.white12, size: 18),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+
   Widget _soundPickerRow(String label, String file, VoidCallback onTap) =>
       InkWell(
         onTap: onTap,
@@ -166,7 +210,7 @@ class FeedbackTab extends StatelessWidget {
       );
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final s = settings;
     return Column(
       children: [
@@ -217,6 +261,19 @@ class FeedbackTab extends StatelessWidget {
           onChanged();
           onSaved?.call();
         }),
+        _toggleRow('Trainings-Erinnerung', s.trainingReminderEnabled, (v) async {
+          if (v && !await NotificationService.instance.requestPermission()) {
+            return; // Permission verweigert — Toggle bleibt aus
+          }
+          s.trainingReminderEnabled = v;
+          onChanged();
+          onSaved?.call();
+          await rescheduleRemindersWidget(ref);
+        }),
+        if (s.trainingReminderEnabled)
+          _indentedGroup([
+            _reminderTimeRow(context, ref),
+          ]),
       ],
     );
   }

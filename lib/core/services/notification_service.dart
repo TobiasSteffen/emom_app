@@ -111,3 +111,21 @@ Future<void> rescheduleReminders(Ref ref) async {
     plans: plans,
   );
 }
+
+/// Variante für Widgets, die nur einen [WidgetRef] halten (Riverpod trennt
+/// `Ref` und `WidgetRef` ohne gemeinsamen Obertyp).
+Future<void> rescheduleRemindersWidget(WidgetRef ref) async {
+  final settings = ref.read(settingsProvider).value;
+  if (settings == null) return;
+  final entries =
+      ref.read(calendarProvider).value ?? const <CalendarEntry>[];
+  final series = ref.read(seriesProvider).value ?? const <TrainingSeries>[];
+  final plans =
+      ref.read(planLibraryProvider).value?.plans ?? const <TrainingPlan>[];
+  await NotificationService.instance.rescheduleAll(
+    settings: settings,
+    entries: entries,
+    series: series,
+    plans: plans,
+  );
+}
