@@ -10,7 +10,11 @@ import '../plans/plan_library_screen.dart';
 import '../../core/models/app_page.dart';
 import '../calendar/calendar_screen.dart';
 import 'workout_notifier.dart';
+import '../../core/models/planned_day.dart';
+import '../../core/providers/calendar_notifier.dart';
+import '../../core/providers/series_notifier.dart';
 import 'widgets/plan_indicator.dart';
+import 'widgets/planned_today_chip.dart';
 import 'widgets/workout_header.dart';
 import 'widgets/overall_progress.dart';
 import 'widgets/reps_card.dart';
@@ -123,6 +127,47 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
         ) ??
         false;
     if (doReset) ref.read(workoutProvider.notifier).reset();
+  }
+
+  Future<void> _activatePlannedPlan(String planId, WorkoutState state) async {
+    final active = state.isRunning ||
+        state.waitingForConfirmation ||
+        state.currentMinute > 0;
+    if (active) {
+      final ok = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: const Color(0xFF1A1A1A),
+              title: const Text(
+                'Plan wechseln?',
+                style: TextStyle(
+                    color: Colors.white54, fontSize: 15, letterSpacing: 1),
+              ),
+              content: const Text(
+                'Das laufende Training wird zurückgesetzt.',
+                style: TextStyle(color: Colors.white38, fontSize: 13),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Abbrechen',
+                      style: TextStyle(color: Colors.white38)),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Wechseln',
+                      style: TextStyle(color: Color(0xFFFF6B00))),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+      if (!ok) return;
+      if (!mounted) return;
+    }
+    await ref.read(planLibraryProvider.notifier).setActivePlan(planId);
+    if (!mounted) return;
+    await ref.read(workoutProvider.notifier).reset();
   }
 
   void _showHistory() {
@@ -270,6 +315,20 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     final workoutLabel = notifier.workoutLabelForMinute(state.currentMinute);
     final iconPath = notifier.iconAssetForMinute(state.currentMinute);
 
+    final entries = ref.watch(calendarProvider).value ?? const [];
+    final seriesList = ref.watch(seriesProvider).value ?? const [];
+    final lib = ref.watch(planLibraryProvider).value;
+    final planned = resolveDay(DateTime.now(), entries, seriesList);
+    String? plannedPlanName;
+    if (planned != null && lib != null && planned.planId != lib.activePlanId) {
+      for (final p in lib.plans) {
+        if (p.id == planned.planId) {
+          plannedPlanName = p.name;
+          break;
+        }
+      }
+    }
+
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -295,6 +354,13 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
               curve: Curves.easeInOutCubic,
             ),
           ),
+          if (plannedPlanName != null) ...[
+            const SizedBox(height: 8),
+            PlannedTodayChip(
+              planName: plannedPlanName,
+              onTap: () => _activatePlannedPlan(planned!.planId, state),
+            ),
+          ],
           const SizedBox(height: 40),
           RepsCard(
             currentMinute: state.currentMinute,
