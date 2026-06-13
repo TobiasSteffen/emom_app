@@ -24,6 +24,8 @@ class AppSettings {
   double volumeBoostLevel;
   String countdownSoundFile;
   String alarmSoundFile;
+  bool trainingReminderEnabled;
+  int trainingReminderMinutes; // Minuten seit Mitternacht, Default 08:00
 
   AppSettings({
     this.vibrationEnabled = true,
@@ -33,6 +35,8 @@ class AppSettings {
     this.volumeBoostLevel = 1.0,
     this.countdownSoundFile = 'tick.wav',
     this.alarmSoundFile = 'alarm.wav',
+    this.trainingReminderEnabled = false,
+    this.trainingReminderMinutes = 480,
   });
 
   static Future<AppSettings> load() async {
@@ -45,6 +49,9 @@ class AppSettings {
       volumeBoostLevel: prefs.getDouble('volumeBoostLevel') ?? 1.0,
       countdownSoundFile: prefs.getString('countdownSoundFile') ?? 'tick.wav',
       alarmSoundFile: prefs.getString('alarmSoundFile') ?? 'alarm.wav',
+      trainingReminderEnabled:
+          prefs.getBool('trainingReminderEnabled') ?? false,
+      trainingReminderMinutes: prefs.getInt('trainingReminderMinutes') ?? 480,
     );
   }
 
@@ -57,5 +64,7 @@ class AppSettings {
     await prefs.setDouble('volumeBoostLevel', volumeBoostLevel);
     await prefs.setString('countdownSoundFile', countdownSoundFile);
     await prefs.setString('alarmSoundFile', alarmSoundFile);
+    await prefs.setBool('trainingReminderEnabled', trainingReminderEnabled);
+    await prefs.setInt('trainingReminderMinutes', trainingReminderMinutes);
   }
 }

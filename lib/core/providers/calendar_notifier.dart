@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/calendar_entry.dart';
+import '../services/notification_service.dart';
 
 part 'calendar_notifier.g.dart';
 
@@ -18,6 +19,7 @@ class CalendarNotifier extends _$CalendarNotifier {
     }
     await CalendarStorage.save(entries);
     state = AsyncData(entries);
+    await rescheduleReminders(ref);
   }
 
   Future<void> removeEntry(DateTime date) async {
@@ -25,6 +27,7 @@ class CalendarNotifier extends _$CalendarNotifier {
         state.requireValue.where((e) => !_sameDay(e.date, date)).toList();
     await CalendarStorage.save(entries);
     state = AsyncData(entries);
+    await rescheduleReminders(ref);
   }
 
   CalendarEntry? entryFor(DateTime date) {

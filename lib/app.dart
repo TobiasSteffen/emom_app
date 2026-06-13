@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'core/providers/calendar_notifier.dart';
+import 'core/providers/plan_library_notifier.dart';
+import 'core/providers/series_notifier.dart';
+import 'core/providers/settings_provider.dart';
+import 'core/services/notification_service.dart';
 import 'features/workout/workout_screen.dart';
 
-class KettlebellApp extends StatefulWidget {
+class KettlebellApp extends ConsumerStatefulWidget {
   const KettlebellApp({super.key});
 
   @override
-  State<KettlebellApp> createState() => _KettlebellAppState();
+  ConsumerState<KettlebellApp> createState() => _KettlebellAppState();
 }
 
-class _KettlebellAppState extends State<KettlebellApp>
+class _KettlebellAppState extends ConsumerState<KettlebellApp>
     with WidgetsBindingObserver {
   @override
   void initState() {
@@ -17,6 +23,21 @@ class _KettlebellAppState extends State<KettlebellApp>
     WidgetsBinding.instance.addObserver(this);
     // Keep the screen awake while the app is in the foreground.
     WakelockPlus.enable();
+    _initReminders();
+  }
+
+  Future<void> _initReminders() async {
+    // Erst alle Provider laden — beim Kaltstart sind sie noch leer.
+    final settings = await ref.read(settingsProvider.future);
+    final entries = await ref.read(calendarProvider.future);
+    final series = await ref.read(seriesProvider.future);
+    final library = await ref.read(planLibraryProvider.future);
+    await NotificationService.instance.rescheduleAll(
+      settings: settings,
+      entries: entries,
+      series: series,
+      plans: library.plans,
+    );
   }
 
   @override

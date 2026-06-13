@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/training_series.dart';
+import '../services/notification_service.dart';
 
 part 'series_notifier.g.dart';
 
@@ -12,12 +13,14 @@ class SeriesNotifier extends _$SeriesNotifier {
     final list = [...state.requireValue, series];
     await SeriesStorage.save(list);
     state = AsyncData(list);
+    await rescheduleReminders(ref);
   }
 
   Future<void> removeSeries(String id) async {
     final list = state.requireValue.where((s) => s.id != id).toList();
     await SeriesStorage.save(list);
     state = AsyncData(list);
+    await rescheduleReminders(ref);
   }
 
   Future<void> addException(String id, DateTime date) async {
@@ -28,5 +31,6 @@ class SeriesNotifier extends _$SeriesNotifier {
     }).toList();
     await SeriesStorage.save(list);
     state = AsyncData(list);
+    await rescheduleReminders(ref);
   }
 }
