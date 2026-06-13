@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/training_plan.dart';
+import '../services/notification_service.dart';
 
 part 'plan_library_notifier.g.dart';
 
@@ -55,5 +56,7 @@ class PlanLibraryNotifier extends _$PlanLibraryNotifier {
     final updated = PlanLibrary(plans: updatedPlans, activePlanId: lib.activePlanId);
     await PlanLibraryStorage.save(updated);
     state = AsyncData(updated);
+    // Plan-Namen stecken im Notification-Text — nach Umbenennen neu planen.
+    await rescheduleReminders(ref);
   }
 }
