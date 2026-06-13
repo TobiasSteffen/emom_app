@@ -44,6 +44,12 @@ void main() {
       expect(entry.note, 'Proteinshake');
     });
 
+    test('fromJson treats empty legacy fields as no note', () {
+      final entry = CalendarEntry.fromJson(
+          {'d': '2026-03-15', 'p': 'plan-x', 'pre': '', 'post': ''});
+      expect(entry.note, '');
+    });
+
     test('copyWith overrides only specified fields', () {
       final entry = CalendarEntry(
         date: DateTime(2026, 6, 10),
