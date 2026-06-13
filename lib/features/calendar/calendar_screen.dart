@@ -171,8 +171,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             ) ??
             false;
         if (!ok) return;
+        if (!mounted) return;
       }
       await ref.read(planLibraryProvider.notifier).setActivePlan(planned.planId);
+      if (!mounted) return;
       await ref.read(workoutProvider.notifier).reset();
     }
     widget.onBack?.call();
