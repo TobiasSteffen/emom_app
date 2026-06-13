@@ -25,23 +25,19 @@ class DayEditorSheet extends StatefulWidget {
 
 class _DayEditorSheetState extends State<DayEditorSheet> {
   String? _selectedPlanId;
-  late TextEditingController _preController;
-  late TextEditingController _postController;
+  late TextEditingController _noteController;
 
   @override
   void initState() {
     super.initState();
     _selectedPlanId = widget.existing?.planId;
-    _preController =
-        TextEditingController(text: widget.existing?.preNutrition ?? '');
-    _postController =
-        TextEditingController(text: widget.existing?.postNutrition ?? '');
+    _noteController =
+        TextEditingController(text: widget.existing?.note ?? '');
   }
 
   @override
   void dispose() {
-    _preController.dispose();
-    _postController.dispose();
+    _noteController.dispose();
     super.dispose();
   }
 
@@ -120,45 +116,16 @@ class _DayEditorSheetState extends State<DayEditorSheet> {
             children: widget.plans.map(_planChip).toList(),
           ),
           const SizedBox(height: 16),
-          // Pre-nutrition
-          const Text('Ernährung Vortag',
+          // Notiz
+          const Text('Notiz',
               style: TextStyle(fontSize: 11, color: Colors.white38, letterSpacing: 1)),
           const SizedBox(height: 6),
           TextField(
-            controller: _preController,
+            controller: _noteController,
             style: const TextStyle(fontSize: 13, color: Colors.white70),
-            maxLines: 2,
+            maxLines: 3,
             decoration: const InputDecoration(
-              hintText: 'z.B. Kohlenhydrate erhöhen, wenig Fett',
-              hintStyle: TextStyle(color: Colors.white24, fontSize: 12),
-              filled: true,
-              fillColor: Color(0xFF111111),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(8)),
-                borderSide: BorderSide(color: Colors.white12),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(8)),
-                borderSide: BorderSide(color: Colors.white12),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(8)),
-                borderSide: BorderSide(color: Color(0xFFFF6B00)),
-              ),
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            ),
-          ),
-          const SizedBox(height: 12),
-          // Post-nutrition
-          const Text('Ernährung Nachtag',
-              style: TextStyle(fontSize: 11, color: Colors.white38, letterSpacing: 1)),
-          const SizedBox(height: 6),
-          TextField(
-            controller: _postController,
-            style: const TextStyle(fontSize: 13, color: Colors.white70),
-            maxLines: 2,
-            decoration: const InputDecoration(
-              hintText: 'z.B. Protein erhöhen, Regeneration',
+              hintText: 'z.B. Ernährung: abends Kohlenhydrate auffüllen',
               hintStyle: TextStyle(color: Colors.white24, fontSize: 12),
               filled: true,
               fillColor: Color(0xFF111111),
@@ -187,8 +154,7 @@ class _DayEditorSheetState extends State<DayEditorSheet> {
                   ? () => widget.onSave(CalendarEntry(
                         date: widget.date,
                         planId: _selectedPlanId!,
-                        preNutrition: _preController.text.trim(),
-                        postNutrition: _postController.text.trim(),
+                        note: _noteController.text.trim(),
                       ))
                   : null,
               child: Container(
