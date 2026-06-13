@@ -34,7 +34,7 @@ final class EquipmentCatalogNotifierProvider
 }
 
 String _$equipmentCatalogNotifierHash() =>
-    r'cff75622f6ba4b2e98874515b136d4eaf0a36a20';
+    r'f9c12fbe24fd37c40531c034f475226041a8cb25';
 
 abstract class _$EquipmentCatalogNotifier
     extends $AsyncNotifier<EquipmentCatalog> {
