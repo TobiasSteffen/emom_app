@@ -65,43 +65,25 @@ class _PlanMinuteRowState extends ConsumerState<PlanMinuteRow> {
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Row(
               children: [
-                ReorderableDragStartListener(
-                  index: i,
-                  // Transparent color keeps the gaps in the handle tappable.
-                  child: Container(
-                    color: Colors.transparent,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.drag_indicator,
-                          size: 14,
-                          color: Colors.white24,
-                        ),
-                        const SizedBox(width: 4),
-                        Container(
-                          width: 6,
-                          height: 6,
-                          margin: const EdgeInsets.only(right: 6),
-                          decoration: BoxDecoration(
-                            color: color,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 42,
-                          child: Text(
-                            'Min ${i + 1}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: widget.isSelected
-                                  ? Colors.white70
-                                  : Colors.white38,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                        ),
-                      ],
+                Container(
+                  width: 6,
+                  height: 6,
+                  margin: const EdgeInsets.only(right: 6),
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                SizedBox(
+                  width: 42,
+                  child: Text(
+                    'Min ${i + 1}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: widget.isSelected
+                          ? Colors.white70
+                          : Colors.white38,
+                      letterSpacing: 1,
                     ),
                   ),
                 ),
