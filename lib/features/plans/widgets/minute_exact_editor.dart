@@ -37,28 +37,27 @@ class PlanMinuteExactEditor extends StatelessWidget {
         child: child,
       ),
       itemCount: plan.intervals.length,
-      itemBuilder: (_, i) => ReorderableDelayedDragStartListener(
+      // Reorder only via the drag handle inside PlanMinuteRow: a row-wide
+      // delayed drag listener would claim any touch held ~500ms and steal
+      // slow left-swipes from SwipeToRevealRow.
+      itemBuilder: (_, i) => SwipeToRevealRow(
         key: ValueKey(identityHashCode(plan.intervals[i])),
-        index: i,
-        child: SwipeToRevealRow(
-          key: ValueKey(identityHashCode(plan.intervals[i])),
-          deleteKey: ValueKey('delete_$i'),
-          canDelete: plan.intervals.length > TrainingPlan.minIntervals,
-          onDeleteTap: () async {
-            if (onConfirmDelete != null) {
-              final confirmed = await onConfirmDelete!(i);
-              if (!confirmed) return;
-            }
-            onDelete(i);
-          },
-          child: PlanMinuteRow(
-            index: i,
-            plan: plan,
-            isSelected: selectedRow == i,
-            onSelect: () => onRowSelected(selectedRow == i ? null : i),
-            onChanged: onChanged,
-            onBeforeFieldChange: onBeforeFieldChange,
-          ),
+        deleteKey: ValueKey('delete_$i'),
+        canDelete: plan.intervals.length > TrainingPlan.minIntervals,
+        onDeleteTap: () async {
+          if (onConfirmDelete != null) {
+            final confirmed = await onConfirmDelete!(i);
+            if (!confirmed) return;
+          }
+          onDelete(i);
+        },
+        child: PlanMinuteRow(
+          index: i,
+          plan: plan,
+          isSelected: selectedRow == i,
+          onSelect: () => onRowSelected(selectedRow == i ? null : i),
+          onChanged: onChanged,
+          onBeforeFieldChange: onBeforeFieldChange,
         ),
       ),
       onReorderItem: onReorder,
