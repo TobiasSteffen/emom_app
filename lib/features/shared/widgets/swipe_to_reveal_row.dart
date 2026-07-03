@@ -3,20 +3,36 @@ import 'package:flutter/material.dart';
 
 // Only claims leftward drags (or rightward when row is already open).
 // This allows right-swipe navigation to pass through to the PageView.
+//
+// The reject decision uses cumulative movement since pointer-down, not
+// single events: real fingers jitter 1-3px in random directions at
+// touch-down, which must not kill a genuine left swipe.
 class _LeftOnlyDragRecognizer extends HorizontalDragGestureRecognizer {
   _LeftOnlyDragRecognizer({super.debugOwner});
+  static const double _rejectNetDx = 8.0;
+  double _netDx = 0.0;
   bool _rejected = false;
+  bool _accepted = false;
   bool Function()? isClosedFn;
+
+  @override
+  void acceptGesture(int pointer) {
+    _accepted = true;
+    super.acceptGesture(pointer);
+  }
 
   @override
   void handleEvent(PointerEvent event) {
     if (_rejected) return;
     if (event is PointerMoveEvent &&
-        event.delta.dx > 1.0 &&
+        !_accepted &&
         (isClosedFn?.call() ?? true)) {
-      _rejected = true;
-      resolve(GestureDisposition.rejected);
-      return;
+      _netDx += event.delta.dx;
+      if (_netDx > _rejectNetDx) {
+        _rejected = true;
+        resolve(GestureDisposition.rejected);
+        return;
+      }
     }
     super.handleEvent(event);
   }
@@ -24,6 +40,8 @@ class _LeftOnlyDragRecognizer extends HorizontalDragGestureRecognizer {
   @override
   void didStopTrackingLastPointer(int pointer) {
     _rejected = false;
+    _accepted = false;
+    _netDx = 0.0;
     super.didStopTrackingLastPointer(pointer);
   }
 }

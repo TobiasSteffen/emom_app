@@ -79,6 +79,28 @@ void main() {
     expect(find.byType(PlanEditorScreen), findsNothing);
   });
 
+  testWidgets(
+      'Links-Swipe mit Touch-Down-Jitter öffnet Delete trotz Gesten-Konkurrenz',
+      (tester) async {
+    await _pumpPushedEditor(tester);
+
+    final center = tester.getCenter(find.byType(SwipeToRevealRow).at(0));
+    final g = await tester.startGesture(center);
+    // Finger rollt beim Aufsetzen minimal nach rechts (typisch bei echtem Touch)
+    await g.moveBy(const Offset(2, 0));
+    await tester.pump(const Duration(milliseconds: 16));
+    // Danach klarer Links-Swipe, leicht diagonal wie ein echter Daumen
+    for (int i = 0; i < 6; i++) {
+      await g.moveBy(const Offset(-16, 1));
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await g.up();
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+    expect(find.byType(PlanEditorScreen), findsOneWidget);
+  });
+
   testWidgets('Rechts-Fling über offener Delete-Row schließt nur die Row',
       (tester) async {
     await _pumpPushedEditor(tester);
