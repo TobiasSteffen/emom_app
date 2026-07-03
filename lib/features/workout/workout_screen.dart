@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/settings.dart';
 import '../../core/providers/plan_library_notifier.dart';
@@ -184,9 +183,11 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
 
   @override
   Widget build(BuildContext context) {
-    final workoutAsync = ref.watch(workoutProvider);
-
-    if (workoutAsync.isLoading) {
+    // Only watch load/error state here: the timer tick (every second) must
+    // not rebuild the PageView with all three pages — the workout page
+    // watches the full state itself via a nested Consumer.
+    final isLoading = ref.watch(workoutProvider.select((a) => a.isLoading));
+    if (isLoading) {
       return const Scaffold(
         backgroundColor: Color(0xFF000000),
         body: Center(
@@ -194,14 +195,16 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
         ),
       );
     }
-    if (workoutAsync.hasError) {
-      return Scaffold(body: Center(child: Text('${workoutAsync.error}')));
+    final error =
+        ref.watch(workoutProvider.select((a) => a.hasError ? a.error : null));
+    if (error != null) {
+      return Scaffold(body: Center(child: Text('$error')));
     }
 
-    return _buildPageView(workoutAsync.requireValue);
+    return _buildPageView();
   }
 
-  Widget _buildPageView(WorkoutState state) {
+  Widget _buildPageView() {
     final notifier = ref.read(workoutProvider.notifier);
 
     // PageView pages are not Navigator routes — intercept system back to
@@ -218,9 +221,9 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
       },
       child: PageView(
         controller: _pageController,
-        physics: const BouncingScrollPhysics(parent: PageScrollPhysics()),
-        dragStartBehavior: DragStartBehavior.down,
         onPageChanged: (page) {
+          // Read fresh state at event time, not a build-time snapshot.
+          final state = ref.read(workoutProvider).requireValue;
           // Snapshot pre-setState values used in side-effects below.
           final prevPlanLibOpened = _planLibWasOpened;
           final prevRunningBeforeCalendar = _wasRunningBeforeCalendar;
@@ -282,15 +285,20 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
           ),
           Scaffold(
             body: SafeArea(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  state.isFinished
-                      ? _buildFinishedScreen(state)
-                      : _buildWorkoutScreen(state),
-                  if (state.waitingForConfirmation)
-                    _buildConfirmationOverlay(state),
-                ],
+              child: Consumer(
+                builder: (context, ref, _) {
+                  final state = ref.watch(workoutProvider).requireValue;
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      state.isFinished
+                          ? _buildFinishedScreen(state)
+                          : _buildWorkoutScreen(state, ref),
+                      if (state.waitingForConfirmation)
+                        _buildConfirmationOverlay(state),
+                    ],
+                  );
+                },
               ),
             ),
           ),
@@ -306,7 +314,10 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     );
   }
 
-  Widget _buildWorkoutScreen(WorkoutState state) {
+  // `ref` is the nested Consumer's ref: ref.watch is only legal during the
+  // build of the consumer it belongs to, and these watches must rebuild
+  // only the workout page, not the whole PageView.
+  Widget _buildWorkoutScreen(WorkoutState state, WidgetRef ref) {
     final notifier = ref.read(workoutProvider.notifier);
     final isPauseInterval = state.intervals[state.currentMinute].isPause;
     final phaseColor = isPauseInterval
