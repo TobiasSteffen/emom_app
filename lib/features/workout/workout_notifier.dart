@@ -27,6 +27,8 @@ class WorkoutState {
   final int totalRepsDone;
   final List<IntervalRecord> completedIntervals;
   final DateTime? workoutStartTime;
+  final List<bool> timedFlags;
+  final bool holdStarted;
 
   const WorkoutState({
     required this.intervals,
@@ -38,14 +40,22 @@ class WorkoutState {
     required this.totalRepsDone,
     required this.completedIntervals,
     this.workoutStartTime,
+    this.timedFlags = const [],
+    this.holdStarted = false,
   });
 
   int get totalMinutes => intervals.length;
-  int get currentReps =>
-      intervals[currentMinute].isPause ? 0 : intervals[currentMinute].reps;
+  bool get currentIsTimed => timedFlags[currentMinute];
+  bool get holdWaiting => currentIsTimed && !holdStarted && !isFinished;
+  int get overtimeSeconds => secondsLeft < 0 ? -secondsLeft : 0;
+  int get currentReps => (intervals[currentMinute].isPause || currentIsTimed)
+      ? 0
+      : intervals[currentMinute].reps;
   int get currentDuration => intervals[currentMinute].durationSeconds;
-  int get totalReps =>
-      intervals.fold(0, (a, iv) => a + (iv.isPause ? 0 : iv.reps));
+  int get totalReps => intervals.indexed.fold(
+      0,
+      (a, e) =>
+          a + ((e.$2.isPause || timedFlags[e.$1]) ? 0 : e.$2.reps));
 
   WorkoutState copyWith({
     List<IntervalConfig>? intervals,
@@ -58,6 +68,8 @@ class WorkoutState {
     List<IntervalRecord>? completedIntervals,
     DateTime? workoutStartTime,
     bool clearWorkoutStartTime = false,
+    List<bool>? timedFlags,
+    bool? holdStarted,
   }) =>
       WorkoutState(
         intervals: intervals ?? this.intervals,
@@ -72,6 +84,8 @@ class WorkoutState {
         workoutStartTime: clearWorkoutStartTime
             ? null
             : (workoutStartTime ?? this.workoutStartTime),
+        timedFlags: timedFlags ?? this.timedFlags,
+        holdStarted: holdStarted ?? this.holdStarted,
       );
 }
 
@@ -110,15 +124,102 @@ class WorkoutNotifier extends _$WorkoutNotifier {
       waitingForConfirmation: false,
       totalRepsDone: 0,
       completedIntervals: const [],
+      timedFlags: _computeTimedFlags(),
+      holdStarted: false,
     );
   }
+
+  List<bool> _computeTimedFlags() => _activePlan.intervals
+      .map((iv) =>
+          !iv.isPause &&
+          (_catalog
+                  .findType(iv.equipmentTypeId)
+                  ?.exercises
+                  .where((e) => e.id == iv.exerciseTypeId)
+                  .firstOrNull
+                  ?.isTimed ??
+              false))
+      .toList();
 
   WorkoutState get _s => state.requireValue;
 
   void start() {
+    if (_s.holdWaiting) return;
     final now = _s.workoutStartTime == null ? DateTime.now() : null;
     state = AsyncData(_s.copyWith(isRunning: true, workoutStartTime: now));
     _timer = Timer.periodic(const Duration(seconds: 1), _tick);
+  }
+
+  void startHold() {
+    if (!_s.holdWaiting) return;
+    final now = _s.workoutStartTime == null ? DateTime.now() : null;
+    state = AsyncData(_s.copyWith(
+        holdStarted: true, isRunning: true, workoutStartTime: now));
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), _tick);
+  }
+
+  void finishHold() {
+    if (!_s.currentIsTimed || !_s.holdStarted) return;
+    final held = (_s.currentDuration - _s.secondsLeft).clamp(0, 1 << 31);
+    _completeCurrent(reps: held, isTimed: true);
+  }
+
+  void skip() {
+    if (_s.isFinished || _s.waitingForConfirmation) return;
+    final timed = _s.currentIsTimed;
+    final held = timed && _s.holdStarted
+        ? (_s.currentDuration - _s.secondsLeft).clamp(0, 1 << 31)
+        : 0;
+    _completeCurrent(
+        reps: timed ? held : _s.currentReps, isTimed: timed, skipped: true);
+  }
+
+  void _completeCurrent({required int reps, bool isTimed = false, bool skipped = false}) {
+    _timer?.cancel();
+    _alarmLoopSub?.cancel();
+    _alarmLoopSub = null;
+    _alarmPlayer.stop();
+    final s = _s;
+    final iv = _activePlan.intervals[s.currentMinute];
+    final newIntervals = [
+      ...s.completedIntervals,
+      IntervalRecord(
+        reps: reps,
+        durationSeconds: s.currentDuration,
+        equipmentTypeId: iv.equipmentTypeId,
+        variantId: iv.variantId,
+        exerciseTypeId: iv.exerciseTypeId,
+        side: iv.side,
+        isPause: iv.isPause,
+        isTimed: isTimed,
+        skipped: skipped,
+      ),
+    ];
+    final newTotalReps = s.totalRepsDone + (isTimed ? 0 : reps);
+    if (s.currentMinute >= s.totalMinutes - 1) {
+      state = AsyncData(s.copyWith(
+        isFinished: true,
+        isRunning: false,
+        totalRepsDone: newTotalReps,
+        completedIntervals: newIntervals,
+      ));
+      _vibrate(600);
+      _saveHistory(intervals: newIntervals, startTime: s.workoutStartTime);
+    } else {
+      final next = s.currentMinute + 1;
+      state = AsyncData(s.copyWith(
+        currentMinute: next,
+        secondsLeft: s.intervals[next].durationSeconds,
+        isRunning: false,
+        holdStarted: false,
+        totalRepsDone: newTotalReps,
+        completedIntervals: newIntervals,
+      ));
+      _vibrate(400);
+      _saveHistory();
+      if (!_s.holdWaiting) start();
+    }
   }
 
   void pause() {
@@ -143,6 +244,8 @@ class WorkoutNotifier extends _$WorkoutNotifier {
       waitingForConfirmation: false,
       totalRepsDone: 0,
       completedIntervals: const [],
+      timedFlags: _computeTimedFlags(),
+      holdStarted: false,
     ));
   }
 
@@ -155,9 +258,11 @@ class WorkoutNotifier extends _$WorkoutNotifier {
       waitingForConfirmation: false,
       currentMinute: nextMinute,
       secondsLeft: _s.intervals[nextMinute].durationSeconds,
+      holdStarted: false,
     ));
     _vibrate(400);
     _saveHistory();
+    if (_s.holdWaiting) return; // Zeit-Übung: auf Start-Tap warten
     start();
   }
 
@@ -188,6 +293,15 @@ class WorkoutNotifier extends _$WorkoutNotifier {
   }
 
   void _tick(Timer timer) {
+    if (_s.currentIsTimed && _s.holdStarted) {
+      final newSeconds = _s.secondsLeft - 1; // darf negativ werden (Überzeit)
+      state = AsyncData(_s.copyWith(secondsLeft: newSeconds));
+      if (newSeconds >= 1 && newSeconds <= 3 && _settings.warningTonesEnabled) {
+        if (newSeconds == 3) _raiseVolume();
+        _playTickSound();
+      }
+      return;
+    }
     final newSeconds = _s.secondsLeft - 1;
     if (newSeconds <= 0) {
       state = AsyncData(_s.copyWith(secondsLeft: 0));
