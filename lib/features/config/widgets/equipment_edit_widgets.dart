@@ -27,12 +27,15 @@ class EditableExercise {
   final String id;
   String name;
   bool hasSide;
-  EditableExercise({required this.id, required this.name, required this.hasSide});
+  bool isTimed;
+  EditableExercise(
+      {required this.id, required this.name, required this.hasSide, this.isTimed = false});
 
   factory EditableExercise.from(ExerciseType e) =>
-      EditableExercise(id: e.id, name: e.name, hasSide: e.hasSide);
+      EditableExercise(id: e.id, name: e.name, hasSide: e.hasSide, isTimed: e.isTimed);
 
-  ExerciseType toType() => ExerciseType(id: id, name: name, hasSide: hasSide);
+  ExerciseType toType() =>
+      ExerciseType(id: id, name: name, hasSide: hasSide, isTimed: isTimed);
 }
 
 // ── Bausteine ─────────────────────────────────────────────────────────────
@@ -152,12 +155,14 @@ class VariantRow extends StatelessWidget {
 class ExerciseRow extends StatelessWidget {
   final EditableExercise exercise;
   final VoidCallback onToggleSide;
+  final VoidCallback onToggleTimed;
   final VoidCallback? onDelete;
   final VoidCallback? onTap;
   const ExerciseRow(
       {super.key,
       required this.exercise,
       required this.onToggleSide,
+      required this.onToggleTimed,
       required this.onDelete,
       this.onTap});
 
@@ -193,6 +198,24 @@ class ExerciseRow extends StatelessWidget {
                     style: TextStyle(
                         fontSize: 11,
                         color: exercise.hasSide ? Colors.black : Colors.white38,
+                        fontWeight: FontWeight.bold)),
+              ),
+            ),
+            const SizedBox(width: 6),
+            GestureDetector(
+              onTap: onToggleTimed,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: exercise.isTimed
+                      ? const Color(0xFFFF6B00)
+                      : const Color(0xFF333333),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text('Zeit',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: exercise.isTimed ? Colors.black : Colors.white38,
                         fontWeight: FontWeight.bold)),
               ),
             ),

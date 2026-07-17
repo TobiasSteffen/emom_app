@@ -239,6 +239,8 @@ class _EquipmentDetailScreenState extends ConsumerState<EquipmentDetailScreen> {
                             onTap: () => _startEditExercise(entry.key),
                             onToggleSide: () => setState(
                                 () => entry.value.hasSide = !entry.value.hasSide),
+                            onToggleTimed: () => setState(
+                                () => entry.value.isTimed = !entry.value.isTimed),
                             onDelete: _exercises.length > 1
                                 ? () => _tryDeleteExercise(entry.key)
                                 : null,

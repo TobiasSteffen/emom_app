@@ -181,4 +181,18 @@ void main() {
       });
     });
   });
+
+  group('ExerciseType.isTimed', () {
+    test('ExerciseType.fromJson defaults isTimed to false (old format)', () {
+      final e = ExerciseType.fromJson({'id': 'x', 'name': 'Swing', 'hasSide': true});
+      expect(e.isTimed, false);
+    });
+
+    test('ExerciseType isTimed roundtrips through JSON', () {
+      const e = ExerciseType(id: 'plank', name: 'Plank', hasSide: false, isTimed: true);
+      final back = ExerciseType.fromJson(e.toJson());
+      expect(back.isTimed, true);
+      expect(back.hasSide, false);
+    });
+  });
 }

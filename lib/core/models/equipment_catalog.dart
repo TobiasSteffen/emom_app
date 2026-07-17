@@ -7,15 +7,22 @@ class ExerciseType {
   final String id;
   final String name;
   final bool hasSide;
+  final bool isTimed;
 
-  const ExerciseType({required this.id, required this.name, required this.hasSide});
+  const ExerciseType(
+      {required this.id,
+      required this.name,
+      required this.hasSide,
+      this.isTimed = false});
 
-  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'hasSide': hasSide};
+  Map<String, dynamic> toJson() =>
+      {'id': id, 'name': name, 'hasSide': hasSide, 'isTimed': isTimed};
 
   factory ExerciseType.fromJson(Map<String, dynamic> j) => ExerciseType(
         id: j['id'] as String,
         name: j['name'] as String,
         hasSide: j['hasSide'] as bool,
+        isTimed: (j['isTimed'] as bool?) ?? false,
       );
 }
 
@@ -119,7 +126,7 @@ class EquipmentCatalog {
           final builtIn = BuiltInExercise.byId(e.id);
           if (builtIn != null && builtIn.legacyNames.contains(e.name)) {
             return ExerciseType(
-                id: e.id, name: builtIn.displayName, hasSide: e.hasSide);
+                id: e.id, name: builtIn.displayName, hasSide: e.hasSide, isTimed: e.isTimed);
           }
           return e;
         }).toList();

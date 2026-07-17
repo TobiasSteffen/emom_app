@@ -297,6 +297,8 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
                         onTap: () => _startEditExercise(entry.key),
                         onToggleSide: () => setState(
                             () => entry.value.hasSide = !entry.value.hasSide),
+                        onToggleTimed: () => setState(
+                            () => entry.value.isTimed = !entry.value.isTimed),
                         onDelete: () => setState(() {
                           _exercises.removeAt(entry.key);
                           _editingVariantIndex = null;
