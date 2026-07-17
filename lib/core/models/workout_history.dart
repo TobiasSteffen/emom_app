@@ -11,6 +11,8 @@ class IntervalRecord {
   final String exerciseTypeId;
   final ExerciseSide? side;
   final bool isPause;
+  final bool isTimed;
+  final bool skipped;
 
   IntervalRecord({
     required this.reps,
@@ -20,6 +22,8 @@ class IntervalRecord {
     this.variantId,
     this.side,
     this.isPause = false,
+    this.isTimed = false,
+    this.skipped = false,
   });
 
   Map<String, dynamic> toJson() {
@@ -32,6 +36,8 @@ class IntervalRecord {
     if (variantId != null) m['v'] = variantId;
     if (side != null) m['s'] = side!.index;
     if (isPause) m['p'] = true;
+    if (isTimed) m['ti'] = true;
+    if (skipped) m['sk'] = true;
     return m;
   }
 
@@ -47,6 +53,8 @@ class IntervalRecord {
         exerciseTypeId: j['x'] as String,
         side: sideIdx != null ? ExerciseSide.values.elementAtOrNull(sideIdx) : null,
         isPause: (j['p'] as bool?) ?? false,
+        isTimed: (j['ti'] as bool?) ?? false,
+        skipped: (j['sk'] as bool?) ?? false,
       );
     }
     // Old format: e = Equipment index, x = Exercise index
@@ -61,6 +69,8 @@ class IntervalRecord {
       exerciseTypeId: IntervalConfig.migrateExercise(xIdx),
       side: sideIdx != null ? ExerciseSide.values.elementAtOrNull(sideIdx) : null,
       isPause: (j['p'] as bool?) ?? false,
+      isTimed: (j['ti'] as bool?) ?? false,
+      skipped: (j['sk'] as bool?) ?? false,
     );
   }
 }
@@ -76,7 +86,8 @@ class WorkoutRecord {
     required this.intervals,
   });
 
-  int get totalReps => intervals.fold(0, (a, b) => a + b.reps);
+  int get totalReps =>
+      intervals.fold(0, (a, b) => a + (b.isTimed ? 0 : b.reps));
   int get totalDurationSeconds => intervals.fold(0, (a, b) => a + b.durationSeconds);
 
   Map<String, dynamic> toJson() => {

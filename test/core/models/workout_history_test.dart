@@ -3,6 +3,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:emom_app/core/models/workout_history.dart';
 import 'package:emom_app/core/models/settings.dart';
 
+IntervalRecord _rec({int reps = 10, bool isTimed = false, bool skipped = false}) =>
+    IntervalRecord(
+        reps: reps,
+        durationSeconds: 60,
+        equipmentTypeId: 'kettlebell',
+        exerciseTypeId: 'swing_beidarmig',
+        isTimed: isTimed,
+        skipped: skipped);
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -192,6 +201,24 @@ void main() {
       );
       expect(pause.toJson().containsKey('p'), isTrue);
       expect(pause.toJson().containsKey('s'), isFalse);
+    });
+
+    test('isTimed and skipped roundtrip through JSON, absent keys default false', () {
+      final r = IntervalRecord.fromJson(_rec(isTimed: true, skipped: true).toJson());
+      expect(r.isTimed, true);
+      expect(r.skipped, true);
+      final old = IntervalRecord.fromJson(_rec().toJson());
+      expect(old.isTimed, false);
+      expect(old.skipped, false);
+    });
+
+    test('totalReps excludes timed intervals but counts skipped ones', () {
+      final w = WorkoutRecord(timestamp: 1, planMode: 1, intervals: [
+        _rec(reps: 10),
+        _rec(reps: 85, isTimed: true), // gehaltene Sekunden, keine Reps
+        _rec(reps: 12, skipped: true),
+      ]);
+      expect(w.totalReps, 22);
     });
   });
 }
