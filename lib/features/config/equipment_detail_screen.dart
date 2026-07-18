@@ -1,3 +1,4 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/equipment_catalog.dart';
@@ -136,9 +137,9 @@ class _EquipmentDetailScreenState extends ConsumerState<EquipmentDetailScreen> {
         _save().ignore();
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFF000000),
+        backgroundColor: AppTheme.bg,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF000000),
+          backgroundColor: AppTheme.bg,
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white38),

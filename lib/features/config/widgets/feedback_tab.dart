@@ -1,3 +1,4 @@
+import '../../../core/theme/app_theme.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,7 +71,7 @@ class FeedbackTab extends ConsumerWidget {
             Switch(
               value: value,
               onChanged: onToggled,
-              activeThumbColor: const Color(0xFF4CAF50),
+              activeThumbColor: AppTheme.ok,
             ),
           ],
         ),
@@ -85,9 +86,9 @@ class FeedbackTab extends ConsumerWidget {
             Expanded(
               child: SliderTheme(
                 data: SliderTheme.of(context).copyWith(
-                  activeTrackColor: const Color(0xFF4CAF50),
-                  inactiveTrackColor: const Color(0xFF1A1A1A),
-                  thumbColor: const Color(0xFF4CAF50),
+                  activeTrackColor: AppTheme.ok,
+                  inactiveTrackColor: AppTheme.surface,
+                  thumbColor: AppTheme.ok,
                   overlayColor: const Color(0x224CAF50),
                   trackHeight: 3,
                   thumbShape:
@@ -131,7 +132,7 @@ class FeedbackTab extends ConsumerWidget {
                 margin:
                     const EdgeInsets.only(left: 6, right: 14, top: 2, bottom: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF4CAF50).withValues(alpha: 0.3),
+                  color: AppTheme.ok.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),

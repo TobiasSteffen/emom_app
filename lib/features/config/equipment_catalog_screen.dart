@@ -1,3 +1,4 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/equipment_catalog.dart';
@@ -23,9 +24,9 @@ class EquipmentCatalogScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final catalogAsync = ref.watch(equipmentCatalogProvider);
     return Scaffold(
-      backgroundColor: const Color(0xFF000000),
+      backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF000000),
+        backgroundColor: AppTheme.bg,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white38),
@@ -74,17 +75,17 @@ class EquipmentCatalogScreen extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   decoration: BoxDecoration(
                     border: Border.all(
-                        color: const Color(0xFFFF6B00).withValues(alpha: 0.4)),
+                        color: AppTheme.accent.withValues(alpha: 0.4)),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.add, color: Color(0xFFFF6B00), size: 18),
+                      Icon(Icons.add, color: AppTheme.accent, size: 18),
                       SizedBox(width: 8),
                       Text('Neues Gerät',
                           style: TextStyle(
-                              color: Color(0xFFFF6B00),
+                              color: AppTheme.accent,
                               fontSize: 14,
                               letterSpacing: 2)),
                     ],
@@ -159,14 +160,14 @@ class _EquipmentRowState extends State<_EquipmentRow> {
             duration: const Duration(milliseconds: 200),
             transform: Matrix4.translationValues(_swiped ? -72 : 0, 0, 0),
             decoration: BoxDecoration(
-              color: const Color(0xFF1A1A1A),
+              color: AppTheme.surface,
               borderRadius: BorderRadius.circular(10),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               children: [
                 Image.asset(t.iconAsset, width: 22, height: 22,
-                    color: const Color(0xFFFF6B00)),
+                    color: AppTheme.accent),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -180,7 +181,7 @@ class _EquipmentRowState extends State<_EquipmentRow> {
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right, color: Color(0xFFFF6B00), size: 18),
+                const Icon(Icons.chevron_right, color: AppTheme.accent, size: 18),
               ],
             ),
           ),

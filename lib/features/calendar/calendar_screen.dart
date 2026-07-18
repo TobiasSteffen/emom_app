@@ -1,4 +1,5 @@
 // lib/features/calendar/calendar_screen.dart
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/calendar_entry.dart';
@@ -13,7 +14,7 @@ import '../../core/providers/settings_provider.dart';
 import '../workout/workout_notifier.dart';
 import 'widgets/day_editor_sheet.dart';
 
-const _orange = Color(0xFFFF6B00);
+const _orange = AppTheme.accent;
 const _monthNames = [
   '', 'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
   'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
@@ -80,7 +81,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF0D0D0D),
+      backgroundColor: AppTheme.surfaceLow,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -145,7 +146,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         final ok = await showDialog<bool>(
               context: context,
               builder: (ctx) => AlertDialog(
-                backgroundColor: const Color(0xFF1A1A1A),
+                backgroundColor: AppTheme.surface,
                 title: const Text(
                   'Plan wechseln?',
                   style: TextStyle(
@@ -340,8 +341,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFF141414),
-          border: Border.all(color: const Color(0xFF222222)),
+          color: AppTheme.surface,
+          border: Border.all(color: AppTheme.surfaceHigh),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
@@ -415,7 +416,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final totalCells = ((startOffset + daysInMonth) / 7).ceil() * 7;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF000000),
+      backgroundColor: AppTheme.bg,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),

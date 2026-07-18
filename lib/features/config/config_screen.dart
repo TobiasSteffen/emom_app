@@ -1,3 +1,4 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/settings.dart';
@@ -41,9 +42,9 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
     final settingsAsync = ref.watch(settingsProvider);
     if (settingsAsync.value == null) return const SizedBox();
     return Scaffold(
-      backgroundColor: const Color(0xFF000000),
+      backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF000000),
+        backgroundColor: AppTheme.bg,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white38),
@@ -74,12 +75,12 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A),
+                color: AppTheme.surface,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.fitness_center, color: Color(0xFF4CAF50), size: 18),
+                  Icon(Icons.fitness_center, color: AppTheme.ok, size: 18),
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(

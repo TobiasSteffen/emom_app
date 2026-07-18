@@ -1,3 +1,4 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/training_plan.dart';
@@ -121,7 +122,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: AppTheme.surface,
         title: const Text(
           'Intervall löschen',
           style: TextStyle(color: Colors.white),
@@ -159,9 +160,9 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
         _save().ignore();
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFF000000),
+        backgroundColor: AppTheme.bg,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF000000),
+          backgroundColor: AppTheme.bg,
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white38),
@@ -181,7 +182,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
               tooltip: 'Löschen',
               icon: Icon(
                 Icons.delete_outline,
-                color: _deleteMode ? const Color(0xFFFF4444) : Colors.white38,
+                color: _deleteMode ? AppTheme.danger : Colors.white38,
               ),
               onPressed: () => setState(() => _deleteMode = !_deleteMode),
             ),
@@ -226,19 +227,19 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
                         border: Border.all(
-                          color: const Color(0xFFFF6B00).withValues(alpha: 0.4),
+                          color: AppTheme.accent.withValues(alpha: 0.4),
                         ),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.add, color: Color(0xFFFF6B00), size: 16),
+                          Icon(Icons.add, color: AppTheme.accent, size: 16),
                           SizedBox(width: 6),
                           Text(
                             'Intervall hinzufügen',
                             style: TextStyle(
-                              color: Color(0xFFFF6B00),
+                              color: AppTheme.accent,
                               fontSize: 13,
                               letterSpacing: 1,
                             ),
@@ -256,7 +257,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
                     vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF111111),
+                    color: AppTheme.surface,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(

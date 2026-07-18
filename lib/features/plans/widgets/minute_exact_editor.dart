@@ -1,3 +1,4 @@
+import '../../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import '../../../core/models/training_plan.dart';
 import '../../shared/widgets/delete_mode_row.dart';
@@ -34,7 +35,7 @@ class PlanMinuteExactEditor extends StatelessWidget {
       buildDefaultDragHandles: false,
       proxyDecorator: (child, index, animation) => Material(
         elevation: 4,
-        color: const Color(0xFF1A1A1A),
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(8),
         child: child,
       ),

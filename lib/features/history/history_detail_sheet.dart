@@ -1,3 +1,4 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -175,7 +176,7 @@ class _HistoryDetailSheetState extends ConsumerState<HistoryDetailSheet> {
                         textAlign: TextAlign.end,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                            color: Color(0xFFFF6B00), fontSize: 13),
+                            color: AppTheme.accent, fontSize: 13),
                       ),
                     ),
                   ],
@@ -330,7 +331,7 @@ class _HistoryDetailSheetState extends ConsumerState<HistoryDetailSheet> {
                 child: ElevatedButton(
                   onPressed: _saving ? null : _save,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF6B00),
+                    backgroundColor: AppTheme.accent,
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(

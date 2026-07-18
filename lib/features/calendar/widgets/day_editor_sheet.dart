@@ -1,4 +1,5 @@
 // lib/features/calendar/widgets/day_editor_sheet.dart
+import '../../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import '../../../core/models/calendar_entry.dart';
 import '../../../core/models/training_plan.dart';
@@ -36,7 +37,7 @@ class DayEditorSheet extends StatefulWidget {
 }
 
 class _DayEditorSheetState extends State<DayEditorSheet> {
-  static const _orange = Color(0xFFFF6B00);
+  static const _orange = AppTheme.accent;
   static const _weekdayLabels = ['', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
   String? _selectedPlanId;
@@ -86,12 +87,12 @@ class _DayEditorSheetState extends State<DayEditorSheet> {
         margin: const EdgeInsets.only(top: 6),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF2A1505) : const Color(0xFF161616),
+          color: selected ? const Color(0xFF2A1505) : AppTheme.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected
                 ? _orange.withValues(alpha: 0.6)
-                : const Color(0xFF242424),
+                : AppTheme.surfaceHigh,
           ),
         ),
         child: Row(
@@ -160,8 +161,8 @@ class _DayEditorSheetState extends State<DayEditorSheet> {
         margin: const EdgeInsets.only(right: 6),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: on ? _orange : const Color(0xFF1A1A1A),
-          border: Border.all(color: on ? _orange : const Color(0xFF2A2A2A)),
+          color: on ? _orange : AppTheme.surface,
+          border: Border.all(color: on ? _orange : AppTheme.surfaceHigh),
         ),
         child: Center(
           child: Text(
@@ -181,7 +182,7 @@ class _DayEditorSheetState extends State<DayEditorSheet> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: AppTheme.surface,
         title: const Text(
           'Serie löschen?',
           style: TextStyle(
@@ -200,7 +201,7 @@ class _DayEditorSheetState extends State<DayEditorSheet> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Löschen',
-                style: TextStyle(color: Color(0xFFFF5050))),
+                style: TextStyle(color: AppTheme.danger)),
           ),
         ],
       ),
@@ -337,7 +338,7 @@ class _DayEditorSheetState extends State<DayEditorSheet> {
                 hintText: 'z.B. Ernährung: abends Kohlenhydrate auffüllen',
                 hintStyle: TextStyle(color: Colors.white24, fontSize: 12),
                 filled: true,
-                fillColor: Color(0xFF111111),
+                fillColor: AppTheme.surface,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(8)),
                   borderSide: BorderSide(color: Colors.white12),
@@ -348,7 +349,7 @@ class _DayEditorSheetState extends State<DayEditorSheet> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(8)),
-                  borderSide: BorderSide(color: Color(0xFFFF6B00)),
+                  borderSide: BorderSide(color: AppTheme.accent),
                 ),
                 contentPadding:
                     EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -363,7 +364,7 @@ class _DayEditorSheetState extends State<DayEditorSheet> {
                 onTap: canSave ? _save : null,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: canSave ? _orange : const Color(0xFF222222),
+                    color: canSave ? _orange : AppTheme.surfaceHigh,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
@@ -402,7 +403,7 @@ class _DayEditorSheetState extends State<DayEditorSheet> {
                 child: OutlinedButton(
                   onPressed: widget.onExcludeDay,
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFF2A2A2A)),
+                    side: const BorderSide(color: AppTheme.surfaceHigh),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),

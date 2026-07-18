@@ -1,3 +1,4 @@
+import '../../../core/theme/app_theme.dart';
 import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:file_picker/file_picker.dart';
@@ -92,7 +93,7 @@ class _SoundPickerDialogState extends State<SoundPickerDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: AppTheme.surface,
       title: Text(
         widget.title,
         style: const TextStyle(
@@ -123,7 +124,7 @@ class _SoundPickerDialogState extends State<SoundPickerDialog> {
               ),
               ..._imported.map((f) => _soundTile(f, isAsset: false)),
             ],
-            const Divider(color: Color(0xFF222222), height: 1),
+            const Divider(color: AppTheme.surfaceHigh, height: 1),
             TextButton.icon(
               onPressed: _importFromFilesystem,
               icon: const Icon(Icons.folder_open,
@@ -145,7 +146,7 @@ class _SoundPickerDialogState extends State<SoundPickerDialog> {
         TextButton(
           onPressed: () => Navigator.pop(context, _selected),
           child: const Text('Übernehmen',
-              style: TextStyle(color: Color(0xFFFF6B00))),
+              style: TextStyle(color: AppTheme.accent)),
         ),
       ],
     );
@@ -161,7 +162,7 @@ class _SoundPickerDialogState extends State<SoundPickerDialog> {
           children: [
             Icon(
               isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: isSelected ? const Color(0xFFFF6B00) : Colors.white12,
+              color: isSelected ? AppTheme.accent : Colors.white12,
               size: 18,
             ),
             const SizedBox(width: 10),

@@ -1,3 +1,4 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -60,7 +61,7 @@ class HistorySheet extends ConsumerWidget {
                       itemBuilder: (ctx, i) => GestureDetector(
                         onTap: () => showModalBottomSheet(
                           context: context,
-                          backgroundColor: const Color(0xFF0D0D0D),
+                          backgroundColor: AppTheme.surfaceLow,
                           isScrollControlled: true,
                           shape: const RoundedRectangleBorder(
                             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -86,7 +87,7 @@ class HistorySheet extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -96,7 +97,7 @@ class HistorySheet extends ConsumerWidget {
               style: const TextStyle(color: Colors.white38, fontSize: 11)),
           const SizedBox(height: 4),
           Text('${record.totalReps} Reps  ·  $durStr',
-              style: const TextStyle(color: Color(0xFFFF6B00), fontSize: 13)),
+              style: const TextStyle(color: AppTheme.accent, fontSize: 13)),
         ],
       ),
     );

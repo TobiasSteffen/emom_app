@@ -1,3 +1,4 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/training_plan.dart';
@@ -29,7 +30,7 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF1A1A1A),
+          backgroundColor: AppTheme.surface,
           title: const Text('Neuer Plan',
               style: TextStyle(color: Colors.white54, fontSize: 15, letterSpacing: 1)),
           content: TextField(
@@ -40,7 +41,7 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
               enabledBorder: UnderlineInputBorder(
                   borderSide: BorderSide(color: Colors.white24)),
               focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFFFF6B00))),
+                  borderSide: BorderSide(color: AppTheme.accent)),
             ),
           ),
           actions: [
@@ -52,7 +53,7 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
             TextButton(
               onPressed: () => Navigator.pop(ctx, controller.text.trim()),
               child: const Text('Erstellen',
-                  style: TextStyle(color: Color(0xFFFF6B00))),
+                  style: TextStyle(color: AppTheme.accent)),
             ),
           ],
         );
@@ -76,7 +77,7 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF1A1A1A),
+          backgroundColor: AppTheme.surface,
           title: const Text('Plan umbenennen',
               style: TextStyle(color: Colors.white54, fontSize: 15, letterSpacing: 1)),
           content: TextField(
@@ -87,7 +88,7 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
               enabledBorder: UnderlineInputBorder(
                   borderSide: BorderSide(color: Colors.white24)),
               focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFFFF6B00))),
+                  borderSide: BorderSide(color: AppTheme.accent)),
             ),
           ),
           actions: [
@@ -99,7 +100,7 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
             TextButton(
               onPressed: () => Navigator.pop(ctx, controller.text.trim()),
               child: const Text('Speichern',
-                  style: TextStyle(color: Color(0xFFFF6B00))),
+                  style: TextStyle(color: AppTheme.accent)),
             ),
           ],
         );
@@ -114,9 +115,9 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
     final libraryAsync = ref.watch(planLibraryProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF000000),
+      backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF000000),
+        backgroundColor: AppTheme.bg,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white38),
@@ -130,12 +131,12 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
             tooltip: 'Löschen',
             icon: Icon(
               Icons.delete_outline,
-              color: _deleteMode ? const Color(0xFFFF4444) : Colors.white38,
+              color: _deleteMode ? AppTheme.danger : Colors.white38,
             ),
             onPressed: () => setState(() => _deleteMode = !_deleteMode),
           ),
           IconButton(
-            icon: const Icon(Icons.fitness_center, color: Color(0xFFFF6B00)),
+            icon: const Icon(Icons.fitness_center, color: AppTheme.accent),
             tooltip: 'Geräte & Übungen',
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(
@@ -147,7 +148,7 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
       ),
       body: libraryAsync.when(
         loading: () => const Center(
-            child: CircularProgressIndicator(color: Color(0xFFFF6B00))),
+            child: CircularProgressIndicator(color: AppTheme.accent)),
         error: (e, _) => Center(
             child: Text('$e', style: const TextStyle(color: Colors.white38))),
         data: (library) => Column(
@@ -161,17 +162,17 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   decoration: BoxDecoration(
                     border: Border.all(
-                        color: const Color(0xFFFF6B00).withValues(alpha: 0.4)),
+                        color: AppTheme.accent.withValues(alpha: 0.4)),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.add, color: Color(0xFFFF6B00), size: 18),
+                      Icon(Icons.add, color: AppTheme.accent, size: 18),
                       SizedBox(width: 8),
                       Text('Neuer Plan',
                           style: TextStyle(
-                              color: Color(0xFFFF6B00),
+                              color: AppTheme.accent,
                               fontSize: 14,
                               letterSpacing: 2)),
                     ],
@@ -208,7 +209,7 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF111111),
+                            color: AppTheme.surface,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
@@ -227,7 +228,7 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
                                       height: 10,
                                       decoration: BoxDecoration(
                                         color: isActive
-                                            ? const Color(0xFFFF6B00)
+                                            ? AppTheme.accent
                                             : Colors.white24,
                                         shape: BoxShape.circle,
                                       ),

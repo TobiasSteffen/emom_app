@@ -1,9 +1,10 @@
+import '../../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 /// Dezenter Hinweis auf dem Workout-Screen: heute ist ein anderer Plan
 /// geplant als der aktive. Tap aktiviert den geplanten Plan.
 class PlannedTodayChip extends StatelessWidget {
-  static const _orange = Color(0xFFFF6B00);
+  static const _orange = AppTheme.accent;
 
   final String planName;
   final VoidCallback onTap;

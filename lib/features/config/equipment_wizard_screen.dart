@@ -1,3 +1,4 @@
+import '../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/equipment_catalog.dart';
@@ -115,7 +116,7 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
   Widget _summaryPill(String label) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
+          color: AppTheme.surface,
           borderRadius: BorderRadius.circular(6),
         ),
         child: Text(label,
@@ -127,7 +128,7 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           decoration: BoxDecoration(
-            color: onTap != null ? const Color(0xFFFF6B00) : Colors.white12,
+            color: onTap != null ? AppTheme.accent : Colors.white12,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(label,
@@ -351,13 +352,13 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFF1A1A1A),
+              color: AppTheme.surface,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
               children: [
                 Image.asset(_iconAsset,
-                    width: 22, height: 22, color: const Color(0xFFFF6B00)),
+                    width: 22, height: 22, color: AppTheme.accent),
                 const SizedBox(width: 12),
                 Text(_name.trim(),
                     style: const TextStyle(
@@ -388,7 +389,7 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 14),
               decoration: BoxDecoration(
-                color: const Color(0xFF4CAF50),
+                color: AppTheme.ok,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text(
@@ -428,9 +429,9 @@ class _EquipmentWizardScreenState extends ConsumerState<EquipmentWizardScreen> {
     };
 
     return Scaffold(
-      backgroundColor: const Color(0xFF000000),
+      backgroundColor: AppTheme.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF000000),
+        backgroundColor: AppTheme.bg,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white38),

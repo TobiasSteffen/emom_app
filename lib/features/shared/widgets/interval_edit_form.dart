@@ -1,3 +1,4 @@
+import '../../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/training_plan.dart';
@@ -11,7 +12,7 @@ Widget _stepButton(IconData icon, VoidCallback? onTap) => GestureDetector(
         width: 32,
         height: 32,
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
+          color: AppTheme.surface,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon,
@@ -60,7 +61,7 @@ class _IntervalEditFormState extends ConsumerState<IntervalEditForm> {
           margin: const EdgeInsets.only(right: 6, bottom: 6),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFFFF6B00) : const Color(0xFF222222),
+            color: selected ? AppTheme.accent : AppTheme.surfaceHigh,
             borderRadius: BorderRadius.circular(6),
             border: selected ? null : Border.all(color: Colors.white12),
           ),
@@ -215,7 +216,7 @@ class _IntervalEditFormState extends ConsumerState<IntervalEditForm> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
       decoration: BoxDecoration(
-          color: const Color(0xFF111111),
+          color: AppTheme.surface,
           borderRadius: BorderRadius.circular(8)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,7 +242,7 @@ class _IntervalEditFormState extends ConsumerState<IntervalEditForm> {
                 decoration: BoxDecoration(
                   color: iv.isPause
                       ? const Color(0xFF1565C0)
-                      : const Color(0xFF222222),
+                      : AppTheme.surfaceHigh,
                   borderRadius: BorderRadius.circular(6),
                   border: iv.isPause ? null : Border.all(color: Colors.white12),
                 ),

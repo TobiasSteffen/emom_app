@@ -1,3 +1,4 @@
+import '../../../core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import '../../../core/models/equipment_catalog.dart';
 
@@ -72,15 +73,15 @@ class EquipmentIconGrid extends StatelessWidget {
             onTap: () => onSelect(asset),
             child: Container(
               decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A),
+                color: AppTheme.surface,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: selected ? const Color(0xFFFF6B00) : Colors.transparent,
+                  color: selected ? AppTheme.accent : Colors.transparent,
                   width: 2,
                 ),
               ),
               padding: const EdgeInsets.all(10),
-              child: Image.asset(asset, color: const Color(0xFFFF6B00)),
+              child: Image.asset(asset, color: AppTheme.accent),
             ),
           );
         }).toList(),
@@ -107,7 +108,7 @@ class EquipmentNameField extends StatelessWidget {
           hintText: 'z.B. Resistance Band',
           hintStyle: const TextStyle(color: Colors.white24),
           filled: true,
-          fillColor: const Color(0xFF1A1A1A),
+          fillColor: AppTheme.surface,
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           border: OutlineInputBorder(
@@ -130,7 +131,7 @@ class VariantRow extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 6),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
+          color: AppTheme.surface,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -171,7 +172,7 @@ class ExerciseRow extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 6),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
+          color: AppTheme.surface,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -190,7 +191,7 @@ class ExerciseRow extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: exercise.hasSide
-                      ? const Color(0xFFFF6B00)
+                      ? AppTheme.accent
                       : const Color(0xFF333333),
                   borderRadius: BorderRadius.circular(4),
                 ),
@@ -208,7 +209,7 @@ class ExerciseRow extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: exercise.isTimed
-                      ? const Color(0xFFFF6B00)
+                      ? AppTheme.accent
                       : const Color(0xFF333333),
                   borderRadius: BorderRadius.circular(4),
                 ),
@@ -259,7 +260,7 @@ class InlineAddRow extends StatelessWidget {
                   hintText: hintText,
                   hintStyle: const TextStyle(color: Colors.white24),
                   filled: true,
-                  fillColor: const Color(0xFF1A1A1A),
+                  fillColor: AppTheme.surface,
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   border: OutlineInputBorder(
@@ -271,7 +272,7 @@ class InlineAddRow extends StatelessWidget {
             ),
             TextButton(
               onPressed: onSubmit,
-              child: const Text('OK', style: TextStyle(color: Color(0xFFFF6B00))),
+              child: const Text('OK', style: TextStyle(color: AppTheme.accent)),
             ),
             TextButton(
               onPressed: onCancel,
@@ -293,7 +294,7 @@ class AddEntryButton extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Text(label,
-              style: const TextStyle(color: Color(0xFFFF6B00), fontSize: 12)),
+              style: const TextStyle(color: AppTheme.accent, fontSize: 12)),
         ),
       );
 }
