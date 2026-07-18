@@ -38,34 +38,38 @@ class _DeleteModeRowState extends State<DeleteModeRow> {
   @override
   Widget build(BuildContext context) {
     final show = widget.deleteMode && widget.canDelete;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(child: widget.child),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeInOut,
-          child: show
-              ? Padding(
-                  padding: const EdgeInsets.only(left: 8),
-                  child: GestureDetector(
-                    key: widget.deleteKey,
-                    onTap: _handleTap,
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.75),
-                        shape: BoxShape.circle,
+    // Optik wie die frühere Swipe-to-Reveal-Fläche: rotes abgerundetes
+    // Rechteck in voller Zeilenhöhe rechts neben dem Inhalt.
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: widget.child),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeInOut,
+            child: show
+                ? Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: GestureDetector(
+                      key: widget.deleteKey,
+                      onTap: _handleTap,
+                      child: Container(
+                        width: 64,
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.75),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.delete_outline,
+                            color: Colors.white, size: 22),
                       ),
-                      child: const Icon(Icons.delete_outline,
-                          color: Colors.white, size: 20),
                     ),
-                  ),
-                )
-              : const SizedBox(height: 36),
-        ),
-      ],
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
     );
   }
 }
