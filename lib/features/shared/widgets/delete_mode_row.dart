@@ -38,38 +38,47 @@ class _DeleteModeRowState extends State<DeleteModeRow> {
   @override
   Widget build(BuildContext context) {
     final show = widget.deleteMode && widget.canDelete;
-    // Optik wie die frühere Swipe-to-Reveal-Fläche: rotes abgerundetes
-    // Rechteck in voller Zeilenhöhe rechts neben dem Inhalt.
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    // Gleiche Struktur wie die frühere Swipe-to-Reveal-Fläche: die Zeile
+    // schiebt sich 64px nach links, dahinter liegt der rote Button — nur
+    // gesteuert vom Lösch-Modus statt von einer Geste. Der Zeileninhalt
+    // behält seine volle Breite und kann nicht überlaufen.
+    const revealWidth = 64.0;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: show ? revealWidth : 0),
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeInOut,
+      builder: (_, offset, child) => Stack(
+        clipBehavior: Clip.none,
         children: [
-          Expanded(child: widget.child),
-          AnimatedSize(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeInOut,
-            child: show
-                ? Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: GestureDetector(
-                      key: widget.deleteKey,
-                      onTap: _handleTap,
-                      child: Container(
-                        width: 64,
-                        decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.75),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        alignment: Alignment.center,
-                        child: const Icon(Icons.delete_outline,
-                            color: Colors.white, size: 22),
-                      ),
-                    ),
-                  )
-                : const SizedBox.shrink(),
+          if (widget.canDelete && offset > 0)
+            Positioned(
+              right: 0,
+              top: 0,
+              bottom: 0,
+              width: offset.clamp(0.0, revealWidth),
+              child: GestureDetector(
+                key: widget.deleteKey,
+                onTap: _handleTap,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.75),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  alignment: Alignment.center,
+                  child: offset > 24
+                      ? const Icon(Icons.delete_outline,
+                          color: Colors.white, size: 22)
+                      : null,
+                ),
+              ),
+            ),
+          Transform.translate(
+            offset: Offset(-offset, 0),
+            child: child,
           ),
         ],
       ),
+      child: widget.child,
     );
   }
 }
