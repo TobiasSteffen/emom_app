@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_theme.dart';
 
 class ConfirmationOverlay extends StatelessWidget {
   final int nextReps;
@@ -28,33 +29,26 @@ class ConfirmationOverlay extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('INTERVALL BEENDET',
-                  style: TextStyle(
-                      color: Colors.white24, fontSize: 11, letterSpacing: 4)),
+              Text('INTERVALL BEENDET', style: AppTheme.eyebrow),
               const SizedBox(height: 32),
               if (nextIsPause)
                 Text(
                   'PAUSE',
-                  style: TextStyle(
-                      fontSize: 64,
-                      fontWeight: FontWeight.w900,
-                      color: nextColor,
-                      height: 1,
-                      letterSpacing: 4),
+                  style: AppTheme.display.copyWith(
+                      fontSize: 72, color: nextColor, letterSpacing: 6),
                 )
               else
                 Text(
                   '$nextReps',
-                  style: TextStyle(
-                      fontSize: 96,
-                      fontWeight: FontWeight.w900,
-                      color: nextColor,
-                      height: 1),
+                  style: AppTheme.display.copyWith(
+                      fontSize: 112, color: nextColor),
                 ),
+              const SizedBox(height: 6),
               Text(nextLabel,
-                  style: const TextStyle(color: Colors.white38, fontSize: 16)),
+                  style:
+                      TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
               Text('Minute $nextMinuteNumber',
-                  style: const TextStyle(color: Colors.white24, fontSize: 13)),
+                  style: TextStyle(color: AppTheme.textFaint, fontSize: 13)),
               const SizedBox(height: 48),
               Container(
                 padding:

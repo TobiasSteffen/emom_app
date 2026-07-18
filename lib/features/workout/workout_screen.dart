@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/settings.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/providers/plan_library_notifier.dart';
 import '../../core/providers/settings_provider.dart';
 import '../history/history_sheet.dart';
@@ -93,7 +94,6 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
         await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            backgroundColor: const Color(0xFF1A1A1A),
             title: const Text(
               'Training zurücksetzen?',
               style: TextStyle(
@@ -118,7 +118,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
                 onPressed: () => Navigator.pop(ctx, true),
                 child: const Text(
                   'Zurücksetzen',
-                  style: TextStyle(color: Color(0xFFFF6B00)),
+                  style: TextStyle(color: AppTheme.accent),
                 ),
               ),
             ],
@@ -136,7 +136,6 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
       final ok = await showDialog<bool>(
             context: context,
             builder: (ctx) => AlertDialog(
-              backgroundColor: const Color(0xFF1A1A1A),
               title: const Text(
                 'Plan wechseln?',
                 style: TextStyle(
@@ -155,7 +154,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
                 TextButton(
                   onPressed: () => Navigator.pop(ctx, true),
                   child: const Text('Wechseln',
-                      style: TextStyle(color: Color(0xFFFF6B00))),
+                      style: TextStyle(color: AppTheme.accent)),
                 ),
               ],
             ),
@@ -172,7 +171,7 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
   void _showHistory() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF0D0D0D),
+      backgroundColor: AppTheme.surfaceLow,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -189,9 +188,9 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
     final isLoading = ref.watch(workoutProvider.select((a) => a.isLoading));
     if (isLoading) {
       return const Scaffold(
-        backgroundColor: Color(0xFF000000),
+        backgroundColor: AppTheme.bg,
         body: Center(
-          child: CircularProgressIndicator(color: Color(0xFFFF6B00)),
+          child: CircularProgressIndicator(color: AppTheme.accent),
         ),
       );
     }
@@ -399,10 +398,8 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
                 height: 56,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: state.holdWaiting
-                      ? const Color(0xFF4CAF50)
-                      : const Color(0xFFFF4444),
-                  borderRadius: BorderRadius.circular(16),
+                  color: state.holdWaiting ? AppTheme.ok : AppTheme.danger,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                 ),
                 child: Center(
                   child: Text(

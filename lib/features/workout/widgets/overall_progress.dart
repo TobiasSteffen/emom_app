@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/settings.dart';
+import '../../../core/theme/app_theme.dart';
 
 class OverallProgress extends StatelessWidget {
   final int currentMinute;
@@ -20,8 +21,8 @@ class OverallProgress extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Minute ${currentMinute + 1} / $totalMinutes',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13)),
+        Text('MINUTE ${currentMinute + 1} / $totalMinutes',
+            style: AppTheme.eyebrow.copyWith(fontSize: 11)),
         const SizedBox(height: 8),
         ClipRRect(
           borderRadius: BorderRadius.circular(4),

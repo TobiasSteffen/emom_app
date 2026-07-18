@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/settings.dart';
+import '../../../core/theme/app_theme.dart';
 
 class WorkoutHeader extends StatelessWidget {
   final int currentMinute;
@@ -28,9 +29,10 @@ class WorkoutHeader extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text('EMOM 30',
-            style: TextStyle(
-              fontSize: 20, fontWeight: FontWeight.bold,
-              color: Colors.white.withValues(alpha: 0.6), letterSpacing: 3,
+            style: AppTheme.display.copyWith(
+              fontSize: 26,
+              color: AppTheme.textSecondary,
+              letterSpacing: 4,
             )),
         Row(
           children: [
@@ -42,17 +44,18 @@ class WorkoutHeader extends StatelessWidget {
                 border: Border.all(color: phaseColor.withValues(alpha: 0.5)),
               ),
               child: Text(_phaseLabel,
-                  style: TextStyle(color: phaseColor, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      color: phaseColor, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(width: 10),
             GestureDetector(
               onTap: onHistory,
-              child: const Icon(Icons.history, color: Colors.white24, size: 22),
+              child: Icon(Icons.history, color: AppTheme.textMuted, size: 22),
             ),
             const SizedBox(width: 10),
             GestureDetector(
               onTap: onSettings,
-              child: const Icon(Icons.settings, color: Colors.white24, size: 22),
+              child: Icon(Icons.settings, color: AppTheme.textMuted, size: 22),
             ),
           ],
         ),

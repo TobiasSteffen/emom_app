@@ -6,6 +6,7 @@ import 'core/providers/plan_library_notifier.dart';
 import 'core/providers/series_notifier.dart';
 import 'core/providers/settings_provider.dart';
 import 'core/services/notification_service.dart';
+import 'core/theme/app_theme.dart';
 import 'features/workout/workout_screen.dart';
 
 class KettlebellApp extends ConsumerStatefulWidget {
@@ -60,10 +61,23 @@ class _KettlebellAppState extends ConsumerState<KettlebellApp>
       title: 'Kettlebell EMOM',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF000000),
+        scaffoldBackgroundColor: AppTheme.bg,
         colorScheme: const ColorScheme.dark(
-          primary: Color(0xFFFF6B00),
-          secondary: Color(0xFFFF6B00),
+          primary: AppTheme.accent,
+          secondary: AppTheme.accent,
+        ),
+        dialogTheme: DialogThemeData(
+          backgroundColor: AppTheme.surfaceHigh,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          ),
+        ),
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: AppTheme.surfaceLow,
+          shape: RoundedRectangleBorder(
+            borderRadius:
+                BorderRadius.vertical(top: Radius.circular(AppTheme.radiusMd)),
+          ),
         ),
       ),
       home: const WorkoutScreen(),

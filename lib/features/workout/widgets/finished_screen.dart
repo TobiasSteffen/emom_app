@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_theme.dart';
 
 class FinishedScreen extends StatelessWidget {
   final int totalReps;
@@ -20,26 +21,32 @@ class FinishedScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('🏆', style: TextStyle(fontSize: 80)),
+            const Text('🏆', style: TextStyle(fontSize: 72)),
             const SizedBox(height: 24),
-            const Text('WORKOUT DONE!',
-                style: TextStyle(
-                    fontSize: 32, fontWeight: FontWeight.w900,
-                    color: Color(0xFFFF6B00), letterSpacing: 4)),
-            const SizedBox(height: 16),
-            Text('$totalReps $workoutLabel',
-                style: TextStyle(
-                    fontSize: 20, color: Colors.white.withValues(alpha: 0.7))),
+            Text('WORKOUT DONE',
+                style: AppTheme.display.copyWith(
+                    fontSize: 48,
+                    color: AppTheme.accent,
+                    letterSpacing: 5)),
+            const SizedBox(height: 8),
+            Text('$totalReps',
+                style: AppTheme.display.copyWith(
+                    fontSize: 96, color: AppTheme.textPrimary)),
+            Text(workoutLabel,
+                style:
+                    TextStyle(fontSize: 18, color: AppTheme.textSecondary)),
             const SizedBox(height: 48),
             GestureDetector(
               onTap: onReset,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
                 decoration: BoxDecoration(
-                    color: const Color(0xFFFF6B00),
-                    borderRadius: BorderRadius.circular(16)),
+                    color: AppTheme.accent,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMd)),
                 child: const Text('Nochmal',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
             ),
           ],

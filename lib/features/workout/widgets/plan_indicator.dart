@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_theme.dart';
 
 class PlanIndicator extends StatelessWidget {
   final String planName;
@@ -13,19 +14,22 @@ class PlanIndicator extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         decoration: BoxDecoration(
-          color: const Color(0xFF111111),
+          color: AppTheme.surface,
           borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppTheme.hairline),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.fitness_center, size: 11, color: Colors.white24),
+            Icon(Icons.fitness_center, size: 11, color: AppTheme.textMuted),
             const SizedBox(width: 5),
             Text(planName,
-                style: const TextStyle(
-                    fontSize: 11, color: Colors.white24, letterSpacing: 1)),
+                style: TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.textMuted,
+                    letterSpacing: 1)),
             const SizedBox(width: 3),
-            const Icon(Icons.chevron_right, size: 13, color: Colors.white24),
+            Icon(Icons.chevron_right, size: 13, color: AppTheme.textMuted),
           ],
         ),
       ),

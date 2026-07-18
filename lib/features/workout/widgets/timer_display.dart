@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_theme.dart';
 
 class TimerDisplay extends StatelessWidget {
   final int secondsLeft;
@@ -26,16 +27,17 @@ class TimerDisplay extends StatelessWidget {
         ? 1.0
         : ((currentDuration - secondsLeft) / currentDuration).clamp(0.0, 1.0);
     final display = overtime ? '+${_formatTime(-secondsLeft)}' : _formatTime(secondsLeft);
-    final color = (overtime || isWarning) ? const Color(0xFFFF4444) : Colors.white;
+    final color =
+        (overtime || isWarning) ? AppTheme.danger : AppTheme.textPrimary;
     return Column(
       children: [
         Text(
           display,
-          style: TextStyle(
-            fontSize: 52,
-            fontWeight: FontWeight.w300,
+          style: AppTheme.display.copyWith(
+            fontSize: 68,
             color: color,
-            letterSpacing: 4,
+            letterSpacing: 3,
+            fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
         const SizedBox(height: 12),
@@ -45,7 +47,7 @@ class TimerDisplay extends StatelessWidget {
             value: secondProgress,
             backgroundColor: Colors.white.withValues(alpha: 0.1),
             valueColor: AlwaysStoppedAnimation<Color>(
-              (overtime || isWarning) ? const Color(0xFFFF4444) : Colors.white24,
+              (overtime || isWarning) ? AppTheme.danger : Colors.white24,
             ),
             minHeight: 4,
           ),

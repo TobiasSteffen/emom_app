@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/settings.dart';
+import '../../../core/theme/app_theme.dart';
 
 class RepsCard extends StatelessWidget {
   final int currentMinute;
@@ -31,51 +32,52 @@ class RepsCard extends StatelessWidget {
       scale: pulseAnimation,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 40),
+        padding: const EdgeInsets.symmetric(vertical: 36),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(32),
-          border: Border.all(color: phaseColor.withValues(alpha: 0.3), width: 2),
+          // Phasenfarbe als kaum sichtbarer Verlauf statt flacher Fläche —
+          // die Karte "leuchtet" von oben in der aktuellen Phase.
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color.alphaBlend(
+                  phaseColor.withValues(alpha: 0.10), AppTheme.surface),
+              AppTheme.surface,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+          border: Border.all(color: phaseColor.withValues(alpha: 0.35)),
         ),
         child: Column(
           children: [
             if (!isPause) ...[
-              Image.asset(iconPath, width: 48, height: 48, color: phaseColor),
+              Image.asset(iconPath, width: 44, height: 44, color: phaseColor),
+              const SizedBox(height: 6),
+              Text(isTimed ? 'ZEIT' : 'REPS', style: AppTheme.eyebrow),
               const SizedBox(height: 4),
               Text(
-                isTimed ? 'ZEIT' : 'REPS',
-                style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.4),
-                    fontSize: 14,
-                    letterSpacing: 4),
-              ),
-              const SizedBox(height: 8),
-              Text(
                 isTimed ? '${timedSeconds}s' : '$currentReps',
-                style: TextStyle(
-                    fontSize: isTimed ? 96 : 120,
-                    fontWeight: FontWeight.w900,
-                    color: phaseColor,
-                    height: 1),
+                style: AppTheme.display.copyWith(
+                  fontSize: isTimed ? 104 : 128,
+                  color: phaseColor,
+                ),
               ),
             ] else ...[
               const SizedBox(height: 16),
               Text(
                 'PAUSE',
-                style: TextStyle(
-                    fontSize: 64,
-                    fontWeight: FontWeight.w900,
-                    color: phaseColor,
-                    height: 1,
-                    letterSpacing: 4),
+                style: AppTheme.display.copyWith(
+                  fontSize: 72,
+                  color: phaseColor,
+                  letterSpacing: 6,
+                ),
               ),
               const SizedBox(height: 16),
             ],
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Text(
               workoutLabel,
-              style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.5), fontSize: 16),
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 16),
             ),
           ],
         ),
