@@ -10,7 +10,15 @@ import 'package:flutter/material.dart';
 class _LeftOnlyDragRecognizer extends HorizontalDragGestureRecognizer {
   _LeftOnlyDragRecognizer({super.debugOwner});
   static const double _rejectNetDx = 8.0;
+  // Below the ~18px touch slop other arena members (tap, delayed
+  // long-press drag) use, but well above the 1-3px jitter real fingers
+  // produce on pointer-down. Crossing this net displacement is a clear
+  // directional intent, not a tap or accidental jitter. Claiming the
+  // arena eagerly here beats the ReorderableDelayedDragStartListener's
+  // long-press timer, which otherwise wins against slow left swipes.
+  static const double _eagerAcceptDx = 10.0;
   double _netDx = 0.0;
+  double _netDy = 0.0;
   bool _rejected = false;
   bool _accepted = false;
   bool Function()? isClosedFn;
@@ -24,14 +32,31 @@ class _LeftOnlyDragRecognizer extends HorizontalDragGestureRecognizer {
   @override
   void handleEvent(PointerEvent event) {
     if (_rejected) return;
-    if (event is PointerMoveEvent &&
-        !_accepted &&
-        (isClosedFn?.call() ?? true)) {
+    if (event is PointerMoveEvent && !_accepted) {
       _netDx += event.delta.dx;
-      if (_netDx > _rejectNetDx) {
-        _rejected = true;
-        resolve(GestureDisposition.rejected);
-        return;
+      _netDy += event.delta.dy;
+      final closed = isClosedFn?.call() ?? true;
+      if (closed) {
+        // Rightward swipes on a closed row must fall through to the
+        // screen-level right-fling-back detector.
+        if (_netDx > _rejectNetDx) {
+          _rejected = true;
+          resolve(GestureDisposition.rejected);
+          return;
+        }
+        // Deliberate leftward movement that dominates any vertical
+        // drift: claim the arena now instead of waiting for slop/timer
+        // races.
+        if (_netDx <= -_eagerAcceptDx && _netDx.abs() >= _netDy.abs()) {
+          resolve(GestureDisposition.accepted);
+        }
+      } else {
+        // Row already open: both further-left reveal and right-to-close
+        // belong to us; the vertical-dominance guard keeps list scrolls
+        // untouched.
+        if (_netDx.abs() >= _eagerAcceptDx && _netDx.abs() >= _netDy.abs()) {
+          resolve(GestureDisposition.accepted);
+        }
       }
     }
     super.handleEvent(event);
@@ -42,6 +67,7 @@ class _LeftOnlyDragRecognizer extends HorizontalDragGestureRecognizer {
     _rejected = false;
     _accepted = false;
     _netDx = 0.0;
+    _netDy = 0.0;
     super.didStopTrackingLastPointer(pointer);
   }
 }
