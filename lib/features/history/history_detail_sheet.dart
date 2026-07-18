@@ -19,7 +19,8 @@ IntervalConfig _toConfig(IntervalRecord r) => IntervalConfig(
       isPause: r.isPause,
     );
 
-IntervalRecord _toRecord(IntervalConfig c) => IntervalRecord(
+IntervalRecord _toRecord(IntervalConfig c, IntervalRecord orig) =>
+    IntervalRecord(
       equipmentTypeId: c.equipmentTypeId,
       variantId: c.variantId,
       exerciseTypeId: c.exerciseTypeId,
@@ -27,6 +28,8 @@ IntervalRecord _toRecord(IntervalConfig c) => IntervalRecord(
       durationSeconds: c.durationSeconds,
       side: c.side,
       isPause: c.isPause,
+      isTimed: orig.isTimed,
+      skipped: orig.skipped,
     );
 
 class HistoryDetailSheet extends ConsumerStatefulWidget {
@@ -57,8 +60,10 @@ class _HistoryDetailSheetState extends ConsumerState<HistoryDetailSheet> {
 
   String _repBreakdown(EquipmentCatalog catalog) {
     final Map<String, int> byType = {};
-    for (final iv in _editIntervals) {
-      if (!iv.isPause) {
+    for (int i = 0; i < _editIntervals.length; i++) {
+      final iv = _editIntervals[i];
+      final rec = _savedIntervals[i];
+      if (!iv.isPause && !rec.isTimed) {
         byType[iv.equipmentTypeId] = (byType[iv.equipmentTypeId] ?? 0) + iv.reps;
       }
     }
@@ -96,12 +101,18 @@ class _HistoryDetailSheetState extends ConsumerState<HistoryDetailSheet> {
     final updated = WorkoutRecord(
       timestamp: widget.record.timestamp,
       planMode: widget.record.planMode,
-      intervals: _editIntervals.map(_toRecord).toList(),
+      intervals: [
+        for (int i = 0; i < _editIntervals.length; i++)
+          _toRecord(_editIntervals[i], _savedIntervals[i]),
+      ],
     );
     await ref.read(historyProvider.notifier).updateRecord(updated);
     if (mounted) {
       setState(() {
-        _savedIntervals = _editIntervals.map(_toRecord).toList();
+        _savedIntervals = [
+          for (int i = 0; i < _editIntervals.length; i++)
+            _toRecord(_editIntervals[i], _savedIntervals[i]),
+        ];
         _isDirty = false;
         _saving = false;
       });
@@ -181,6 +192,7 @@ class _HistoryDetailSheetState extends ConsumerState<HistoryDetailSheet> {
               itemCount: _editIntervals.length,
               itemBuilder: (ctx, i) {
                 final iv = _editIntervals[i];
+                final rec = _savedIntervals[i];
                 final isSelected = _selectedRow == i;
                 final color =
                     iv.isPause ? Colors.white24 : phaseColorForMinute(i);
@@ -255,11 +267,22 @@ class _HistoryDetailSheetState extends ConsumerState<HistoryDetailSheet> {
                                     color: Colors.white24, fontSize: 11),
                               ),
                               const SizedBox(width: 8),
-                              Text('${iv.reps} Reps',
+                              Text(
+                                  rec.isTimed
+                                      ? '${iv.reps} Sek.'
+                                      : '${iv.reps} Reps',
                                   style: TextStyle(
                                       color: color,
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600)),
+                              if (rec.skipped) ...[
+                                const SizedBox(width: 6),
+                                const Text('Vorzeitig beendet',
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.white38,
+                                        fontStyle: FontStyle.italic)),
+                              ],
                               const Spacer(),
                               Text('${iv.durationSeconds}s',
                                   style: const TextStyle(
