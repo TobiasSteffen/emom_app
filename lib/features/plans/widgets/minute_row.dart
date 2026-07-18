@@ -146,7 +146,7 @@ class _PlanMinuteRowState extends ConsumerState<PlanMinuteRow> {
                   ],
 
                   Text(
-                    '${iv.reps}W',
+                    exerciseType?.isTimed == true ? 'Zeit' : '${iv.reps}W',
                     style: const TextStyle(fontSize: 12, color: Colors.white38),
                   ),
                   const SizedBox(width: 6),

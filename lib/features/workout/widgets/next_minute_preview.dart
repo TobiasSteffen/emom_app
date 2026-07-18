@@ -36,7 +36,9 @@ class NextMinutePreview extends ConsumerWidget {
         final exerciseLabel = interval.side != null
             ? '${exercise?.name ?? '?'} ${interval.side!.shortLabel}'
             : (exercise?.name ?? '?');
-        final parts = [equipLabel, exerciseLabel, '${interval.reps}W', '${interval.durationSeconds}s'];
+        final parts = exercise?.isTimed == true
+            ? [equipLabel, exerciseLabel, 'Zeit', '${interval.durationSeconds}s']
+            : [equipLabel, exerciseLabel, '${interval.reps}W', '${interval.durationSeconds}s'];
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [

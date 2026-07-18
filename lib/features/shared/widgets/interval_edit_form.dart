@@ -125,6 +125,13 @@ class _IntervalEditFormState extends ConsumerState<IntervalEditForm> {
       IntervalConfig iv, EquipmentType newType, String? newVariantId) {
     _update(() {
       final typeChanged = iv.equipmentTypeId != newType.id;
+      // Capture old exercise's isTimed state before any changes
+      final oldEqType = ref.read(equipmentCatalogProvider).value?.findType(iv.equipmentTypeId);
+      final oldExercise = oldEqType?.exercises
+          .where((e) => e.id == iv.exerciseTypeId)
+          .firstOrNull;
+      final wasTimed = oldExercise?.isTimed ?? false;
+
       iv.equipmentTypeId = newType.id;
       iv.variantId = newVariantId;
       if (typeChanged && !newType.exercises.any((e) => e.id == iv.exerciseTypeId)) {
@@ -138,6 +145,9 @@ class _IntervalEditFormState extends ConsumerState<IntervalEditForm> {
         iv.side = (widget.index ?? 0) % 2 == 0
             ? ExerciseSide.links
             : ExerciseSide.rechts;
+      }
+      if (exercise.isTimed && !wasTimed) {
+        iv.durationSeconds = 60;
       }
     });
   }
@@ -278,12 +288,20 @@ class _IntervalEditFormState extends ConsumerState<IntervalEditForm> {
                             ex.name,
                             iv.exerciseTypeId == ex.id,
                             () => _update(() {
+                              // Capture old exercise's isTimed state
+                              final oldExercise = eqType.exercises
+                                  .where((e) => e.id == iv.exerciseTypeId)
+                                  .firstOrNull;
+                              final wasTimed = oldExercise?.isTimed ?? false;
                               iv.exerciseTypeId = ex.id;
                               if (!ex.hasSide) iv.side = null;
                               if (ex.hasSide && iv.side == null) {
                                 iv.side = (widget.index ?? 0) % 2 == 0
                                     ? ExerciseSide.links
                                     : ExerciseSide.rechts;
+                              }
+                              if (ex.isTimed && !wasTimed) {
+                                iv.durationSeconds = 60;
                               }
                             }),
                           ),
@@ -303,22 +321,24 @@ class _IntervalEditFormState extends ConsumerState<IntervalEditForm> {
                     ]),
                   ),
                 ],
-                const Divider(color: Colors.white12, height: 1),
-                _formRow(
-                  'Wiederholungen',
-                  _stepper(
-                    display: '${iv.reps}',
-                    onDec: iv.reps > 1 ? () => _update(() => iv.reps--) : null,
-                    onInc: () => _update(() => iv.reps++),
+                if (!exercise.isTimed) ...[
+                  const Divider(color: Colors.white12, height: 1),
+                  _formRow(
+                    'Wiederholungen',
+                    _stepper(
+                      display: '${iv.reps}',
+                      onDec: iv.reps > 1 ? () => _update(() => iv.reps--) : null,
+                      onInc: () => _update(() => iv.reps++),
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
             secondChild: const SizedBox(width: double.infinity),
           ),
           const Divider(color: Colors.white12, height: 1),
           _formRow(
-            'Sekunden',
+            iv.isPause || !exercise.isTimed ? 'Sekunden' : 'Zeit (Sek.)',
             _stepper(
               display: '${iv.durationSeconds}',
               onDec: iv.durationSeconds > 30
