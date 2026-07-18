@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:emom_app/core/models/training_plan.dart';
 import 'package:emom_app/core/providers/plan_library_notifier.dart';
 import 'package:emom_app/features/plans/plan_editor_screen.dart';
-import 'package:emom_app/features/shared/widgets/swipe_to_reveal_row.dart';
+import 'package:emom_app/features/plans/widgets/minute_row.dart';
 
 // Must be > TrainingPlan.minIntervals (3) so deletion is allowed
 List<IntervalConfig> _fourIntervals() => List.generate(
@@ -55,10 +55,9 @@ class _FakePlanLibraryNotifier extends PlanLibraryNotifier {
   Future<PlanLibrary> build() async => _initial;
 }
 
-/// Swipe row at [index] open (reveal trash button), then settle.
-Future<void> _swipeOpen(WidgetTester tester, int index) async {
-  final rowFinder = find.byType(SwipeToRevealRow).at(index);
-  await tester.drag(rowFinder, const Offset(-80, 0));
+/// Lösch-Modus über den AppBar-Toggle aktivieren.
+Future<void> _enterDeleteMode(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('delete_mode_toggle')));
   await tester.pumpAndSettle();
 }
 
@@ -73,7 +72,7 @@ void main() {
       (tester) async {
     await _pumpEditor(tester, planId: 'plan-1', activePlanId: 'plan-2');
 
-    await _swipeOpen(tester, 0);
+    await _enterDeleteMode(tester);
     await _tapTrash(tester, 0);
 
     expect(find.byType(AlertDialog), findsNothing);
@@ -83,7 +82,7 @@ void main() {
       (tester) async {
     await _pumpEditor(tester, planId: 'plan-1', activePlanId: 'plan-1');
 
-    await _swipeOpen(tester, 0);
+    await _enterDeleteMode(tester);
     await _tapTrash(tester, 0);
 
     expect(find.byType(AlertDialog), findsOneWidget);
@@ -95,7 +94,7 @@ void main() {
       (tester) async {
     await _pumpEditor(tester, planId: 'plan-1', activePlanId: 'plan-1');
 
-    await _swipeOpen(tester, 0);
+    await _enterDeleteMode(tester);
     await _tapTrash(tester, 0);
 
     expect(find.byType(AlertDialog), findsOneWidget);
@@ -104,18 +103,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(AlertDialog), findsNothing);
-    expect(find.byType(SwipeToRevealRow), findsNWidgets(4));
+    expect(find.byType(PlanMinuteRow), findsNWidgets(4));
   });
 
   testWidgets('Bestätigen löscht das Intervall', (tester) async {
     await _pumpEditor(tester, planId: 'plan-1', activePlanId: 'plan-1');
 
-    await _swipeOpen(tester, 0);
+    await _enterDeleteMode(tester);
     await _tapTrash(tester, 0);
     await tester.tap(find.text('Löschen'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(SwipeToRevealRow), findsNWidgets(3));
+    expect(find.byType(PlanMinuteRow), findsNWidgets(3));
   });
 
   testWidgets('Swipe gesperrt wenn nur noch minIntervals Zeilen',
@@ -147,9 +146,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.drag(
-        find.byType(SwipeToRevealRow).at(0), const Offset(80, 0));
-    await tester.pumpAndSettle();
+    await _enterDeleteMode(tester);
 
     expect(find.byKey(const ValueKey('delete_0')), findsNothing);
   });

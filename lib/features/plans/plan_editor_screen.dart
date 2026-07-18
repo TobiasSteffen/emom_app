@@ -17,6 +17,7 @@ class PlanEditorScreen extends ConsumerStatefulWidget {
 class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
   late TrainingPlan _plan;
   int? _selectedRow;
+  bool _deleteMode = false;
   late final UndoManager _undoManager;
 
   @override
@@ -175,6 +176,15 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
             ),
           ),
           actions: [
+            IconButton(
+              key: const ValueKey('delete_mode_toggle'),
+              tooltip: 'Löschen',
+              icon: Icon(
+                Icons.delete_outline,
+                color: _deleteMode ? const Color(0xFFFF4444) : Colors.white38,
+              ),
+              onPressed: () => setState(() => _deleteMode = !_deleteMode),
+            ),
             if (_undoManager.canUndo)
               IconButton(
                 icon: const Icon(Icons.undo, color: Colors.white38),
@@ -182,9 +192,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
               ),
           ],
         ),
-        // Right-fling = app-wide back gesture (matches PageView navigation);
-        // interval rows reject rightward drags while closed, so this wins
-        // the arena there and loses to an open row (which closes instead).
+        // Right-fling = app-wide back gesture (matches PageView navigation).
         body: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onHorizontalDragEnd: (details) {
@@ -197,6 +205,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
               Expanded(
                 child: PlanMinuteExactEditor(
                   plan: _plan,
+                  deleteMode: _deleteMode,
                   selectedRow: _selectedRow,
                   onRowSelected: (i) => setState(() => _selectedRow = i),
                   onChanged: () => setState(() {}),

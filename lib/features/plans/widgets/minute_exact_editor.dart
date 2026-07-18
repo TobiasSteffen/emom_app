@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/training_plan.dart';
-import '../../shared/widgets/swipe_to_reveal_row.dart';
+import '../../shared/widgets/delete_mode_row.dart';
 import 'minute_row.dart';
 
 class PlanMinuteExactEditor extends StatelessWidget {
   final TrainingPlan plan;
+  final bool deleteMode;
   final int? selectedRow;
   final ValueChanged<int?> onRowSelected;
   final VoidCallback onChanged;
@@ -16,6 +17,7 @@ class PlanMinuteExactEditor extends StatelessWidget {
   const PlanMinuteExactEditor({
     super.key,
     required this.plan,
+    required this.deleteMode,
     required this.selectedRow,
     required this.onRowSelected,
     required this.onChanged,
@@ -40,9 +42,10 @@ class PlanMinuteExactEditor extends StatelessWidget {
       itemBuilder: (_, i) => ReorderableDelayedDragStartListener(
         key: ValueKey(identityHashCode(plan.intervals[i])),
         index: i,
-        child: SwipeToRevealRow(
+        child: DeleteModeRow(
           key: ValueKey(identityHashCode(plan.intervals[i])),
           deleteKey: ValueKey('delete_$i'),
+          deleteMode: deleteMode,
           canDelete: plan.intervals.length > TrainingPlan.minIntervals,
           onDeleteTap: () async {
             if (onConfirmDelete != null) {

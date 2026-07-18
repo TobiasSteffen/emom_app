@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:emom_app/core/models/training_plan.dart';
 import 'package:emom_app/core/providers/plan_library_notifier.dart';
 import 'package:emom_app/features/plans/plan_editor_screen.dart';
-import 'package:emom_app/features/shared/widgets/swipe_to_reveal_row.dart';
 
 List<IntervalConfig> _fourIntervals() => List.generate(
       4,
@@ -79,42 +78,18 @@ void main() {
     expect(find.byType(PlanEditorScreen), findsNothing);
   });
 
-  testWidgets(
-      'Links-Swipe mit Touch-Down-Jitter öffnet Delete trotz Gesten-Konkurrenz',
+  testWidgets('Lösch-Modus-Toggle blendet Lösch-Buttons ein und aus',
       (tester) async {
     await _pumpPushedEditor(tester);
 
-    final center = tester.getCenter(find.byType(SwipeToRevealRow).at(0));
-    final g = await tester.startGesture(center);
-    // Finger rollt beim Aufsetzen minimal nach rechts (typisch bei echtem Touch)
-    await g.moveBy(const Offset(2, 0));
-    await tester.pump(const Duration(milliseconds: 16));
-    // Danach klarer Links-Swipe, leicht diagonal wie ein echter Daumen
-    for (int i = 0; i < 6; i++) {
-      await g.moveBy(const Offset(-16, 1));
-      await tester.pump(const Duration(milliseconds: 16));
-    }
-    await g.up();
+    expect(find.byKey(const ValueKey('delete_0')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('delete_mode_toggle')));
     await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('delete_0')), findsOneWidget);
 
-    expect(find.byIcon(Icons.delete_outline), findsOneWidget);
-    expect(find.byType(PlanEditorScreen), findsOneWidget);
-  });
-
-  testWidgets('Rechts-Fling über offener Delete-Row schließt nur die Row',
-      (tester) async {
-    await _pumpPushedEditor(tester);
-
-    await tester.drag(
-        find.byType(SwipeToRevealRow).at(0), const Offset(-80, 0));
+    await tester.tap(find.byKey(const ValueKey('delete_mode_toggle')));
     await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.delete_outline), findsOneWidget);
-
-    await tester.fling(
-        find.byType(SwipeToRevealRow).at(0), const Offset(300, 0), 1000);
-    await tester.pumpAndSettle();
-
-    expect(find.byType(PlanEditorScreen), findsOneWidget);
-    expect(find.byIcon(Icons.delete_outline), findsNothing);
+    expect(find.byKey(const ValueKey('delete_0')), findsNothing);
   });
 }
