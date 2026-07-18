@@ -2,13 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/training_plan.dart';
 import '../../core/providers/plan_library_notifier.dart';
-import '../shared/widgets/swipe_to_reveal_row.dart';
+import '../shared/widgets/delete_mode_row.dart';
 import 'plan_editor_screen.dart';
 import '../config/equipment_catalog_screen.dart';
 
-class PlanLibraryScreen extends ConsumerWidget {
+class PlanLibraryScreen extends ConsumerStatefulWidget {
   final VoidCallback? onBack;
   const PlanLibraryScreen({super.key, this.onBack});
+
+  @override
+  ConsumerState<PlanLibraryScreen> createState() => _PlanLibraryScreenState();
+}
+
+class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
+  bool _deleteMode = false;
 
   String _formatDuration(int seconds) {
     final m = seconds ~/ 60;
@@ -16,7 +23,7 @@ class PlanLibraryScreen extends ConsumerWidget {
     return '${m}m ${s.toString().padLeft(2, '0')}s';
   }
 
-  Future<void> _addPlan(BuildContext context, WidgetRef ref, int planCount) async {
+  Future<void> _addPlan(BuildContext context, int planCount) async {
     final controller = TextEditingController(text: 'Plan ${planCount + 1}');
     final name = await showDialog<String>(
       context: context,
@@ -63,8 +70,7 @@ class PlanLibraryScreen extends ConsumerWidget {
     });
   }
 
-  Future<void> _renamePlan(
-      BuildContext context, WidgetRef ref, TrainingPlan plan) async {
+  Future<void> _renamePlan(BuildContext context, TrainingPlan plan) async {
     final controller = TextEditingController(text: plan.name);
     final name = await showDialog<String>(
       context: context,
@@ -103,8 +109,8 @@ class PlanLibraryScreen extends ConsumerWidget {
     await ref.read(planLibraryProvider.notifier).renamePlan(plan.id, name);
   }
 
-@override
-  Widget build(BuildContext context, WidgetRef ref) {
+  @override
+  Widget build(BuildContext context) {
     final libraryAsync = ref.watch(planLibraryProvider);
 
     return Scaffold(
@@ -114,11 +120,20 @@ class PlanLibraryScreen extends ConsumerWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white38),
-          onPressed: onBack ?? () => Navigator.of(context).pop(),
+          onPressed: widget.onBack ?? () => Navigator.of(context).pop(),
         ),
         title: const Text('TRAININGSPLÄNE',
             style: TextStyle(fontSize: 15, letterSpacing: 4, color: Colors.white38)),
         actions: [
+          IconButton(
+            key: const ValueKey('library_delete_mode_toggle'),
+            tooltip: 'Löschen',
+            icon: Icon(
+              Icons.delete_outline,
+              color: _deleteMode ? const Color(0xFFFF4444) : Colors.white38,
+            ),
+            onPressed: () => setState(() => _deleteMode = !_deleteMode),
+          ),
           IconButton(
             icon: const Icon(Icons.fitness_center, color: Color(0xFFFF6B00)),
             tooltip: 'Geräte & Übungen',
@@ -140,7 +155,7 @@ class PlanLibraryScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
               child: GestureDetector(
-                onTap: () => _addPlan(context, ref, library.plans.length),
+                onTap: () => _addPlan(context, library.plans.length),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -177,79 +192,83 @@ class PlanLibraryScreen extends ConsumerWidget {
                       MaterialPageRoute(
                           builder: (_) => PlanEditorScreen(plan: plan)),
                     ),
-                    child: SwipeToRevealRow(
-                      key: ValueKey(plan.id),
-                      canDelete: library.plans.length > 1,
-                      onDeleteTap: () async {
-                        await ref
-                            .read(planLibraryProvider.notifier)
-                            .deletePlan(plan.id);
-                      },
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF111111),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () => ref
-                                  .read(planLibraryProvider.notifier)
-                                  .setActivePlan(plan.id),
-                              child: SizedBox(
-                                width: 32,
-                                height: 32,
-                                child: Center(
-                                  child: Container(
-                                    width: 10,
-                                    height: 10,
-                                    decoration: BoxDecoration(
-                                      color: isActive
-                                          ? const Color(0xFFFF6B00)
-                                          : Colors.white24,
-                                      shape: BoxShape.circle,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: DeleteModeRow(
+                        key: ValueKey(plan.id),
+                        deleteKey: ValueKey('delete_plan_${plan.id}'),
+                        deleteMode: _deleteMode,
+                        canDelete: library.plans.length > 1,
+                        onDeleteTap: () async {
+                          await ref
+                              .read(planLibraryProvider.notifier)
+                              .deletePlan(plan.id);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF111111),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => ref
+                                    .read(planLibraryProvider.notifier)
+                                    .setActivePlan(plan.id),
+                                child: SizedBox(
+                                  width: 32,
+                                  height: 32,
+                                  child: Center(
+                                    child: Container(
+                                      width: 10,
+                                      height: 10,
+                                      decoration: BoxDecoration(
+                                        color: isActive
+                                            ? const Color(0xFFFF6B00)
+                                            : Colors.white24,
+                                        shape: BoxShape.circle,
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: GestureDetector(
-                                onLongPress: () => _renamePlan(context, ref, plan),
-                                behavior: HitTestBehavior.opaque,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      plan.name,
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        color: isActive
-                                            ? Colors.white70
-                                            : Colors.white38,
-                                        fontWeight: isActive
-                                            ? FontWeight.w600
-                                            : FontWeight.normal,
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: GestureDetector(
+                                  onLongPress: () => _renamePlan(context, plan),
+                                  behavior: HitTestBehavior.opaque,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        plan.name,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          color: isActive
+                                              ? Colors.white70
+                                              : Colors.white38,
+                                          fontWeight: isActive
+                                              ? FontWeight.w600
+                                              : FontWeight.normal,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${plan.intervals.length} Intervalle · ${_formatDuration(plan.totalDurationSeconds)}',
-                                      style: const TextStyle(
-                                          fontSize: 12, color: Colors.white24),
-                                    ),
-                                  ],
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${plan.intervals.length} Intervalle · ${_formatDuration(plan.totalDurationSeconds)}',
+                                        style: const TextStyle(
+                                            fontSize: 12, color: Colors.white24),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                            const Icon(Icons.chevron_right,
-                                color: Colors.white24, size: 20),
-                          ],
+                              const Icon(Icons.chevron_right,
+                                  color: Colors.white24, size: 20),
+                            ],
+                          ),
                         ),
                       ),
                     ),
