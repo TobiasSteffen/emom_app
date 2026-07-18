@@ -38,45 +38,41 @@ class _DeleteModeRowState extends State<DeleteModeRow> {
   @override
   Widget build(BuildContext context) {
     final show = widget.deleteMode && widget.canDelete;
-    // Gleiche Struktur wie die frühere Swipe-to-Reveal-Fläche: die Zeile
-    // schiebt sich 64px nach links, dahinter liegt der rote Button — nur
-    // gesteuert vom Lösch-Modus statt von einer Geste. Der Zeileninhalt
-    // behält seine volle Breite und kann nicht überlaufen.
+    // Lösch-Modus als Layout-Änderung, nicht als Verschiebung: der Button
+    // bekommt rechts einen echten Slot, der Zeileninhalt wird per Expanded
+    // auf die Restbreite gestaucht — nichts ragt aus dem Bildschirm.
     const revealWidth = 64.0;
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: show ? revealWidth : 0),
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeInOut,
-      builder: (_, offset, child) => Stack(
-        clipBehavior: Clip.none,
-        children: [
-          if (widget.canDelete && offset > 0)
-            Positioned(
-              right: 0,
-              top: 0,
-              bottom: 0,
-              width: offset.clamp(0.0, revealWidth),
+      builder: (_, slot, child) => IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+          Expanded(child: child!),
+          if (widget.canDelete && slot > 0)
+            SizedBox(
+              width: slot.clamp(0.0, revealWidth),
               child: GestureDetector(
                 key: widget.deleteKey,
                 onTap: _handleTap,
                 child: Container(
+                  margin: const EdgeInsets.only(left: 8),
                   decoration: BoxDecoration(
                     color: Colors.red.withValues(alpha: 0.75),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   alignment: Alignment.center,
-                  child: offset > 24
+                  child: slot > 24
                       ? const Icon(Icons.delete_outline,
                           color: Colors.white, size: 22)
                       : null,
                 ),
               ),
             ),
-          Transform.translate(
-            offset: Offset(-offset, 0),
-            child: child,
-          ),
-        ],
+          ],
+        ),
       ),
       child: widget.child,
     );
