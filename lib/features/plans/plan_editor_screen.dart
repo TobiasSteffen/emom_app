@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/training_plan.dart';
 import '../../core/providers/plan_library_notifier.dart';
+import '../../core/providers/equipment_catalog_notifier.dart';
 import 'undo_manager.dart';
 import 'widgets/minute_exact_editor.dart';
 
@@ -60,6 +61,20 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
           _selectedRow = s + 1;
         }
       }
+    });
+  }
+
+  int _displayedTotalReps() {
+    final catalog = ref.watch(equipmentCatalogProvider).value;
+    if (catalog == null) return _plan.totalReps;
+    return _plan.intervals.fold(0, (sum, iv) {
+      final exerciseType = catalog
+          .findType(iv.equipmentTypeId)
+          ?.exercises
+          .where((e) => e.id == iv.exerciseTypeId)
+          .firstOrNull;
+      if (exerciseType?.isTimed == true) return sum;
+      return sum + iv.reps;
     });
   }
 
@@ -250,7 +265,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            '${_plan.totalReps} Wdh.',
+                            '${_displayedTotalReps()} Wdh.',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
