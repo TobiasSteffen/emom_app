@@ -380,6 +380,8 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
             iconPath: iconPath,
             pulseAnimation: _pulseAnimation,
             isPause: isPauseInterval,
+            isTimed: state.currentIsTimed,
+            timedSeconds: state.intervals[state.currentMinute].durationSeconds,
           ),
           const SizedBox(height: 32),
           TimerDisplay(
@@ -387,6 +389,34 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
             currentDuration: state.currentDuration,
             isRunning: state.isRunning,
           ),
+          if (state.currentIsTimed) ...[
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: () => state.holdWaiting
+                  ? notifier.startHold()
+                  : notifier.finishHold(),
+              child: Container(
+                height: 56,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: state.holdWaiting
+                      ? const Color(0xFF4CAF50)
+                      : const Color(0xFFFF4444),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Center(
+                  child: Text(
+                    state.holdWaiting ? 'START' : 'FERTIG',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 3),
+                  ),
+                ),
+              ),
+            ),
+          ],
           if (state.currentMinute < state.totalMinutes - 1) ...[
             const SizedBox(height: 16),
             NextMinutePreview(
@@ -400,6 +430,14 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
                 onPressed: () => notifier.reset(),
                 icon: const Icon(
                   Icons.refresh,
+                  color: Colors.white38,
+                  size: 28,
+                ),
+              ),
+              IconButton(
+                onPressed: () => notifier.skip(),
+                icon: const Icon(
+                  Icons.skip_next_rounded,
                   color: Colors.white38,
                   size: 28,
                 ),
@@ -448,7 +486,9 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
         ? const Color(0xFF555555)
         : phaseColorForMinute(nextMinute);
     return ConfirmationOverlay(
-      nextReps: nextInterval.isPause ? 0 : nextInterval.reps,
+      nextReps: (nextInterval.isPause || state.timedFlags[nextMinute])
+          ? 0
+          : nextInterval.reps,
       nextColor: nextColor,
       nextLabel: notifier.workoutLabelForMinute(nextMinute),
       nextMinuteNumber: nextMinute + 1,

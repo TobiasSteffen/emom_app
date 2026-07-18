@@ -20,16 +20,21 @@ class TimerDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isWarning = secondsLeft <= 5 && secondsLeft > 0 && isRunning;
-    final secondProgress = (currentDuration - secondsLeft) / currentDuration;
+    final overtime = secondsLeft < 0;
+    final isWarning = !overtime && secondsLeft <= 5 && secondsLeft > 0 && isRunning;
+    final secondProgress = overtime
+        ? 1.0
+        : ((currentDuration - secondsLeft) / currentDuration).clamp(0.0, 1.0);
+    final display = overtime ? '+${_formatTime(-secondsLeft)}' : _formatTime(secondsLeft);
+    final color = (overtime || isWarning) ? const Color(0xFFFF4444) : Colors.white;
     return Column(
       children: [
         Text(
-          _formatTime(secondsLeft),
+          display,
           style: TextStyle(
             fontSize: 52,
             fontWeight: FontWeight.w300,
-            color: isWarning ? const Color(0xFFFF4444) : Colors.white,
+            color: color,
             letterSpacing: 4,
           ),
         ),
@@ -40,7 +45,7 @@ class TimerDisplay extends StatelessWidget {
             value: secondProgress,
             backgroundColor: Colors.white.withValues(alpha: 0.1),
             valueColor: AlwaysStoppedAnimation<Color>(
-              isWarning ? const Color(0xFFFF4444) : Colors.white24,
+              (overtime || isWarning) ? const Color(0xFFFF4444) : Colors.white24,
             ),
             minHeight: 4,
           ),

@@ -8,6 +8,8 @@ class RepsCard extends StatelessWidget {
   final String iconPath;
   final Animation<double> pulseAnimation;
   final bool isPause;
+  final bool isTimed;
+  final int timedSeconds;
 
   const RepsCard({
     super.key,
@@ -17,6 +19,8 @@ class RepsCard extends StatelessWidget {
     required this.iconPath,
     required this.pulseAnimation,
     this.isPause = false,
+    this.isTimed = false,
+    this.timedSeconds = 0,
   });
 
   @override
@@ -39,7 +43,7 @@ class RepsCard extends StatelessWidget {
               Image.asset(iconPath, width: 48, height: 48, color: phaseColor),
               const SizedBox(height: 4),
               Text(
-                'REPS',
+                isTimed ? 'ZEIT' : 'REPS',
                 style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.4),
                     fontSize: 14,
@@ -47,9 +51,9 @@ class RepsCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                '$currentReps',
+                isTimed ? '${timedSeconds}s' : '$currentReps',
                 style: TextStyle(
-                    fontSize: 120,
+                    fontSize: isTimed ? 96 : 120,
                     fontWeight: FontWeight.w900,
                     color: phaseColor,
                     height: 1),
