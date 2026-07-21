@@ -48,23 +48,6 @@ class _EmomWizardScreenState extends ConsumerState<EmomWizardScreen> {
         type.exercises.isNotEmpty ? type.exercises.first.id : null;
   }
 
-  void _applySchemeDefaults(EmomRepScheme scheme) {
-    switch (scheme) {
-      case EmomRepScheme.konstant:
-        _from = 10;
-        _to = 10;
-      case EmomRepScheme.aufsteigend:
-        _from = 5;
-        _to = 15;
-      case EmomRepScheme.absteigend:
-        _from = 15;
-        _to = 5;
-      case EmomRepScheme.pyramide:
-        _from = 5;
-        _to = 15;
-    }
-  }
-
   ExerciseType? _selectedExercise(EquipmentCatalog catalog) {
     final type = catalog.findType(_equipmentTypeId ?? '');
     if (type == null) return null;
@@ -228,10 +211,8 @@ class _EmomWizardScreenState extends ConsumerState<EmomWizardScreen> {
       children: [
         for (final s in EmomRepScheme.values)
           _chip(labels[s]!, _scheme == s, () {
-            setState(() {
-              _scheme = s;
-              _applySchemeDefaults(s);
-            });
+            // Schemawechsel lässt die eingestellten von/bis-Werte unangetastet.
+            setState(() => _scheme = s);
           }),
       ],
     );
