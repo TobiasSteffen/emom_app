@@ -234,6 +234,45 @@ class TrainingPlan {
     )),
   );
 
+  /// Klassisches EMOM: [intervals] gleich lange Intervalle einer Übung mit
+  /// Wiederholungen nach [scheme]. Bei [isTimed] werden die Wiederholungen
+  /// ignoriert (reps = 0), bei [hasSide] wechselt die Seite pro Minute.
+  factory TrainingPlan.emom({
+    required String name,
+    required String equipmentTypeId,
+    String? variantId,
+    required String exerciseTypeId,
+    required bool hasSide,
+    required bool isTimed,
+    required EmomRepScheme scheme,
+    required int fromReps,
+    required int toReps,
+    int intervals = 30,
+    int durationSeconds = 60,
+  }) {
+    final reps = isTimed
+        ? List.filled(intervals, 0)
+        : emomRepSequence(scheme,
+            from: fromReps, to: toReps, count: intervals);
+    return TrainingPlan(
+      id: _newId(),
+      name: name,
+      intervals: List.generate(
+        intervals,
+        (i) => IntervalConfig(
+          equipmentTypeId: equipmentTypeId,
+          variantId: variantId,
+          exerciseTypeId: exerciseTypeId,
+          side: hasSide
+              ? (i % 2 == 0 ? ExerciseSide.links : ExerciseSide.rechts)
+              : null,
+          reps: reps[i],
+          durationSeconds: durationSeconds,
+        ),
+      ),
+    );
+  }
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'name': name,
