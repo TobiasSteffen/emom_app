@@ -388,32 +388,6 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
             currentDuration: state.currentDuration,
             isRunning: state.isRunning,
           ),
-          if (state.currentIsTimed) ...[
-            const SizedBox(height: 16),
-            GestureDetector(
-              onTap: () => state.holdWaiting
-                  ? notifier.startHold()
-                  : notifier.finishHold(),
-              child: Container(
-                height: 56,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: state.holdWaiting ? AppTheme.ok : AppTheme.danger,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                ),
-                child: Center(
-                  child: Text(
-                    state.holdWaiting ? 'START' : 'FERTIG',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 3),
-                  ),
-                ),
-              ),
-            ),
-          ],
           if (state.currentMinute < state.totalMinutes - 1) ...[
             const SizedBox(height: 16),
             NextMinutePreview(
@@ -441,32 +415,60 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: GestureDetector(
-                  onTap: () => _startStop(state),
-                  child: Container(
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: phaseColor,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: phaseColor.withValues(alpha: 0.4),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
+                // Zeit-Übung: START/FERTIG ersetzt den Play/Pause-Button —
+                // Play wäre im Warte-Zustand funktionslos (start() bricht
+                // bei holdWaiting ab).
+                child: state.currentIsTimed
+                    ? GestureDetector(
+                        onTap: () => state.holdWaiting
+                            ? notifier.startHold()
+                            : notifier.finishHold(),
+                        child: Container(
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: state.holdWaiting
+                                ? AppTheme.ok
+                                : AppTheme.danger,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Center(
+                            child: Text(
+                              state.holdWaiting ? 'START' : 'FERTIG',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 3),
+                            ),
+                          ),
                         ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Icon(
-                        state.isRunning
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
-                        color: Colors.white,
-                        size: 36,
+                      )
+                    : GestureDetector(
+                        onTap: () => _startStop(state),
+                        child: Container(
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: phaseColor,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: phaseColor.withValues(alpha: 0.4),
+                                blurRadius: 20,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Icon(
+                              state.isRunning
+                                  ? Icons.pause_rounded
+                                  : Icons.play_arrow_rounded,
+                              color: Colors.white,
+                              size: 36,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ),
               ),
             ],
           ),
