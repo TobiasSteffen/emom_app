@@ -16,31 +16,22 @@ class OverallProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final progress = currentMinute / totalMinutes;
+    final phaseColor = isPause ? Colors.white24 : phaseColorForMinute(currentMinute);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('MINUTE ${currentMinute + 1} / $totalMinutes',
             style: AppTheme.eyebrow.copyWith(fontSize: 11)),
         const SizedBox(height: 8),
-        // Minuten-Leiste: ein Segment pro Minute in seiner Phasenfarbe —
-        // die Phasenstruktur des Trainings ist direkt ablesbar, kommende
-        // Minuten sind abgedunkelt.
-        Row(
-          children: [
-            for (var i = 0; i < totalMinutes; i++) ...[
-              if (i > 0) const SizedBox(width: 2),
-              Expanded(
-                child: Container(
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: phaseColorForMinute(i).withValues(
-                        alpha: i <= currentMinute ? 1.0 : 0.22),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-            ],
-          ],
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: progress,
+            backgroundColor: Colors.white.withValues(alpha: 0.1),
+            valueColor: AlwaysStoppedAnimation<Color>(phaseColor),
+            minHeight: 6,
+          ),
         ),
       ],
     );
