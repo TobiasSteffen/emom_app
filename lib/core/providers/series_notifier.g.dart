@@ -33,13 +33,13 @@ final class SeriesNotifierProvider
   SeriesNotifier create() => SeriesNotifier();
 }
 
-String _$seriesNotifierHash() => r'589f2ed8b3ce48769458a755151a61c41ccb1b03';
+String _$seriesNotifierHash() => r'50caa8723f72758a4e866358a37b825a81c56a6b';
 
 abstract class _$SeriesNotifier extends $AsyncNotifier<List<TrainingSeries>> {
   FutureOr<List<TrainingSeries>> build();
   @$mustCallSuper
   @override
-  void runBuild() {
+  WhenComplete runBuild() {
     final ref =
         this.ref
             as $Ref<AsyncValue<List<TrainingSeries>>, List<TrainingSeries>>;
@@ -54,6 +54,6 @@ abstract class _$SeriesNotifier extends $AsyncNotifier<List<TrainingSeries>> {
               Object?,
               Object?
             >;
-    element.handleCreate(ref, build);
+    return element.handleCreate(ref, build);
   }
 }

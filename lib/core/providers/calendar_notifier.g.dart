@@ -33,13 +33,13 @@ final class CalendarNotifierProvider
   CalendarNotifier create() => CalendarNotifier();
 }
 
-String _$calendarNotifierHash() => r'339f3de75debc3431cd2ba81ab077560a75dfd7b';
+String _$calendarNotifierHash() => r'0c0209ae1c0a741bf072c02370685db419da4030';
 
 abstract class _$CalendarNotifier extends $AsyncNotifier<List<CalendarEntry>> {
   FutureOr<List<CalendarEntry>> build();
   @$mustCallSuper
   @override
-  void runBuild() {
+  WhenComplete runBuild() {
     final ref =
         this.ref as $Ref<AsyncValue<List<CalendarEntry>>, List<CalendarEntry>>;
     final element =
@@ -50,6 +50,6 @@ abstract class _$CalendarNotifier extends $AsyncNotifier<List<CalendarEntry>> {
               Object?,
               Object?
             >;
-    element.handleCreate(ref, build);
+    return element.handleCreate(ref, build);
   }
 }

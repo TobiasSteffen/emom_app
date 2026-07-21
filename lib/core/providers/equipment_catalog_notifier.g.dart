@@ -41,7 +41,7 @@ abstract class _$EquipmentCatalogNotifier
   FutureOr<EquipmentCatalog> build();
   @$mustCallSuper
   @override
-  void runBuild() {
+  WhenComplete runBuild() {
     final ref =
         this.ref as $Ref<AsyncValue<EquipmentCatalog>, EquipmentCatalog>;
     final element =
@@ -52,6 +52,6 @@ abstract class _$EquipmentCatalogNotifier
               Object?,
               Object?
             >;
-    element.handleCreate(ref, build);
+    return element.handleCreate(ref, build);
   }
 }

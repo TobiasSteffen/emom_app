@@ -33,13 +33,13 @@ final class WorkoutNotifierProvider
   WorkoutNotifier create() => WorkoutNotifier();
 }
 
-String _$workoutNotifierHash() => r'bd5486c1993e89f5e8da74e17558ca6fe4282d04';
+String _$workoutNotifierHash() => r'de4043c523f2d3cb686597c0d32a60ac7e23ce90';
 
 abstract class _$WorkoutNotifier extends $AsyncNotifier<WorkoutState> {
   FutureOr<WorkoutState> build();
   @$mustCallSuper
   @override
-  void runBuild() {
+  WhenComplete runBuild() {
     final ref = this.ref as $Ref<AsyncValue<WorkoutState>, WorkoutState>;
     final element =
         ref.element
@@ -49,6 +49,6 @@ abstract class _$WorkoutNotifier extends $AsyncNotifier<WorkoutState> {
               Object?,
               Object?
             >;
-    element.handleCreate(ref, build);
+    return element.handleCreate(ref, build);
   }
 }

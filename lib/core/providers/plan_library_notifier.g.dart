@@ -34,13 +34,13 @@ final class PlanLibraryNotifierProvider
 }
 
 String _$planLibraryNotifierHash() =>
-    r'efe37d69a0c940e288511defb90d29be3fe64de6';
+    r'c87089a063cfaa18faed3e22f7c1bcf2927f6d78';
 
 abstract class _$PlanLibraryNotifier extends $AsyncNotifier<PlanLibrary> {
   FutureOr<PlanLibrary> build();
   @$mustCallSuper
   @override
-  void runBuild() {
+  WhenComplete runBuild() {
     final ref = this.ref as $Ref<AsyncValue<PlanLibrary>, PlanLibrary>;
     final element =
         ref.element
@@ -50,6 +50,6 @@ abstract class _$PlanLibraryNotifier extends $AsyncNotifier<PlanLibrary> {
               Object?,
               Object?
             >;
-    element.handleCreate(ref, build);
+    return element.handleCreate(ref, build);
   }
 }

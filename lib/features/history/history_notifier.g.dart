@@ -39,7 +39,7 @@ abstract class _$HistoryNotifier extends $AsyncNotifier<List<WorkoutRecord>> {
   FutureOr<List<WorkoutRecord>> build();
   @$mustCallSuper
   @override
-  void runBuild() {
+  WhenComplete runBuild() {
     final ref =
         this.ref as $Ref<AsyncValue<List<WorkoutRecord>>, List<WorkoutRecord>>;
     final element =
@@ -50,6 +50,6 @@ abstract class _$HistoryNotifier extends $AsyncNotifier<List<WorkoutRecord>> {
               Object?,
               Object?
             >;
-    element.handleCreate(ref, build);
+    return element.handleCreate(ref, build);
   }
 }
