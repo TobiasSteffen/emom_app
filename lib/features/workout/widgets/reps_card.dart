@@ -58,7 +58,7 @@ class RepsCard extends StatelessWidget {
               Text(
                 isTimed ? '${timedSeconds}s' : '$currentReps',
                 style: AppTheme.display.copyWith(
-                  fontSize: isTimed ? 104 : 128,
+                  fontSize: 128,
                   color: phaseColor,
                 ),
               ),
