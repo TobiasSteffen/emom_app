@@ -6,6 +6,7 @@ import '../../core/providers/plan_library_notifier.dart';
 import '../shared/widgets/delete_mode_row.dart';
 import 'plan_editor_screen.dart';
 import '../config/equipment_catalog_screen.dart';
+import 'emom_wizard_screen.dart';
 
 class PlanLibraryScreen extends ConsumerStatefulWidget {
   final VoidCallback? onBack;
@@ -25,6 +26,63 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
   }
 
   Future<void> _addPlan(BuildContext context, int planCount) async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('NEUER PLAN',
+                    style: TextStyle(
+                        fontSize: 11,
+                        letterSpacing: 3,
+                        color: Colors.white38)),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.note_add_outlined,
+                  color: Colors.white54),
+              title: const Text('Leer',
+                  style: TextStyle(color: Colors.white70)),
+              subtitle: const Text('Selbst aufbauen',
+                  style: TextStyle(color: Colors.white24, fontSize: 12)),
+              onTap: () => Navigator.pop(ctx, 'empty'),
+            ),
+            ListTile(
+              leading:
+                  const Icon(Icons.timer_outlined, color: AppTheme.accent),
+              title: const Text('Klassisches EMOM',
+                  style: TextStyle(color: Colors.white70)),
+              subtitle: const Text('30 × 60s einer Übung',
+                  style: TextStyle(color: Colors.white24, fontSize: 12)),
+              onTap: () => Navigator.pop(ctx, 'emom'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (!context.mounted || choice == null) return;
+    if (choice == 'empty') {
+      await _addEmptyPlan(context, planCount);
+    } else {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => EmomWizardScreen(planCount: planCount),
+        ),
+      );
+    }
+  }
+
+  Future<void> _addEmptyPlan(BuildContext context, int planCount) async {
     final controller = TextEditingController(text: 'Plan ${planCount + 1}');
     final name = await showDialog<String>(
       context: context,
