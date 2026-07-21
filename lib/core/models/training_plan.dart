@@ -133,6 +133,47 @@ class IntervalConfig {
       );
 }
 
+/// Wiederholungs-Schema einer klassischen EMOM-Vorlage.
+enum EmomRepScheme { konstant, aufsteigend, absteigend, pyramide }
+
+/// Erzeugt [count] Wiederholungs-Werte für ein EMOM nach [scheme].
+/// Linear interpoliert, auf ganze Zahl gerundet, minimal 1.
+List<int> emomRepSequence(
+  EmomRepScheme scheme, {
+  required int from,
+  required int to,
+  int count = 30,
+}) {
+  if (count <= 0) return const [];
+
+  int lerp(int a, int b, int i, int steps) {
+    if (steps <= 0) return a < 1 ? 1 : a;
+    final v = a + (b - a) * i / steps;
+    final r = v.round();
+    return r < 1 ? 1 : r;
+  }
+
+  switch (scheme) {
+    case EmomRepScheme.konstant:
+      final v = from < 1 ? 1 : from;
+      return List.filled(count, v);
+    case EmomRepScheme.aufsteigend:
+    case EmomRepScheme.absteigend:
+      // Beide sind eine Gerade von `from` nach `to`; die zwei Chips
+      // unterscheiden sich nur in der Default-Vorbelegung (5→15 vs. 15→5).
+      return List.generate(count, (i) => lerp(from, to, i, count - 1));
+    case EmomRepScheme.pyramide:
+      final half = count ~/ 2;
+      return List.generate(count, (i) {
+        if (i < half) {
+          return lerp(from, to, i, half); // Anstieg: Index 0 = from
+        }
+        // Abstieg: Index `half` = Peak (to), Ende = from.
+        return lerp(to, from, i - half, count - 1 - half);
+      });
+  }
+}
+
 class TrainingPlan {
   static const int minIntervals = 3;
   static const int maxIntervals = 30;
