@@ -4,7 +4,7 @@
 
 **Goal:** Handy-App erkennt eine verbundene Garmin Venu 4 und kann gezielt eine neu gebaute Connect-IQ-Watch-App öffnen, die nur "Hello World" zeigt und sich per Tap wieder schließt — als Fundament für die spätere Trainings-/Vitaldaten-Anbindung.
 
-**Architecture:** Drei unabhängige Teile: (1) eine Monkey-C-Watch-App in `garmin_watch_app/`, (2) eine Kotlin-Bridge um Garmins Connect IQ Mobile SDK (Android) hinter einem `MethodChannel`, (3) ein schlanker Dart-Service + Riverpod-Notifier, der von einem neuen Test-Eintrag im `ConfigScreen` aus aufgerufen wird. Datenfluss ist einseitig: Dart → Kotlin → Garmin-SDK → Uhr, keine Rückkommunikation in diesem Spike.
+**Architecture:** Drei unabhängige Teile: (1) eine Monkey-C-Watch-App in `garmin_watch_app/`, (2) eine Kotlin-Bridge um Garmins Connect IQ Mobile SDK (Android) hinter einem `MethodChannel`, (3) ein schlanker Dart-Service + Riverpod-Notifier, bedient über zwei UI-Einstiegspunkte: ein Ampel-Icon (grau/rot/grün) im Workout-Header für die Alltagsbedienung, und ein Abschnitt im `ConfigScreen` für Ersteinrichtung/Fehlersuche sowie den Sichtbarkeits-Toggle des Header-Icons. Datenfluss ist einseitig: Dart → Kotlin → Garmin-SDK → Uhr, keine Rückkommunikation in diesem Spike.
 
 **Tech Stack:** Flutter/Dart, Riverpod (`riverpod_annotation`/`riverpod_generator`), Kotlin (Android Platform Channel), Garmin Connect IQ SDK (Monkey C) + Connect IQ Mobile SDK für Android (`com.garmin.connectiq:ciq-companion-app-sdk`).
 
@@ -12,7 +12,7 @@
 
 - iOS ist nicht Teil dieses Spikes (App unterstützt kein iOS, siehe `docs/emom_app_spezifikation.md`).
 - Kein Rückkanal Uhr → Handy in diesem Spike (kommt erst mit Vitaldaten in einer späteren Iteration).
-- Kein automatischer Start beim Trainingsbeginn — dieser Spike hat einen manuellen Test-Button in den Einstellungen.
+- Kein automatischer Start beim Trainingsbeginn — Öffnen der Watch-App ist immer ein manueller Tap (Header-Icon oder Einstellungen-Button).
 - `flutter analyze` muss nach jedem Dart/Kotlin-Task weiterhin 0 Fehler liefern; `flutter test` muss grün bleiben.
 - Neue `@riverpod`-Provider brauchen `dart run build_runner build` zur Regenerierung der `.g.dart`-Datei (siehe `CLAUDE.md`).
 - Package-Name des Projekts: `emom_app`; Android-`applicationId`: `com.example.emom_app`.
@@ -191,6 +191,8 @@ Kein Commit — reine Geräte-Verifikation, keine Repo-Änderung.
 
   (Versionsnummer beim Umsetzen auf Maven Central unter "CIQ Companion APP SDK" gegenprüfen — `2.2.0` ist der zum Zeitpunkt dieser Recherche aktuelle Stand.)
 
+  Kein zusätzlicher Repository-Eintrag nötig: `android/build.gradle.kts` deklariert bereits `allprojects { repositories { google(); mavenCentral() } }`, und das SDK wird laut Garmins README genau auf Maven Central veröffentlicht.
+
 - [ ] **Schritt 2: Bluetooth-Berechtigungen ergänzen**
 
   In `android/app/src/main/AndroidManifest.xml`, falls noch nicht vorhanden:
@@ -358,13 +360,14 @@ Kein Commit — reine Geräte-Verifikation, keine Repo-Änderung.
 
 **Interfaces:**
 - Consumes: `MethodChannel("com.example.emom_app/garmin")` aus Task 5, Methoden `isWatchConnected`/`openWatchApp`.
-- Produces: `GarminService.isWatchConnected() → Future<bool>`, `GarminService.openWatchApp() → Future<String>` (gebraucht in Task 7).
+- Produces: `GarminService.isWatchConnected() → Future<bool>`, `GarminService.openWatchApp() → Future<String>`, `GarminService.hasEverConnected() → Future<bool>`, `GarminService.markEverConnected() → Future<void>` (alle gebraucht in Task 7).
 
 - [ ] **Schritt 1: Fehlschlagenden Test schreiben**
 
   ```dart
   import 'package:flutter/services.dart';
   import 'package:flutter_test/flutter_test.dart';
+  import 'package:shared_preferences/shared_preferences.dart';
   import 'package:emom_app/core/services/garmin_service.dart';
 
   void main() {
@@ -375,6 +378,7 @@ Kein Commit — reine Geräte-Verifikation, keine Repo-Änderung.
 
     setUp(() {
       calls.clear();
+      SharedPreferences.setMockInitialValues({});
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall call) async {
         calls.add(call);
@@ -405,6 +409,21 @@ Kein Commit — reine Geräte-Verifikation, keine Repo-Änderung.
       final result = await service.openWatchApp();
       expect(result, 'launched');
     });
+
+    test('hasEverConnected ist zunaechst false', () async {
+      final service = GarminService();
+      expect(await service.hasEverConnected(), false);
+    });
+
+    test('markEverConnected setzt das Flag dauerhaft auf true', () async {
+      final service = GarminService();
+      await service.markEverConnected();
+      expect(await service.hasEverConnected(), true);
+
+      // Neue Service-Instanz simuliert App-Neustart — Flag muss ueberleben.
+      final serviceAfterRestart = GarminService();
+      expect(await serviceAfterRestart.hasEverConnected(), true);
+    });
   }
   ```
 
@@ -417,9 +436,11 @@ Kein Commit — reine Geräte-Verifikation, keine Repo-Änderung.
 
   ```dart
   import 'package:flutter/services.dart';
+  import 'package:shared_preferences/shared_preferences.dart';
 
   class GarminService {
     static const _channel = MethodChannel('com.example.emom_app/garmin');
+    static const _everConnectedKey = 'garminHasEverConnected';
 
     Future<bool> isWatchConnected() async {
       final result = await _channel.invokeMethod<bool>('isWatchConnected');
@@ -430,45 +451,123 @@ Kein Commit — reine Geräte-Verifikation, keine Repo-Änderung.
       final result = await _channel.invokeMethod<String>('openWatchApp');
       return result ?? 'error';
     }
+
+    Future<bool> hasEverConnected() async {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool(_everConnectedKey) ?? false;
+    }
+
+    Future<void> markEverConnected() async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_everConnectedKey, true);
+    }
   }
   ```
 
 - [ ] **Schritt 4: Test ausführen, Erfolg bestätigen**
 
   Run: `flutter test test/core/services/garmin_service_test.dart`
-  Expected: PASS (beide Tests grün)
+  Expected: PASS (alle vier Tests grün)
 
 - [ ] **Schritt 5: Commit**
 
   ```bash
   git add lib/core/services/garmin_service.dart test/core/services/garmin_service_test.dart
-  git commit -m "feat: GarminService als Dart-Wrapper um den MethodChannel"
+  git commit -m "feat: GarminService als Dart-Wrapper um den MethodChannel + everConnected-Persistenz"
   ```
 
 ---
 
-### Task 7: `GarminNotifier` + Test-Eintrag in `ConfigScreen`
+### Task 7: `AppSettings`-Flag + `GarminNotifier` (`GarminConnectionStatus`) + Einstellungen-Abschnitt
 
 **Files:**
+- Modify: `lib/core/models/settings.dart`
+- Modify: `test/core/models/settings_test.dart`
 - Create: `lib/features/config/garmin_notifier.dart`
 - Modify: `lib/features/config/config_screen.dart`
 - Test: `test/features/config/garmin_config_row_test.dart`
 
 **Interfaces:**
 - Consumes: `GarminService` aus Task 6.
-- Produces: `garminProvider` (liefert `AsyncValue<bool>` = Verbindungsstatus) und `GarminNotifier.openWatchApp() → Future<String>`, aufgerufen aus `ConfigScreen`. (Riverpod-Codegen kürzt das "Notifier"-Suffix im Provider-Namen — vgl. `HistoryNotifier` → `historyProvider` in `history_notifier.g.dart`.)
+- Produces:
+  - `AppSettings.garminHeaderIconVisible` (bool, Default `false`) — gebraucht in Task 8.
+  - `garminProvider` (liefert `AsyncValue<GarminConnectionStatus>`) und `GarminNotifier.openWatchApp() → Future<String>` — gebraucht in Task 8. (Riverpod-Codegen kürzt das "Notifier"-Suffix im Provider-Namen — vgl. `HistoryNotifier` → `historyProvider` in `history_notifier.g.dart`.)
+  - `GarminConnectionStatus { bool connected; bool everConnected; }` — gebraucht in Task 8.
 
-- [ ] **Schritt 1: Fehlschlagenden Widget-Test schreiben**
+- [ ] **Schritt 1: Fehlschlagenden Test für das neue Settings-Feld schreiben**
+
+  In `test/core/models/settings_test.dart`, am Dateianfang (neben dem bestehenden `import 'package:emom_app/core/models/settings.dart';`) ergänzen:
+
+  ```dart
+  import 'package:shared_preferences/shared_preferences.dart';
+  ```
+
+  Und innerhalb von `main()`, als neue `group` neben der bestehenden `group('ExerciseSideX', ...)`:
+
+  ```dart
+  group('AppSettings.garminHeaderIconVisible', () {
+    test('Default ist false', () async {
+      SharedPreferences.setMockInitialValues({});
+      final settings = await AppSettings.load();
+      expect(settings.garminHeaderIconVisible, false);
+    });
+
+    test('wird gespeichert und beim Laden wiederhergestellt', () async {
+      SharedPreferences.setMockInitialValues({});
+      final settings = await AppSettings.load();
+      settings.garminHeaderIconVisible = true;
+      await settings.save();
+
+      final reloaded = await AppSettings.load();
+      expect(reloaded.garminHeaderIconVisible, true);
+    });
+  });
+  ```
+
+- [ ] **Schritt 2: Test ausführen, Fehlschlag bestätigen**
+
+  Run: `flutter test test/core/models/settings_test.dart`
+  Expected: FAIL — `garminHeaderIconVisible` existiert noch nicht auf `AppSettings`.
+
+- [ ] **Schritt 3: `AppSettings` erweitern**
+
+  In `lib/core/models/settings.dart`: neues Feld, Konstruktor-Parameter, `load()`, `save()` ergänzen (gleiches Muster wie `trainingReminderEnabled`):
+
+  ```dart
+  bool garminHeaderIconVisible; // in der Feldliste ergaenzen
+
+  // im Konstruktor:
+  this.garminHeaderIconVisible = false,
+
+  // in load():
+  garminHeaderIconVisible: prefs.getBool('garminHeaderIconVisible') ?? false,
+
+  // in save():
+  await prefs.setBool('garminHeaderIconVisible', garminHeaderIconVisible);
+  ```
+
+- [ ] **Schritt 4: Settings-Test ausführen, Erfolg bestätigen**
+
+  Run: `flutter test test/core/models/settings_test.dart`
+  Expected: PASS
+
+- [ ] **Schritt 5: Fehlschlagenden Widget-Test für den Garmin-Abschnitt schreiben**
 
   ```dart
   import 'package:flutter/material.dart';
   import 'package:flutter_riverpod/flutter_riverpod.dart';
   import 'package:flutter_test/flutter_test.dart';
+  import 'package:shared_preferences/shared_preferences.dart';
   import 'package:emom_app/features/config/config_screen.dart';
   import 'package:emom_app/features/config/garmin_notifier.dart';
+  import 'package:emom_app/core/providers/settings_provider.dart';
 
   void main() {
-    testWidgets('zeigt Garmin-Test-Eintrag mit Verbindungsstatus', (tester) async {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    testWidgets('zeigt Garmin-Abschnitt mit Verbindungsstatus und Sichtbarkeits-Toggle', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -479,8 +578,9 @@ Kein Commit — reine Geräte-Verifikation, keine Repo-Änderung.
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Garmin-Uhr (Test)'), findsOneWidget);
+      expect(find.text('GARMIN-UHR'), findsOneWidget);
       expect(find.text('Watch-App öffnen'), findsOneWidget);
+      expect(find.text('In der Hauptansicht anzeigen'), findsOneWidget);
     });
 
     testWidgets('Tap auf "Watch-App öffnen" ruft openWatchApp auf', (tester) async {
@@ -500,13 +600,43 @@ Kein Commit — reine Geräte-Verifikation, keine Repo-Änderung.
 
       expect(fake.openWatchAppCalled, true);
     });
+
+    testWidgets('Toggle schaltet garminHeaderIconVisible um', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            garminProvider.overrideWith(() => _FakeGarminNotifier()),
+          ],
+          child: const MaterialApp(home: ConfigScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ConfigScreen)),
+      );
+      expect(container.read(settingsProvider).requireValue.garminHeaderIconVisible, false);
+
+      final garminSwitch = find.descendant(
+        of: find.ancestor(
+          of: find.text('In der Hauptansicht anzeigen'),
+          matching: find.byType(Row),
+        ),
+        matching: find.byType(Switch),
+      );
+      await tester.tap(garminSwitch);
+      await tester.pumpAndSettle();
+
+      expect(container.read(settingsProvider).requireValue.garminHeaderIconVisible, true);
+    });
   }
 
   class _FakeGarminNotifier extends GarminNotifier {
     bool openWatchAppCalled = false;
 
     @override
-    Future<bool> build() async => true;
+    Future<GarminConnectionStatus> build() async =>
+        const GarminConnectionStatus(connected: true, everConnected: true);
 
     @override
     Future<String> openWatchApp() async {
@@ -516,12 +646,14 @@ Kein Commit — reine Geräte-Verifikation, keine Repo-Änderung.
   }
   ```
 
-- [ ] **Schritt 2: Test ausführen, Fehlschlag bestätigen**
+  Hinweis zum dritten Test: Der Garmin-Abschnitt wird laut Schritt 9 **vor** `FeedbackTab(...)` eingefügt, liegt also vor dessen fünf Toggle-Zeilen (`feedback_tab.dart:218-273`) — ein einfacher `find.byType(Switch).last` würde deshalb den falschen (Trainings-Erinnerung-)Switch treffen, dessen `onChanged` zusätzlich async `NotificationService.instance.requestPermission()` aufruft. Der Finder oben grenzt deshalb bewusst über den umgebenden `Row` mit dem Label-Text ein, unabhängig von der Position auf dem Screen.
+
+- [ ] **Schritt 6: Test ausführen, Fehlschlag bestätigen**
 
   Run: `flutter test test/features/config/garmin_config_row_test.dart`
-  Expected: FAIL — `garmin_notifier.dart` existiert noch nicht, `ConfigScreen` hat noch keinen "Garmin-Uhr (Test)"-Eintrag.
+  Expected: FAIL — `garmin_notifier.dart` existiert noch nicht, `ConfigScreen` hat noch keinen Garmin-Abschnitt.
 
-- [ ] **Schritt 3: `GarminNotifier` implementieren**
+- [ ] **Schritt 7: `GarminNotifier` implementieren**
 
   ```dart
   import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -529,28 +661,45 @@ Kein Commit — reine Geräte-Verifikation, keine Repo-Änderung.
 
   part 'garmin_notifier.g.dart';
 
+  class GarminConnectionStatus {
+    final bool connected;
+    final bool everConnected;
+
+    const GarminConnectionStatus({
+      required this.connected,
+      required this.everConnected,
+    });
+  }
+
   @riverpod
   class GarminNotifier extends _$GarminNotifier {
     final GarminService _service = GarminService();
 
     @override
-    Future<bool> build() => _service.isWatchConnected();
+    Future<GarminConnectionStatus> build() async {
+      final connected = await _service.isWatchConnected();
+      if (connected) {
+        await _service.markEverConnected();
+      }
+      final everConnected = await _service.hasEverConnected();
+      return GarminConnectionStatus(connected: connected, everConnected: everConnected);
+    }
 
-    Future<String> openWatchApp() => _service.openWatchApp();
-
-    Future<void> refresh() async {
-      state = const AsyncLoading();
-      state = AsyncData(await _service.isWatchConnected());
+    Future<String> openWatchApp() async {
+      final status = await _service.openWatchApp();
+      ref.invalidateSelf();
+      await future; // wartet auf den neu ausgeloesten build(), bevor die Methode zurueckkehrt
+      return status;
     }
   }
   ```
 
-- [ ] **Schritt 4: `.g.dart` generieren**
+- [ ] **Schritt 8: `.g.dart` generieren**
 
   Run: `dart run build_runner build --delete-conflicting-outputs`
   Expected: `lib/features/config/garmin_notifier.g.dart` wird erzeugt, keine Fehler.
 
-- [ ] **Schritt 5: `ConfigScreen` — neuen Eintrag ergänzen**
+- [ ] **Schritt 9: `ConfigScreen` — Garmin-Abschnitt ergänzen**
 
   In `lib/features/config/config_screen.dart`, Import ergänzen:
 
@@ -569,13 +718,13 @@ Kein Commit — reine Geräte-Verifikation, keine Repo-Änderung.
   const Padding(
     padding: EdgeInsets.only(bottom: 8, top: 4),
     child: Text(
-      'GARMIN-UHR (TEST)',
+      'GARMIN-UHR',
       style: TextStyle(fontSize: 11, letterSpacing: 2, color: Colors.white24),
     ),
   ),
   Builder(builder: (context) {
-    final connection = ref.watch(garminProvider);
-    final connected = connection.valueOrNull ?? false;
+    final connectionAsync = ref.watch(garminProvider);
+    final connected = connectionAsync.valueOrNull?.connected ?? false;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
@@ -616,32 +765,280 @@ Kein Commit — reine Geräte-Verifikation, keine Repo-Änderung.
               child: const Text('Watch-App öffnen'),
             ),
           ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'In der Hauptansicht anzeigen',
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+              ),
+              Switch(
+                value: _s.garminHeaderIconVisible,
+                onChanged: (v) {
+                  setState(() => _s.garminHeaderIconVisible = v);
+                  _save();
+                },
+              ),
+            ],
+          ),
         ],
       ),
     );
   }),
   ```
 
-- [ ] **Schritt 6: Test ausführen, Erfolg bestätigen**
+- [ ] **Schritt 10: Test ausführen, Erfolg bestätigen**
 
   Run: `flutter test test/features/config/garmin_config_row_test.dart`
-  Expected: PASS (beide Tests grün)
+  Expected: PASS (alle drei Tests grün)
 
-- [ ] **Schritt 7: Gesamte Testsuite + Analyzer prüfen**
+- [ ] **Schritt 11: Gesamte Testsuite + Analyzer prüfen**
 
   Run: `flutter analyze && flutter test`
   Expected: 0 Analyzer-Fehler, alle Tests grün.
 
-- [ ] **Schritt 8: Commit**
+- [ ] **Schritt 12: Commit**
 
   ```bash
-  git add lib/features/config/garmin_notifier.dart lib/features/config/garmin_notifier.g.dart lib/features/config/config_screen.dart test/features/config/garmin_config_row_test.dart
-  git commit -m "feat: Garmin-Test-Eintrag im ConfigScreen (Verbindungsstatus + Watch-App oeffnen)"
+  git add lib/core/models/settings.dart test/core/models/settings_test.dart lib/features/config/garmin_notifier.dart lib/features/config/garmin_notifier.g.dart lib/features/config/config_screen.dart test/features/config/garmin_config_row_test.dart
+  git commit -m "feat: Garmin-Einstellungen (Verbindungsstatus, Watch-App oeffnen, Sichtbarkeits-Toggle)"
   ```
 
 ---
 
-### Task 8: Ende-zu-Ende-Verifikation auf echter Hardware
+### Task 8: `GarminHeaderIcon` — Ampel-Icon im Workout-Header
+
+**Files:**
+- Create: `lib/features/workout/widgets/garmin_header_icon.dart`
+- Modify: `lib/features/workout/widgets/workout_header.dart`
+- Test: `test/features/workout/garmin_header_icon_test.dart`
+
+**Interfaces:**
+- Consumes: `garminProvider` + `GarminConnectionStatus` und `AppSettings.garminHeaderIconVisible` (via `settingsProvider`) aus Task 7; `WorkoutHeader`s **bestehendes** `onSettings`-Callback.
+- **Wichtig:** `GarminHeaderIcon` darf für den grauen Tap-Fall **nicht selbst** `Navigator.push(ConfigScreen)` aufrufen, sondern muss das von `WorkoutHeader` durchgereichte `onSettings` verwenden. Grund: `_openConfig()` in `lib/features/workout/workout_screen.dart:65-76` führt nach der Rückkehr aus den Einstellungen wichtige Folge-Logik aus (`ref.read(workoutProvider.notifier).updateSettings(...)`) — ein eigener, paralleler Navigationsweg würde das umgehen. `WorkoutHeader` bekommt `onSettings` bereits von `workout_screen.dart` übergeben (für das Zahnrad-Icon) und reicht denselben Callback einfach zusätzlich an `GarminHeaderIcon` weiter — keine neue Signatur-Änderung an `WorkoutHeader` von außen nötig.
+
+- [ ] **Schritt 1: Fehlschlagenden Widget-Test schreiben**
+
+  ```dart
+  import 'package:flutter/material.dart';
+  import 'package:flutter_riverpod/flutter_riverpod.dart';
+  import 'package:flutter_test/flutter_test.dart';
+  import 'package:shared_preferences/shared_preferences.dart';
+  import 'package:emom_app/features/workout/widgets/garmin_header_icon.dart';
+  import 'package:emom_app/features/config/garmin_notifier.dart';
+  import 'package:emom_app/core/theme/app_theme.dart';
+
+  void main() {
+    Future<void> pump(
+      WidgetTester tester,
+      GarminNotifier fakeNotifier,
+      VoidCallback onSettings,
+    ) async {
+      SharedPreferences.setMockInitialValues({'garminHeaderIconVisible': true});
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [garminProvider.overrideWith(() => fakeNotifier)],
+          child: MaterialApp(
+            home: Scaffold(body: GarminHeaderIcon(onSettings: onSettings)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('unsichtbar wenn garminHeaderIconVisible false ist', (tester) async {
+      SharedPreferences.setMockInitialValues({'garminHeaderIconVisible': false});
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            garminProvider.overrideWith(
+              () => _FakeGarminNotifier(connected: true, everConnected: true),
+            ),
+          ],
+          child: MaterialApp(
+            home: Scaffold(body: GarminHeaderIcon(onSettings: () {})),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('garminHeaderIcon')), findsNothing);
+    });
+
+    testWidgets('gruen wenn verbunden', (tester) async {
+      await pump(
+        tester,
+        _FakeGarminNotifier(connected: true, everConnected: true),
+        () {},
+      );
+      final icon = tester.widget<Icon>(find.byKey(const Key('garminHeaderIcon')));
+      expect(icon.color, AppTheme.ok);
+    });
+
+    testWidgets('rot wenn nicht verbunden aber schon mal verbunden gewesen', (tester) async {
+      await pump(
+        tester,
+        _FakeGarminNotifier(connected: false, everConnected: true),
+        () {},
+      );
+      final icon = tester.widget<Icon>(find.byKey(const Key('garminHeaderIcon')));
+      expect(icon.color, AppTheme.danger);
+    });
+
+    testWidgets('grau wenn noch nie verbunden', (tester) async {
+      await pump(
+        tester,
+        _FakeGarminNotifier(connected: false, everConnected: false),
+        () {},
+      );
+      final icon = tester.widget<Icon>(find.byKey(const Key('garminHeaderIcon')));
+      expect(icon.color, AppTheme.textMuted);
+    });
+
+    testWidgets('Tap bei Grau ruft onSettings auf, nicht openWatchApp', (tester) async {
+      var settingsCalled = false;
+      final fake = _FakeGarminNotifier(connected: false, everConnected: false);
+      await pump(tester, fake, () => settingsCalled = true);
+
+      await tester.tap(find.byKey(const Key('garminHeaderIcon')));
+      await tester.pumpAndSettle();
+
+      expect(settingsCalled, true);
+      expect(fake.openWatchAppCalled, false);
+    });
+
+    testWidgets('Tap bei Rot ruft openWatchApp auf, nicht onSettings', (tester) async {
+      var settingsCalled = false;
+      final fake = _FakeGarminNotifier(connected: false, everConnected: true);
+      await pump(tester, fake, () => settingsCalled = true);
+
+      await tester.tap(find.byKey(const Key('garminHeaderIcon')));
+      await tester.pumpAndSettle();
+
+      expect(settingsCalled, false);
+      expect(fake.openWatchAppCalled, true);
+    });
+  }
+
+  class _FakeGarminNotifier extends GarminNotifier {
+    final bool connected;
+    final bool everConnected;
+    bool openWatchAppCalled = false;
+
+    _FakeGarminNotifier({required this.connected, required this.everConnected});
+
+    @override
+    Future<GarminConnectionStatus> build() async =>
+        GarminConnectionStatus(connected: connected, everConnected: everConnected);
+
+    @override
+    Future<String> openWatchApp() async {
+      openWatchAppCalled = true;
+      return 'launched';
+    }
+  }
+  ```
+
+- [ ] **Schritt 2: Test ausführen, Fehlschlag bestätigen**
+
+  Run: `flutter test test/features/workout/garmin_header_icon_test.dart`
+  Expected: FAIL — `garmin_header_icon.dart` existiert noch nicht.
+
+- [ ] **Schritt 3: `GarminHeaderIcon` implementieren**
+
+  ```dart
+  import 'package:flutter/material.dart';
+  import 'package:flutter_riverpod/flutter_riverpod.dart';
+  import '../../../core/providers/settings_provider.dart';
+  import '../../../core/theme/app_theme.dart';
+  import '../../config/garmin_notifier.dart';
+
+  class GarminHeaderIcon extends ConsumerWidget {
+    final VoidCallback onSettings;
+
+    const GarminHeaderIcon({super.key, required this.onSettings});
+
+    @override
+    Widget build(BuildContext context, WidgetRef ref) {
+      final settingsAsync = ref.watch(settingsProvider);
+      final visible = settingsAsync.valueOrNull?.garminHeaderIconVisible ?? false;
+      if (!visible) return const SizedBox.shrink();
+
+      final status = ref.watch(garminProvider).valueOrNull;
+      final connected = status?.connected ?? false;
+      final everConnected = status?.everConnected ?? false;
+
+      final Color color = connected
+          ? AppTheme.ok
+          : (everConnected ? AppTheme.danger : AppTheme.textMuted);
+
+      return GestureDetector(
+        onTap: () async {
+          if (!everConnected) {
+            onSettings();
+            return;
+          }
+          final result = await ref.read(garminProvider.notifier).openWatchApp();
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Status: $result')),
+            );
+          }
+        },
+        child: Icon(Icons.watch, key: const Key('garminHeaderIcon'), color: color, size: 22),
+      );
+    }
+  }
+  ```
+
+- [ ] **Schritt 4: Test ausführen, Erfolg bestätigen**
+
+  Run: `flutter test test/features/workout/garmin_header_icon_test.dart`
+  Expected: PASS (alle sechs Tests grün)
+
+- [ ] **Schritt 5: In `WorkoutHeader` einbinden**
+
+  In `lib/features/workout/widgets/workout_header.dart`, Import ergänzen:
+
+  ```dart
+  import 'garmin_header_icon.dart';
+  ```
+
+  In der inneren `Row` (Zeilen 37–61 im aktuellen Stand), zwischen dem Verlauf- und dem Zahnrad-Icon einfügen:
+
+  ```dart
+  GestureDetector(
+    onTap: onHistory,
+    child: Icon(Icons.history, color: AppTheme.textMuted, size: 22),
+  ),
+  const SizedBox(width: 10),
+  GarminHeaderIcon(onSettings: onSettings),
+  const SizedBox(width: 10),
+  GestureDetector(
+    onTap: onSettings,
+    child: Icon(Icons.settings, color: AppTheme.textMuted, size: 22),
+  ),
+  ```
+
+  (Die ersten beiden `GestureDetector`/`SizedBox`-Zeilen existieren schon — hier nur zur Orientierung, wo genau `GarminHeaderIcon` dazwischen muss.)
+
+- [ ] **Schritt 6: Gesamte Testsuite + Analyzer prüfen**
+
+  Run: `flutter analyze && flutter test`
+  Expected: 0 Analyzer-Fehler, alle Tests grün.
+
+- [ ] **Schritt 7: Commit**
+
+  ```bash
+  git add lib/features/workout/widgets/garmin_header_icon.dart lib/features/workout/widgets/workout_header.dart test/features/workout/garmin_header_icon_test.dart
+  git commit -m "feat: Ampel-Icon fuer Garmin-Verbindung im Workout-Header"
+  ```
+
+---
+
+### Task 9: Ende-zu-Ende-Verifikation auf echter Hardware
 
 **Manuell, kein Repo-Code.** Finale Abnahme der Erfolgskriterien aus der Spec.
 
@@ -653,23 +1050,33 @@ Kein Commit — reine Geräte-Verifikation, keine Repo-Änderung.
 
   Sicherstellen, dass Handy und Venu 4 per Bluetooth gekoppelt und die Garmin-Connect-Mobile-App im Hintergrund aktiv ist (das Connect-IQ-Mobile-SDK baut auf dieser Kopplung auf).
 
-- [ ] **Schritt 3: Verbindungsstatus prüfen**
+- [ ] **Schritt 3: Verbindungsstatus in den Einstellungen prüfen**
 
-  In der Kettlebell-EMOM-App → Einstellungen → "Garmin-Uhr (Test)". Erwartung: zeigt "Uhr verbunden" mit grünem Icon.
+  In der Kettlebell-EMOM-App → Zahnrad-Icon → Einstellungen → Abschnitt "GARMIN-UHR". Erwartung: zeigt "Uhr verbunden" mit grünem Icon. Toggle "In der Hauptansicht anzeigen" einschalten (Default ist aus).
 
-- [ ] **Schritt 4: Watch-App öffnen**
+- [ ] **Schritt 4: Header-Icon prüfen**
 
-  Auf "Watch-App öffnen" tippen. Erwartung: Auf der Venu 4 öffnet sich die Hello-World-App automatisch (kein Schwarzbild — falls doch, siehe Spec-Abschnitt "Fehlerbehandlung / Risiken", das ist der zu verifizierende Risikofall). Am Handy erscheint eine Snackbar mit dem zurückgemeldeten Status.
+  Zurück zum Haupt-Workout-Screen. Erwartung: Ampel-Icon erscheint jetzt zwischen Verlauf- und Zahnrad-Icon, grün (Uhr ist ja verbunden).
 
-- [ ] **Schritt 5: Watch-App schließen**
+  `garminProvider` ist wie alle Provider in diesem Projekt `keepAlive` und prüft die Verbindung nur beim ersten Aufbau sowie nach einem Tap neu (kein Polling, siehe Spec-Abschnitt "Fehlerbehandlung / Risiken") — ein passives Live-Update ist also NICHT zu erwarten. Zum Testen: Bluetooth am Handy ausschalten, dann auf das (noch grün angezeigte) Icon tippen. Erwartung: Tap versucht `openWatchApp()`, das schlägt mangels Verbindung fehl (Snackbar mit Fehlerstatus, z.B. "no_device"), und das Icon wechselt danach auf Rot (nicht Grau, da `everConnected` bereits gesetzt ist) — die Korrektur passiert also durch den Tap selbst, nicht von allein. Bluetooth wieder anschalten, erneut tippen → Icon wechselt zurück auf Grün.
+
+- [ ] **Schritt 5: Watch-App über das Header-Icon öffnen**
+
+  Auf das grüne (oder rote) Header-Icon tippen. Erwartung: Auf der Venu 4 öffnet sich die Hello-World-App automatisch (kein Schwarzbild — falls doch, siehe Spec-Abschnitt "Fehlerbehandlung / Risiken", das ist der zu verifizierende Risikofall). Am Handy erscheint eine Snackbar mit dem zurückgemeldeten Status.
+
+- [ ] **Schritt 6: Watch-App schließen**
 
   Auf der Uhr auf den Bildschirm tippen. Erwartung: App beendet sich.
 
-- [ ] **Schritt 6: Ergebnis festhalten**
+- [ ] **Schritt 7: Grauen Zustand verifizieren (frische Installation)**
+
+  Nur möglich, wenn `garminHasEverConnected` noch nicht gesetzt ist (z.B. App-Daten löschen und neu installieren, oder die Prüfung vor Schritt 3 durchführen statt danach). Erwartung: Icon zeigt Grau, Tap navigiert zu den Einstellungen statt einen Verbindungsversuch zu starten.
+
+- [ ] **Schritt 8: Ergebnis festhalten**
 
   Kurze Notiz in `docs/emom_app_spezifikation.md` (Abschnitt "Garmin-Integration") ergänzen: ob der Spike erfolgreich war, und falls der Schwarzbild-Bug aufgetreten ist, welches Verhalten genau beobachtet wurde (Grundlage für die nächste Iteration).
 
-Kein Commit für Schritte 1–5 (reine Verifikation). Falls Schritt 6 die Spec-Datei ändert:
+Kein Commit für Schritte 1–7 (reine Verifikation). Falls Schritt 8 die Spec-Datei ändert:
 
 ```bash
 git add docs/emom_app_spezifikation.md
@@ -688,6 +1095,9 @@ git commit -m "docs: Ergebnis des Garmin-Verbindungs-Spikes festgehalten"
 | `android/app/src/main/kotlin/.../GarminBridge.kt` | 5 |
 | `android/app/src/main/kotlin/.../MainActivity.kt` | 5 |
 | `lib/core/services/garmin_service.dart` + Test | 6 |
+| `lib/core/models/settings.dart` + Test | 7 |
 | `lib/features/config/garmin_notifier.dart` + `.g.dart` | 7 |
 | `lib/features/config/config_screen.dart` | 7 |
 | `test/features/config/garmin_config_row_test.dart` | 7 |
+| `lib/features/workout/widgets/garmin_header_icon.dart` + Test | 8 |
+| `lib/features/workout/widgets/workout_header.dart` | 8 |
