@@ -7,6 +7,9 @@ const kEquipmentIconAssets = [
   'assets/icon/steelmace.png',
   'assets/icon/pezziball.png',
   'assets/icon/liegestuetz.png',
+  'assets/icon/kniebeuge.png',
+  'assets/icon/plank.png',
+  'assets/icon/dehnen.png',
 ];
 
 // ── Mutable Arbeitskopien für die Editier-Screens ─────────────────────────

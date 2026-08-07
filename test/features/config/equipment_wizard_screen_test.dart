@@ -44,6 +44,7 @@ void main() {
     // Schritt 1: Name eingeben → Weiter
     await tester.enterText(find.byType(TextField).first, 'Testgerät');
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Weiter →'));
     await tester.tap(find.text('Weiter →'));
     await tester.pumpAndSettle();
 

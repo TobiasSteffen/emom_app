@@ -257,6 +257,7 @@ void main() {
     // VariantRow enthält einen GestureDetector mit Icons.close
     final closeIcons = find.byIcon(Icons.close);
     // Die ersten Icons gehören zu den Varianten (var_a zuerst)
+    await tester.ensureVisible(closeIcons.first);
     await tester.tap(closeIcons.first);
     // pump damit setState abläuft, dann pump für Snackbar-Animation
     await tester.pump();
@@ -294,6 +295,7 @@ void main() {
     final type = _testType();
     final container = await _pumpScreen(tester, type: type);
 
+    await tester.ensureVisible(find.text('10 kg'));
     await tester.tap(find.text('10 kg'));
     await tester.pumpAndSettle();
 
@@ -325,6 +327,7 @@ void main() {
     final type = _testType();
     await _pumpScreen(tester, type: type);
 
+    await tester.ensureVisible(find.text('10 kg'));
     await tester.tap(find.text('10 kg'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, 'XYZ');
@@ -339,6 +342,7 @@ void main() {
     final type = _testType();
     await _pumpScreen(tester, type: type);
 
+    await tester.ensureVisible(find.text('10 kg'));
     await tester.tap(find.text('10 kg'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, '');
@@ -387,6 +391,7 @@ void main() {
     final container = await _pumpScreen(tester, type: type);
 
     // Edit auf '20 kg' (var_b, Index 1) starten
+    await tester.ensureVisible(find.text('20 kg'));
     await tester.tap(find.text('20 kg'));
     await tester.pumpAndSettle();
     final editFieldBefore = find.widgetWithText(TextField, '20 kg');
@@ -395,6 +400,7 @@ void main() {
     // '10 kg' (var_a, Index 0) löschen — erstes ✕ gehört zur ersten Variante
     // Das würde _editingVariantIndex=1 (20kg) zu einem falschen Index machen,
     // wenn nicht explizit gelöscht
+    await tester.ensureVisible(find.byIcon(Icons.close).first);
     await tester.tap(find.byIcon(Icons.close).first);
     await tester.pumpAndSettle();
 
