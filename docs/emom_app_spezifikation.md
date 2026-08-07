@@ -652,17 +652,23 @@ Kopfzeile der Detailansicht: Datum, `X/30 Intervalle`, Gesamtreps-Aufschlüsselu
 
 - **Langfristige Architektur**: Mit wachsender Datenkomplexität (Kalender, Ernährung, mehrere Sportarten) ist eine Migration der Persistenzschicht auf eine lokale SQLite-Datenbank (`drift`-Paket) zu evaluieren.
 
-- **Garmin-Integration** *(nächstes Feature — Venu 4 ist vorhanden, startbereit)*:
+- **Garmin-Integration** *(Hello-World-Spike abgeschlossen, weitere Schritte offen)*:
 
-  **Grobe Anforderung (Rohnotiz vom 2026-08-07, noch nicht durchdacht/geplant — dient nur als Ausgangspunkt für die nächste Session):**
-  1. Handy-App erkennt, dass die Garmin-Uhr verbunden ist (Bluetooth-Pairing-Status).
-  2. Beim Start eines Trainings auf dem Handy öffnet sich automatisch die (noch zu bauende) Companion-App auf der Uhr.
-  3. Die Uhr-App zeigt das laufende Training an (aktuelles Intervall/Minute, synchron zum Handy-Timer).
-  4. Die Uhr-App zeigt Vitaldaten an — Herzfrequenz auf jeden Fall, plus was die Venu 4 sonst sinnvoll liefert (HRV, Kalorien, o.ä. — noch offen, muss recherchiert werden).
-  5. Diese Vitaldaten sollen (ggf.) auch auf dem Handy während des Workouts angezeigt werden.
-  6. Vitaldaten sollen in der Trainingshistorie mitgespeichert werden.
+  **Stand 2026-08-08:** Der erste Spike (Verbindung erkennen + Watch-App vom Handy aus öffnen) ist gebaut, getestet und auf der echten Venu 4 end-to-end bestätigt. Volle technische Details, Architektur und zwei dabei gefundene/behobene Bugs (fehlende Bluetooth-Laufzeitberechtigung, `ConnectIQ.initialize()` durfte nicht mehrfach aufgerufen werden) stehen in `CLAUDE.md` unter "Garmin Watch Integration"; Task-für-Task-Historie in `docs/superpowers/plans/2026-08-07-garmin-connect-spike.md`.
 
-  Offene Fragen für die nächste Session: Auflösung der Vitaldaten in der Historie (pro Workout vs. pro Intervall), welche Datenfelder die Venu 4 über Connect IQ tatsächlich live herausgibt, MVP-Zuschnitt (was zuerst).
+  **Konkret als Nächstes gewünscht:** Ein Rückkanal Uhr → Handy über Garmins **App Messages** (`Communications.transmit()` auf der Watch-Seite, `connectIQ.registerForAppEvents()` auf der Kotlin-Seite), damit das Ampel-Icon im Workout-Header live aktuell bleibt — aktuell zeigt es nur den Stand vom letzten Check (siehe "kein Live-Update" in `CLAUDE.md`); wenn der Nutzer die Watch-App auf der Uhr schließt, soll das Icon automatisch auf Rot wechseln, nicht erst beim nächsten Tap. Noch nicht brainstormed/geplant.
+
+  **Korrektur:** `watch_connectivity_garmin` (pub.dev) wurde bei der Recherche für den Spike geprüft und verworfen — es bildet nur Nachrichten-Austausch mit einer bereits laufenden Watch-App nach, kein ferngesteuertes Öffnen. Stattdessen wird das native Connect IQ Mobile SDK direkt angesprochen (siehe CLAUDE.md).
+
+  **Grobe Anforderung (Rohnotiz vom 2026-08-07, Ausgangspunkt für den Spike):**
+  1. Handy-App erkennt, dass die Garmin-Uhr verbunden ist (Bluetooth-Pairing-Status). ✅ umgesetzt
+  2. Beim Start eines Trainings auf dem Handy öffnet sich automatisch die Companion-App auf der Uhr. — Grundmechanismus (App vom Handy aus öffnen) ✅ umgesetzt; automatischer Trigger beim Trainingsstart noch offen (aktuell nur manueller Tap)
+  3. Die Uhr-App zeigt das laufende Training an (aktuelles Intervall/Minute, synchron zum Handy-Timer). — offen
+  4. Die Uhr-App zeigt Vitaldaten an — Herzfrequenz auf jeden Fall, plus was die Venu 4 sonst sinnvoll liefert (HRV, Kalorien, o.ä. — noch offen, muss recherchiert werden). — offen
+  5. Diese Vitaldaten sollen (ggf.) auch auf dem Handy während des Workouts angezeigt werden. — offen
+  6. Vitaldaten sollen in der Trainingshistorie mitgespeichert werden. — offen
+
+  Offene Fragen für die nächste Session: Auflösung der Vitaldaten in der Historie (pro Workout vs. pro Intervall), welche Datenfelder die Venu 4 über Connect IQ tatsächlich live herausgibt, MVP-Zuschnitt (was zuerst — vermutlich der App-Messages-Rückkanal fürs Icon).
 
   Technischer Hintergrund (bereits vorhandene Recherche, unten stehend): Live-Daten während des Trainings (Schritt 3–5) brauchen **Weg 1** (direkte Bluetooth-Verbindung über Connect IQ); **Weg 2** (Health API) liefert erst nach Cloud-Sync und eignet sich daher nicht für Live-Anzeige, ggf. aber ergänzend für reichhaltigere Nachträge in der Historie.
 
@@ -676,7 +682,6 @@ Kopfzeile der Detailansicht: Datum, `X/30 Intervalle`, Gesamtreps-Aufschlüsselu
        ↕  Bluetooth
   Monkey C App (Uhr)
   ```
-  Fertiger Flutter-Wrapper: `watch_connectivity_garmin` (pub.dev). Beide Richtungen funktionieren: Phone startet Training → Uhr zeigt es an; Uhr misst Herzrate → Flutter zeigt Statistiken.
 
   **Weg 1 – Live-Daten direkt von der Uhr (Connect IQ):** Monkey C sendet per Bluetooth an Flutter: Herzrate, HRV, GPS/Pace, Kalorien, Schritte, SpO2, Stress-Level, Schlaf (je nach Modell).
 

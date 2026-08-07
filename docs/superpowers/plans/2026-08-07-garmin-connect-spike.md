@@ -1048,39 +1048,37 @@ Kein Commit — reine Geräte-Verifikation, keine Repo-Änderung.
 
 **Manuell, kein Repo-Code.** Finale Abnahme der Erfolgskriterien aus der Spec.
 
-- [ ] **Schritt 1: Debug-APK auf dem Handy installieren**
+- [x] **Schritt 1: Debug-APK auf dem Handy installieren**
 
-  Run: `flutter install` (oder `flutter run --release=false` bei verbundenem Test-Handy)
+  `flutter run` gegen ein per WLAN-ADB verbundenes Testhandy (M2102K1G, Android 13). Wiederholt neu installiert im Zuge der Fehlersuche — siehe Schritt 8.
 
-- [ ] **Schritt 2: Venu 4 verbinden**
+- [x] **Schritt 2: Venu 4 verbinden**
 
-  Sicherstellen, dass Handy und Venu 4 per Bluetooth gekoppelt und die Garmin-Connect-Mobile-App im Hintergrund aktiv ist (das Connect-IQ-Mobile-SDK baut auf dieser Kopplung auf).
+  Bluetooth-Kopplung über Garmin Connect Mobile bestätigt (Uhr dort und in der separaten "Garmin Connect IQ"-App als verbunden gelistet, beide grün).
 
-- [ ] **Schritt 3: Verbindungsstatus in den Einstellungen prüfen**
+- [x] **Schritt 3: Verbindungsstatus in den Einstellungen prüfen**
 
-  In der Kettlebell-EMOM-App → Zahnrad-Icon → Einstellungen → Abschnitt "GARMIN-UHR". Erwartung: zeigt "Uhr verbunden" mit grünem Icon. Toggle "In der Hauptansicht anzeigen" einschalten (Default ist aus).
+  Bestätigt: Abschnitt "GARMIN-UHR" zeigt "Uhr verbunden" grün, Toggle "In der Hauptansicht anzeigen" eingeschaltet.
 
-- [ ] **Schritt 4: Header-Icon prüfen**
+- [x] **Schritt 4: Header-Icon prüfen** *(teilweise — siehe Hinweis)*
 
-  Zurück zum Haupt-Workout-Screen. Erwartung: Ampel-Icon erscheint jetzt zwischen Verlauf- und Zahnrad-Icon, grün (Uhr ist ja verbunden).
+  Grün und Rot beide auf echter Hardware beobachtet (Rot während der Fehlersuche, bevor die Bugs unten behoben waren; Grün danach reproduzierbar). Der spezifische "Bluetooth ausschalten"-Teilschritt wurde nicht separat nachgestellt — Grau/Rot-Logik ist aber zusätzlich durch `garmin_header_icon_test.dart` (6 Widget-Tests) abgedeckt.
 
-  `garminProvider` ist wie alle Provider in diesem Projekt `keepAlive` und prüft die Verbindung nur beim ersten Aufbau sowie nach einem Tap neu (kein Polling, siehe Spec-Abschnitt "Fehlerbehandlung / Risiken") — ein passives Live-Update ist also NICHT zu erwarten. Zum Testen: Bluetooth am Handy ausschalten, dann auf das (noch grün angezeigte) Icon tippen. Erwartung: Tap versucht `openWatchApp()`, das schlägt mangels Verbindung fehl (Snackbar mit Fehlerstatus, z.B. "no_device"), und das Icon wechselt danach auf Rot (nicht Grau, da `everConnected` bereits gesetzt ist) — die Korrektur passiert also durch den Tap selbst, nicht von allein. Bluetooth wieder anschalten, erneut tippen → Icon wechselt zurück auf Grün.
+- [x] **Schritt 5: Watch-App über das Header-Icon öffnen**
 
-- [ ] **Schritt 5: Watch-App über das Header-Icon öffnen**
+  Erfolgreich, nach Behebung von zwei echten Bugs (siehe Schritt 8). Log bestätigt: `openApplication callback status=PROMPT_SHOWN_ON_DEVICE`, Nutzer bestätigt "Hello World" ist auf der Uhr erschienen. Kein Schwarzbild-Bug aufgetreten.
 
-  Auf das grüne (oder rote) Header-Icon tippen. Erwartung: Auf der Venu 4 öffnet sich die Hello-World-App automatisch (kein Schwarzbild — falls doch, siehe Spec-Abschnitt "Fehlerbehandlung / Risiken", das ist der zu verifizierende Risikofall). Am Handy erscheint eine Snackbar mit dem zurückgemeldeten Status.
+- [x] **Schritt 6: Watch-App schließen**
 
-- [ ] **Schritt 6: Watch-App schließen**
-
-  Auf der Uhr auf den Bildschirm tippen. Erwartung: App beendet sich.
+  Tap-zum-Schließen bereits in Task 2/3 (Simulator und erster Sideload) verifiziert; in dieser Session nicht erneut einzeln nachgestellt, keine Änderung an dem Verhalten seitdem.
 
 - [ ] **Schritt 7: Grauen Zustand verifizieren (frische Installation)**
 
-  Nur möglich, wenn `garminHasEverConnected` noch nicht gesetzt ist (z.B. App-Daten löschen und neu installieren, oder die Prüfung vor Schritt 3 durchführen statt danach). Erwartung: Icon zeigt Grau, Tap navigiert zu den Einstellungen statt einen Verbindungsversuch zu starten.
+  Nicht auf echter Hardware nachgestellt (hätte App-Daten-Löschung erfordert). Grau-Verhalten ist aber durch `garmin_header_icon_test.dart` abgedeckt (`grau wenn noch nie verbunden`-Test, PASS).
 
-- [ ] **Schritt 8: Ergebnis festhalten**
+- [x] **Schritt 8: Ergebnis festhalten**
 
-  Kurze Notiz in `docs/emom_app_spezifikation.md` (Abschnitt "Garmin-Integration") ergänzen: ob der Spike erfolgreich war, und falls der Schwarzbild-Bug aufgetreten ist, welches Verhalten genau beobachtet wurde (Grundlage für die nächste Iteration).
+  Siehe `docs/emom_app_spezifikation.md`, Abschnitt "Garmin-Integration" — Spike erfolgreich, kein Schwarzbild-Bug, aber zwei andere Bugs bei der Live-Verifikation gefunden und behoben (Bluetooth-Laufzeitberechtigungen fehlten; `ConnectIQ.initialize()` durfte nicht mehrfach aufgerufen werden). Details in `CLAUDE.md` unter "Garmin Watch Integration".
 
 Kein Commit für Schritte 1–7 (reine Verifikation). Falls Schritt 8 die Spec-Datei ändert:
 
