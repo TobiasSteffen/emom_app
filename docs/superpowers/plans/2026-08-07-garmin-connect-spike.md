@@ -969,10 +969,10 @@ Kein Commit — reine Geräte-Verifikation, keine Repo-Änderung.
     @override
     Widget build(BuildContext context, WidgetRef ref) {
       final settingsAsync = ref.watch(settingsProvider);
-      final visible = settingsAsync.valueOrNull?.garminHeaderIconVisible ?? false;
+      final visible = settingsAsync.value?.garminHeaderIconVisible ?? false;
       if (!visible) return const SizedBox.shrink();
 
-      final status = ref.watch(garminProvider).valueOrNull;
+      final status = ref.watch(garminProvider).value;
       final connected = status?.connected ?? false;
       final everConnected = status?.everConnected ?? false;
 

@@ -7,6 +7,9 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   const channel = MethodChannel('com.example.emom_app/garmin');
+  const permissionChannel = MethodChannel(
+    'flutter.baseflow.com/permissions/methods',
+  );
   final calls = <MethodCall>[];
 
   setUp(() {
@@ -23,11 +26,27 @@ void main() {
       }
       return null;
     });
+    // Simuliert erteilte Bluetooth-Laufzeitberechtigungen, damit
+    // GarminService._ensureBluetoothPermissions() nicht auf die echte
+    // (in Tests nicht gemockte) Plattform-Implementierung trifft.
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(permissionChannel, (MethodCall call) async {
+      if (call.method == 'requestPermissions') {
+        final requested = List<int>.from(call.arguments as List);
+        // 1 = PermissionStatus.granted in permission_handler's internal wire
+        // codec (permission_handler_platform_interface/src/permission_status.dart);
+        // not exported publicly, hardcoded here since it's a fixed protocol constant.
+        return {for (final code in requested) code: 1};
+      }
+      return null;
+    });
   });
 
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, null);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(permissionChannel, null);
   });
 
   test('isWatchConnected ruft den MethodChannel auf und gibt das Ergebnis zurueck', () async {
