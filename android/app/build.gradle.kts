@@ -45,4 +45,5 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    implementation("com.garmin.connectiq:ciq-companion-app-sdk:2.4.0@aar")
 }
