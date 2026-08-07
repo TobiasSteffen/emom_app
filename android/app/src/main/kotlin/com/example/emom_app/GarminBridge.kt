@@ -9,8 +9,8 @@ import com.garmin.android.connectiq.exception.ServiceUnavailableException
 
 class GarminBridge(private val context: Context) {
 
-    // Application-ID aus garmin_watch_app/manifest.xml (kommt aus einem spaeteren Task, noch nicht vorhanden) eintragen:
-    private val watchAppId = "REPLACE_WITH_MANIFEST_APP_ID"
+    // Application-ID aus garmin_watch_app/manifest.xml
+    private val watchAppId = "ddb356dd-6f3c-4f7a-bb62-3664460edba8"
 
     private val connectIQ: ConnectIQ = ConnectIQ.getInstance(context, ConnectIQ.IQConnectType.WIRELESS)
 

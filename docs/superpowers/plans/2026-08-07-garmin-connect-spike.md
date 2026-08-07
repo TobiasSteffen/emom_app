@@ -57,77 +57,83 @@ Kein Commit — reine Werkzeug-/Account-Einrichtung, keine Repo-Änderung.
 
 **Files:**
 - Create: `garmin_watch_app/manifest.xml` (durch SDK-Tooling generiert, siehe Schritt 1)
-- Create: `garmin_watch_app/source/HelloWorldApp.mc`
-- Create: `garmin_watch_app/source/HelloWorldView.mc`
-- Create: `garmin_watch_app/source/HelloWorldDelegate.mc`
+- Create: `garmin_watch_app/source/garmin_watch_appApp.mc`
+- Create: `garmin_watch_app/source/garmin_watch_appView.mc`
+- Create: `garmin_watch_app/source/garmin_watch_appDelegate.mc`
+- Deleted (generiert, nicht gebraucht): `garmin_watch_app/source/garmin_watch_appMenuDelegate.mc`, `garmin_watch_app/resources/menus/`, `garmin_watch_app/resources/drawables/monkey.png`
 
 **Interfaces:**
-- Produces: eine über den Connect-IQ-Simulator startbare Watch-App; die generierte **Application-ID** aus `manifest.xml` (Attribut `id` im `<iq:application>`-Tag) wird in Task 6 als Konstante gebraucht — nach Abschluss dieses Tasks hier notieren: `______________________________`
+- Produces: eine über den Connect-IQ-Simulator startbare Watch-App; die generierte **Application-ID** aus `manifest.xml` wird in Task 5 als Konstante gebraucht — **`ddb356dd-6f3c-4f7a-bb62-3664460edba8`**, bereits in `GarminBridge.kt` eingetragen.
 
-- [ ] **Schritt 1: Projekt über die VS-Code-Extension scaffolden**
+**Tatsächlich generierte Klassennamen (statt der ursprünglich angenommenen `HelloWorldApp`/`HelloWorldView`/`HelloWorldDelegate`):** Die VS-Code-Extension hat die Klassen nach dem Projektnamen benannt: `garmin_watch_appApp`, `garmin_watch_appView`, `garmin_watch_appDelegate` — Dateien entsprechend `source/garmin_watch_appApp.mc` etc. Zusätzlich wurde ein `garmin_watch_appMenuDelegate` samt Menü-Ressource generiert (Blank-Template kommt mit einem 2-Item-Menü) — das wurde entfernt (Datei gelöscht, `resources/menus/` gelöscht, `onMenu()` aus dem Delegate entfernt), da die Spec ausdrücklich "keine Funktionalität außer Hello World + Schließen" vorgibt. `garmin_watch_appView.mc` nutzt das generierte Ressourcen-Layout (`Rez.Layouts.MainLayout` + `@Strings.prompt`) statt direktem `dc.drawText(...)` — Text wurde über `strings.xml` auf "Hello World" geändert, das mitgelieferte Monkey-Logo-Bitmap aus Layout und Ressourcen entfernt (nicht Teil der Spec).
 
-  Command Palette → "Monkey C: New Project". Projektname: `garmin_watch_app` (im Repo-Root anlegen, sibling zu `android/`, `ios/`, `lib/`). Typ: **Watch App**. Zielgerät: **Venu 4**. Template: **Blank**. Die Extension generiert `manifest.xml`, `source/HelloWorldApp.mc` (oder ähnlich benannt — beim Anlegen den Klassennamen `HelloWorldApp` wählen, falls die Extension danach fragt) sowie Resource-Ordner.
+- [x] **Schritt 1: Projekt über die VS-Code-Extension scaffolden**
 
-  Falls die Extension einen anderen Einstiegs-Klassennamen vorschlägt: die Dateien in diesem Task konsequent an den generierten Namen anpassen (nicht blind `HelloWorldApp` erzwingen).
+  Command Palette → "Monkey C: New Project". Projektname `garmin_watch_app`, im Repo-Root angelegt. Typ: Watch App. Zielgerät: Venu 4 45mm (`venu445mm`). Template: Blank. API-Level: neueste verfügbare (`minApiLevel="6.0.2"`) — kein Grund für ältere/abwärtskompatible Level, da nur das eigene, aktuelle Gerät getestet wird.
 
-- [ ] **Schritt 2: `HelloWorldApp.mc` — Einstiegspunkt**
+  Wie erwartet hat die Extension die Klassen nach dem Projektnamen benannt (nicht `HelloWorldApp`): `garmin_watch_appApp` / `garmin_watch_appView` / `garmin_watch_appDelegate`. Zusätzlich wurde ein Menü samt `garmin_watch_appMenuDelegate` generiert (Blank-Template-Standard) — entfernt, siehe Files-Abschnitt oben.
 
-  Ersetze den generierten Inhalt durch:
+- [x] **Schritt 2: `garmin_watch_appApp.mc` — Einstiegspunkt**
+
+  Generierter Code unverändert übernommen (referenziert bereits `garmin_watch_appView`/`garmin_watch_appDelegate` korrekt):
 
   ```javascript
   import Toybox.Application;
   import Toybox.Lang;
   import Toybox.WatchUi;
 
-  class HelloWorldApp extends Application.AppBase {
+  class garmin_watch_appApp extends Application.AppBase {
       function initialize() {
           AppBase.initialize();
       }
-
+      function onStart(state as Dictionary?) as Void {}
+      function onStop(state as Dictionary?) as Void {}
       function getInitialView() as [Views] or [Views, InputDelegates] {
-          return [ new HelloWorldView(), new HelloWorldDelegate() ];
+          return [ new garmin_watch_appView(), new garmin_watch_appDelegate() ];
       }
+  }
+
+  function getApp() as garmin_watch_appApp {
+      return Application.getApp() as garmin_watch_appApp;
   }
   ```
 
-- [ ] **Schritt 3: `HelloWorldView.mc` — Anzeige**
+- [x] **Schritt 3: `garmin_watch_appView.mc` — Anzeige**
+
+  Generierter Code unverändert übernommen — nutzt das Ressourcen-Layout-System (`Rez.Layouts.MainLayout`) statt direktem `dc.drawText(...)`, idiomatischer als ursprünglich geplant:
 
   ```javascript
-  import Toybox.WatchUi;
   import Toybox.Graphics;
+  import Toybox.WatchUi;
 
-  class HelloWorldView extends WatchUi.View {
+  class garmin_watch_appView extends WatchUi.View {
       function initialize() {
           View.initialize();
       }
-
-      function onUpdate(dc as Graphics.Dc) as Void {
-          View.onUpdate(dc);
-          dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-          dc.clear();
-          dc.drawText(
-              dc.getWidth() / 2,
-              dc.getHeight() / 2,
-              Graphics.FONT_MEDIUM,
-              "Hello World",
-              Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER
-          );
+      function onLayout(dc as Dc) as Void {
+          setLayout(Rez.Layouts.MainLayout(dc));
       }
+      function onShow() as Void {}
+      function onUpdate(dc as Dc) as Void {
+          View.onUpdate(dc);
+      }
+      function onHide() as Void {}
   }
   ```
 
-- [ ] **Schritt 4: `HelloWorldDelegate.mc` — Tap schließt die App**
+  Der angezeigte Text kommt aus `resources/layouts/layout.xml` (Label mit `text="@Strings.prompt"`, zentriert über `x="center" y="center"` + `TEXT_JUSTIFY_CENTER|TEXT_JUSTIFY_VCENTER`) und `resources/strings/strings.xml` (`<string id="prompt">Hello World</string>` — war generiert als "Click the menu button", geändert). Das generierte Monkey-Logo-Bitmap wurde aus Layout und `resources/drawables/` entfernt (nicht Teil der Spec).
+
+- [x] **Schritt 4: `garmin_watch_appDelegate.mc` — Tap schließt die App**
 
   ```javascript
-  import Toybox.WatchUi;
   import Toybox.Lang;
   import Toybox.System;
+  import Toybox.WatchUi;
 
-  class HelloWorldDelegate extends WatchUi.BehaviorDelegate {
+  class garmin_watch_appDelegate extends WatchUi.BehaviorDelegate {
       function initialize() {
           BehaviorDelegate.initialize();
       }
-
       function onSelect() as Boolean {
           System.exit();
           return true;
@@ -135,16 +141,18 @@ Kein Commit — reine Werkzeug-/Account-Einrichtung, keine Repo-Änderung.
   }
   ```
 
-  `onSelect()` feuert bei einem Tap auf den Touchscreen (Venu 4 hat keine dedizierte "OK"-Taste) — ein Tap irgendwo auf dem Bildschirm dient als OK/Schließen-Aktion. Das ist eine bewusste Vereinfachung für den Spike, kein eigens gezeichneter Button.
+  `onMenu()` (generiert, öffnete das jetzt entfernte Menü) wurde durch `onSelect()` ersetzt. `onSelect()` feuert bei Tap auf den Touchscreen (Venu 4 hat keine dedizierte "OK"-Taste) — ein Tap irgendwo auf dem Bildschirm schließt die App. Compiler-Warnung "Statement is not reachable" für das `return true;` nach `System.exit()` ist erwartet (Compiler weiß, dass `exit()` nicht zurückkehrt) und harmlos.
 
-- [ ] **Schritt 5: Im Simulator verifizieren**
+- [x] **Schritt 5: Im Simulator verifizieren**
 
-  Im Connect-IQ-Simulator für Venu 4 bauen und starten (VS Code: "Monkey C: Run" oder `monkeydo` über die Kommandozeile, je nachdem was die installierte Extension anbietet). Erwartung: Simulator zeigt "Hello World" zentriert auf schwarzem Hintergrund. Tap auf den simulierten Touchscreen → App beendet sich (Simulator kehrt zur Geräte-Übersicht zurück oder zeigt "App terminated" — je nach Simulator-Version).
+  **VS Code GUI ("Monkey C: Run") funktioniert in diesem Repo nicht** — Fehler "Connect IQ project not found. Be sure your project has a jungle file and the project's Jungle Files setting is correct." (VS-Code-Workspace ist das Flutter-Repo-Root, nicht `garmin_watch_app/` selbst; keine `.vscode/settings.json` mit `monkeyC.jungleFiles` vorhanden). Stattdessen über die SDK-CLI-Tools gebaut und verifiziert — vollständiger, funktionierender Befehlsablauf jetzt in `CLAUDE.md` unter "Garmin Watch Integration" dokumentiert (Kurzfassung: Developer-Key per `openssl` einmalig erzeugen, `monkeyc.bat -f monkey.jungle -d venu445mm -o bin/garmin_watch_app.prg -y <key>` baut, Simulator separat starten, dann `monkeydo.bat bin/garmin_watch_app.prg venu445mm` pusht/startet die App darin).
 
-- [ ] **Schritt 6: Commit**
+  Ergebnis: **Build erfolgreich**, Simulator zeigt "Hello World" zentriert auf schwarzem Hintergrund, Tap auf den simulierten Touchscreen beendet die App — manuell von Tobias am Simulator bestätigt.
+
+- [x] **Schritt 6: Commit**
 
   ```bash
-  git add garmin_watch_app/
+  git add garmin_watch_app/ .gitignore
   git commit -m "feat: Garmin Watch-App Hello-World-Spike (Monkey C)"
   ```
 

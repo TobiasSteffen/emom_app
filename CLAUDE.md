@@ -113,3 +113,45 @@ Used in workout screen and history detail — hardcoded by minute index:
 ### Sound files
 
 Built-in assets in `assets/sounds/` (`bell.wav`, `tick.wav`, `alarm.wav`, `alarm_low.wav`). Users can import custom audio; copied to `documents/sounds/`. Paths starting with `/` use `DeviceFileSource`; others use `AssetSource('sounds/$f')`.
+
+## Garmin Watch Integration (in progress)
+
+Connects the app to a Garmin Venu 4 via Garmin's native **Connect IQ Mobile SDK** (Android-only, no Flutter package — see `docs/superpowers/specs/2026-08-07-garmin-connect-spike-design.md` for why). Two independent codebases, connected only at runtime over Bluetooth:
+
+1. **Phone side** (this Flutter/Android app):
+   - `android/app/src/main/kotlin/com/example/emom_app/GarminBridge.kt` — wraps `com.garmin.android.connectiq.ConnectIQ` (Gradle dep `com.garmin.connectiq:ciq-companion-app-sdk`, Maven Central), exposes `isWatchConnected()` / `openWatchApp()`.
+   - `MainActivity.kt` registers a `MethodChannel("com.example.emom_app/garmin")` for the bridge.
+   - `lib/core/services/garmin_service.dart` — Dart wrapper around the channel; also owns the `garminHasEverConnected` SharedPreferences flag (set once a connection ever succeeds, never reset — separate from `AppSettings` because it must persist immediately, not on the config screen's save-on-navigate-back cycle).
+   - `lib/features/config/garmin_notifier.dart` — `@riverpod` `GarminNotifier` (provider name `garminProvider`, codegen strips the `Notifier` suffix), state `GarminConnectionStatus { connected, everConnected }`.
+   - `lib/features/workout/widgets/garmin_header_icon.dart` — traffic-light-colored watch icon in the workout header (grey = never connected, red = not connected now, green = connected); tap on grey navigates to Settings via `WorkoutHeader`'s existing `onSettings` callback (never a separate `Navigator.push`, or it skips `_openConfig()`'s post-return settings sync in `workout_screen.dart`); tap on red/green calls `openWatchApp()`.
+   - `AppSettings.garminHeaderIconVisible` — toggle in `ConfigScreen`'s "GARMIN-UHR" section; icon is hidden by default.
+   - No live polling: `garminProvider` is `keepAlive` like every provider here, so the icon only re-checks on first build or after a tap — see the design spec's "Fehlerbehandlung / Risiken" for the accepted trade-off.
+
+2. **Watch side** — `garmin_watch_app/`, a **separate Connect IQ (Monkey C) project**, not part of the Flutter/Gradle build at all. Entry classes are named after the folder (VS Code's project wizard names them after the project, not after what you type as "class name"): `garmin_watch_appApp` / `garmin_watch_appView` / `garmin_watch_appDelegate`, in `garmin_watch_app/source/`. `manifest.xml` Application-ID `ddb356dd-6f3c-4f7a-bb62-3664460edba8` (must match the constant in `GarminBridge.kt`). Target device: `venu445mm` (Venu 4, 45mm — Connect IQ's internal product ID, not "venu4").
+
+   **Building/running `garmin_watch_app/` via VS Code's GUI ("Monkey C: Run") does not work in this repo** — fails with "Connect IQ project not found. Be sure your project has a jungle file and the project's Jungle Files setting is correct." Root cause: the open VS Code workspace is the Flutter repo root, not `garmin_watch_app/` itself, and no `.vscode/settings.json` with `monkeyC.jungleFiles` has been set up to bridge that. **Use the SDK's CLI tools directly instead** — reliable, and is how this was actually built and verified working end-to-end:
+
+   ```bash
+   # Java is required but not on PATH by default; Android Studio bundles one:
+   export PATH="/c/Program Files/Android/Android Studio/jbr/bin:$PATH"
+
+   SDK="$HOME/AppData/Roaming/Garmin/ConnectIQ/Sdks/<installed-version>/bin"   # find exact folder name under Sdks/
+   KEY="$HOME/AppData/Roaming/Garmin/ConnectIQ/developer_key.der"             # generate once, see below — NEVER commit this
+
+   # One-time: generate a developer signing key (must be RSA 4096-bit, 2048 fails with "Signature check failed")
+   openssl genpkey -algorithm RSA -out developer_key.pem -outform PEM -pkeyopt rsa_keygen_bits:4096
+   openssl pkcs8 -topk8 -inform PEM -outform DER -in developer_key.pem -out developer_key.der -nocrypt
+
+   # Build (run from garmin_watch_app/)
+   "$SDK/monkeyc.bat" -f monkey.jungle -d venu445mm -o bin/garmin_watch_app.prg -y "$KEY" -w
+
+   # Run in the simulator: start the simulator GUI first, THEN push the build to it
+   #   (PowerShell) Start-Process "$SDK\simulator.exe"
+   "$SDK/monkeydo.bat" bin/garmin_watch_app.prg venu445mm
+   ```
+
+   `garmin_watch_app/bin/` (build output) is gitignored — never commit `.prg` files or the developer key.
+
+   **Sideloading to the real watch:** the Venu 4 connects via MTP (no drive letter on Windows, no Mass Storage USB mode available on this model) — copy the built `.prg` into `GARMIN\Apps\` on the device manually via File Explorer; cannot be scripted from the CLI/an agent.
+
+Full task-by-task history: `docs/superpowers/plans/2026-08-07-garmin-connect-spike.md`. Design rationale: `docs/superpowers/specs/2026-08-07-garmin-connect-spike-design.md`.
