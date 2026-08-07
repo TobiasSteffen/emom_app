@@ -51,5 +51,8 @@ docs/*.pdf
 # Claude Code
 .claude/
 
+# Superpowers plugin local scratch state (brainstorm sessions, sdd task briefs/diffs)
+.superpowers/
+
 # Connect IQ watch app build output (garmin_watch_app/) — see CLAUDE.md for build workflow
 garmin_watch_app/bin/
