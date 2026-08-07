@@ -640,34 +640,31 @@ Kopfzeile der Detailansicht: Datum, `X/30 Intervalle`, Gesamtreps-Aufschlüsselu
 
 ## TODO
 
-- **Kotlin Gradle Plugin (KGP) Migration**: Sechs transitive Flutter-Plugins wenden das Kotlin Gradle Plugin noch manuell an. Flutter wird dieses Verhalten in einer zukünftigen Version als Build-Fehler werten. Folgende Pakete müssen auf Major-Versionen aktualisiert werden, sobald die API-Kompatibilität geprüft ist:
-  - `audioplayers`: 5.x → 6.x (`WorkoutNotifier` nutzt `AudioPlayer` und `onPlayerComplete`-Listener)
-  - `volume_controller`: 2.x → 3.x (Lautstärke-Boost in `WorkoutNotifier._volumeBoost`)
-  - Transitive Abhängigkeiten (`device_info_plus`, `package_info_plus`, `shared_preferences_android`, `wakelock_plus`) werden durch die obigen Upgrades mitgezogen.
-  - App-Level KGP bereits behoben: `id("kotlin-android")` aus `android/app/build.gradle.kts` entfernt.
-
-- **Trainingshistorie – Editierbarkeit**: Historische Einträge sollen nachträglich bearbeitbar sein (z.B. einzelne Intervall-Werte korrigieren).
 - **Trainingshistorie – Kommentar**: Pro Workout-Eintrag soll ein freier Kommentar erfassbar und editierbar sein (z.B. Notizen zur Session).
 
-- **Mehrere Sportarten & Icons**: Neben Kettlebell und Steel Mace sollen weitere Sportarten hinzufügbar sein, jeweils mit eigenem Icon. In einem Plan können beliebig viele Sportarten gemischt auftreten (pro Intervall wählbar).
-
-- **Benutzerdefinierte Sportarten**: Der Nutzer soll eigene Sportgeräte anlegen können (Name, zugehörige Übungen, Icon). Diese erscheinen dann im Plan-Editor gleichwertig neben den eingebauten Geräten (Kettlebell, Steel Mace, Pezziball). Technische Grundvoraussetzung: `Equipment`-Enum muss zu einem dynamischen Datenmodell migriert werden, das zur Laufzeit erweiterbar ist und via JSON persistiert wird (SharedPreferences oder Datei). Der `IntervalConfig`-Typ muss auf das neue Modell umgestellt werden.
-  - **Icon-Auswahl**: Emoji-Picker als einfachste Offline-Variante (kein Netzwerk, keine Abhängigkeiten).
-  - **Icon-Generierung via KI** *(offen)*: Optional könnte beim Anlegen einer neuen Sportart ein SVG-Icon automatisch per Anfrage an die Claude API generiert werden (Prompt: Gerätename → SVG-Code → gerendert via `flutter_svg`). Erfordert einen Anthropic-API-Key, den der Nutzer einmalig in den App-Einstellungen hinterlegt. Kein Free-Tier — Kosten ca. $0.001–0.002 pro Anfrage (Haiku-Modell). Noch nicht geplant.
-
 - **Plan-Kommentare**: Einzelne Phasen oder Intervalle innerhalb eines Plans sollen mit Freitext-Kommentaren versehbar sein (z.B. Technikhinweise, Intensitätsvorgaben).
-
-- **Kalenderplanung**: Trainingspläne sollen an konkreten Tagen im Kalender geplant werden können. Pro geplantem Trainingstag sind Ernährungshinweise für den Tag vor und den Tag nach dem Training erfassbar und anzeigbar.
 
 - **Mehrsprachigkeit**: Die App soll mehrere Sprachen unterstützen (zunächst Deutsch und Englisch). Alle UI-Texte, Labels und Fehlermeldungen sollen über ein Lokalisierungssystem (Flutter `intl` / ARB-Dateien) verwaltet werden. Sprache folgt der Systemeinstellung des Geräts, mit manueller Override-Option in den Einstellungen.
 
 - **Onboarding-Wizard**: Beim ersten App-Start wird ein Wizard angezeigt, der die wichtigsten Funktionen erklärt: Trainingsplan auswählen/erstellen, Workout starten, Intervall bestätigen, Trainingshistorie. Der Wizard soll überspringbar sein und jederzeit in den Einstellungen erneut aufrufbar sein.
 
-- ~~**Pause-Intervall**: Ein Intervall soll als "Pause" markierbar sein~~ ✅ Umgesetzt: Intervalle können als Pause markiert werden (kein Gerät/Übung/Reps, nur Countdown). Im Workout-Screen grau dargestellt mit „PAUSE"-Label. Im Plan-Editor über blauen Toggle-Button oben rechts schaltbar, Ein-/Ausblenden des Formulars mit `AnimatedCrossFade`.
+- **Icon-Generierung via KI**: Optional könnte beim Anlegen einer neuen Sportart ein SVG-Icon automatisch per Anfrage an die Claude API generiert werden (Prompt: Gerätename → SVG-Code → gerendert via `flutter_svg`). Erfordert einen Anthropic-API-Key, den der Nutzer einmalig in den App-Einstellungen hinterlegt. Kein Free-Tier — Kosten ca. $0.001–0.002 pro Anfrage (Haiku-Modell). Noch nicht geplant.
 
 - **Langfristige Architektur**: Mit wachsender Datenkomplexität (Kalender, Ernährung, mehrere Sportarten) ist eine Migration der Persistenzschicht auf eine lokale SQLite-Datenbank (`drift`-Paket) zu evaluieren.
 
-- **Garmin-Integration** *(Voraussetzung: Garmin Watch kaufen — Garmin ist einer der offensten Anbieter)*:
+- **Garmin-Integration** *(nächstes Feature — Venu 4 ist vorhanden, startbereit)*:
+
+  **Grobe Anforderung (Rohnotiz vom 2026-08-07, noch nicht durchdacht/geplant — dient nur als Ausgangspunkt für die nächste Session):**
+  1. Handy-App erkennt, dass die Garmin-Uhr verbunden ist (Bluetooth-Pairing-Status).
+  2. Beim Start eines Trainings auf dem Handy öffnet sich automatisch die (noch zu bauende) Companion-App auf der Uhr.
+  3. Die Uhr-App zeigt das laufende Training an (aktuelles Intervall/Minute, synchron zum Handy-Timer).
+  4. Die Uhr-App zeigt Vitaldaten an — Herzfrequenz auf jeden Fall, plus was die Venu 4 sonst sinnvoll liefert (HRV, Kalorien, o.ä. — noch offen, muss recherchiert werden).
+  5. Diese Vitaldaten sollen (ggf.) auch auf dem Handy während des Workouts angezeigt werden.
+  6. Vitaldaten sollen in der Trainingshistorie mitgespeichert werden.
+
+  Offene Fragen für die nächste Session: Auflösung der Vitaldaten in der Historie (pro Workout vs. pro Intervall), welche Datenfelder die Venu 4 über Connect IQ tatsächlich live herausgibt, MVP-Zuschnitt (was zuerst).
+
+  Technischer Hintergrund (bereits vorhandene Recherche, unten stehend): Live-Daten während des Trainings (Schritt 3–5) brauchen **Weg 1** (direkte Bluetooth-Verbindung über Connect IQ); **Weg 2** (Health API) liefert erst nach Cloud-Sync und eignet sich daher nicht für Live-Anzeige, ggf. aber ergänzend für reichhaltigere Nachträge in der Historie.
 
   Garmin-Apps werden in **Monkey C** (JS-ähnlich) über die **Connect IQ**-Plattform entwickelt (VS Code + Monkey C Extension + Connect IQ SDK + Java 8). Flutter kann nicht portiert werden, aber Flutter und Monkey C können über Bluetooth kommunizieren.
 
