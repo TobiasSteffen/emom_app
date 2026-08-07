@@ -31,9 +31,11 @@ Zwei Details sind aus reiner Dokumentenrecherche nicht zweifelsfrei zu klären (
 
 **Manuell, kein Repo-Code.** Diese Schritte macht Tobias selbst (Software-Installation, Account-Anlage, Hardware-Pairing) — keine Subagent-Ausführung möglich.
 
-- [ ] **Schritt 1: Connect IQ SDK installieren**
+- [ ] **Schritt 1: Connect IQ SDK installieren (inkl. Login)**
 
-  Auf https://developer.garmin.com/connect-iq/sdk/ den "Connect IQ SDK Manager" herunterladen und installieren. Über den SDK Manager das aktuelle Connect IQ SDK für den Zielgerätetyp (Venu 4) installieren.
+  Auf https://developer.garmin.com/connect-iq/sdk/ den "Connect IQ SDK Manager" herunterladen und installieren (kein Login zum Herunterladen nötig). Beim ersten Start fragt der SDK Manager nach einem Login — dafür reicht der **normale, bestehende Garmin-Connect-Account** (der auch mit der Uhr verknüpft ist), es ist **keine** separate Developer-Registrierung/-Freischaltung nötig (die auf garmin.com/forms/ciq-registration ist nur für die Store-Veröffentlichung relevant, nicht für lokales Sideload-Testing — verifiziert in Garmins "New Developer FAQ"). Über den SDK Manager danach das aktuelle Connect IQ SDK für den Zielgerätetyp (Venu 4) installieren.
+
+  Die Application-ID pro Watch-App (Task 2) wird rein lokal von der VS-Code-Extension als UUID generiert, keine Server-Registrierung nötig.
 
 - [ ] **Schritt 2: Java 8 sicherstellen**
 
@@ -43,11 +45,7 @@ Zwei Details sind aus reiner Dokumentenrecherche nicht zweifelsfrei zu klären (
 
   In VS Code die Extension "Monkey C" (Publisher: Garmin) installieren. Sie erkennt automatisch die vom SDK Manager installierte SDK-Version.
 
-- [ ] **Schritt 4: Garmin Connect Developer Account anlegen**
-
-  Auf https://developer.garmin.com mit dem bestehenden Garmin-Connect-Account anmelden bzw. Developer-Zugang freischalten. Wird für die App-Registrierung (Application-ID) in Task 2 gebraucht.
-
-- [ ] **Schritt 5: Venu 4 für Sideloading vorbereiten**
+- [ ] **Schritt 4: Venu 4 für Sideloading vorbereiten**
 
   Uhr per USB mit dem Rechner verbinden. Prüfen, ob sie als Massenspeicher-Laufwerk mit einem `GARMIN/APPS/`-Ordner erscheint (Standard-Sideload-Mechanismus bei Garmin-Uhren). Falls das Gerät keinen Massenspeicher-Modus anbietet oder ein gesonderter Entwicklermodus nötig ist: in den Garmin-Support-Seiten für die Venu 4 nachschlagen (Settings → System → USB-Modus, oder eine Tastenkombination beim Verbinden — Details modellabhängig, hier nicht verlässlich vorab bekannt) und Ergebnis kurz in diesem Plan-Dokument als Notiz ergänzen, bevor Task 3 angegangen wird.
 

@@ -38,10 +38,9 @@ Datenfluss ist für diesen Spike bewusst einseitig: Dart → Kotlin-Bridge → G
 
 ## Abschnitt 1 — Entwicklungsumgebung (einmaliges Setup, kein App-Code)
 
-- Connect IQ SDK Manager installieren (developer.garmin.com/connect-iq/sdk/)
+- Connect IQ SDK Manager installieren (developer.garmin.com/connect-iq/sdk/, kein Login zum Download nötig) — beim ersten Start des SDK Managers reicht der bestehende, normale Garmin-Connect-Account als Login; keine separate Developer-Registrierung nötig (die ist nur für eine Store-Veröffentlichung relevant, nicht für lokales Sideload-Testing)
 - VS Code + Monkey C Extension
 - Java 8 (JDK) für den Monkey-C-Compiler
-- Garmin Connect Developer Account anlegen — wird für die App-Registrierung/Application-ID gebraucht
 - Venu 4 in den Entwicklermodus versetzen, damit die Watch-App per USB sideloaded werden kann — die genauen Schritte dafür sind nicht Teil dieser Spec und werden beim Umsetzungsplan recherchiert, da die Venu 4 ein sehr neues Modell ist
 
 ---
@@ -137,7 +136,7 @@ Tap-Verhalten:
 
 ## Erfolgskriterien
 
-- Entwicklungsumgebung (SDK, VS Code Extension, Developer Account) eingerichtet.
+- Entwicklungsumgebung (SDK, VS Code Extension) eingerichtet.
 - Watch-App baut und läuft im Simulator, zeigt „Hello World", OK-Button beendet sie.
 - Watch-App erfolgreich per USB auf die Venu 4 sideloaded.
 - Handy-App erkennt über `isWatchConnected()` korrekt den Verbindungsstatus der Uhr.
