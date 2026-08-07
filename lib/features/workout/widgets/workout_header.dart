@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/settings.dart';
 import '../../../core/theme/app_theme.dart';
+import 'garmin_header_icon.dart';
 
 class WorkoutHeader extends StatelessWidget {
   final int currentMinute;
@@ -52,6 +53,8 @@ class WorkoutHeader extends StatelessWidget {
               onTap: onHistory,
               child: Icon(Icons.history, color: AppTheme.textMuted, size: 22),
             ),
+            const SizedBox(width: 10),
+            GarminHeaderIcon(onSettings: onSettings),
             const SizedBox(width: 10),
             GestureDetector(
               onTap: onSettings,
