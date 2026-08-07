@@ -6,7 +6,9 @@ plugins {
 
 android {
     namespace = "com.example.emom_app"
-    compileSdk = flutter.compileSdkVersion
+    // permission_handler_android 14.x braucht compileSdk 37; flutter.compileSdkVersion
+    // liegt aktuell darunter (36) -- explizit ueberschrieben, backward-kompatibel.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

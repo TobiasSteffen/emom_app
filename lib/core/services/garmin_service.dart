@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,14 +21,24 @@ class GarminService {
 
   Future<bool> isWatchConnected() async {
     if (!await _ensureBluetoothPermissions()) return false;
-    final result = await _channel.invokeMethod<bool>('isWatchConnected');
-    return result ?? false;
+    try {
+      final result = await _channel.invokeMethod<bool>('isWatchConnected');
+      return result ?? false;
+    } on PlatformException catch (e) {
+      debugPrint('GarminService.isWatchConnected failed: ${e.code} ${e.message}');
+      return false;
+    }
   }
 
   Future<String> openWatchApp() async {
     if (!await _ensureBluetoothPermissions()) return 'permission_denied';
-    final result = await _channel.invokeMethod<String>('openWatchApp');
-    return result ?? 'error';
+    try {
+      final result = await _channel.invokeMethod<String>('openWatchApp');
+      return result ?? 'error';
+    } on PlatformException catch (e) {
+      debugPrint('GarminService.openWatchApp failed: ${e.code} ${e.message}');
+      return 'error';
+    }
   }
 
   Future<bool> hasEverConnected() async {
