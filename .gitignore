@@ -50,3 +50,6 @@ docs/*.pdf
 
 # Claude Code
 .claude/
+
+# Connect IQ watch app build output (garmin_watch_app/) — see CLAUDE.md for build workflow
+garmin_watch_app/bin/
