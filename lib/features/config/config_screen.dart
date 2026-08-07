@@ -5,6 +5,7 @@ import '../../core/models/settings.dart';
 import '../../core/providers/settings_provider.dart';
 import 'widgets/feedback_tab.dart';
 import 'equipment_catalog_screen.dart';
+import 'garmin_notifier.dart';
 
 class ConfigScreen extends ConsumerStatefulWidget {
   final int visitCount;
@@ -93,6 +94,79 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
               ),
             ),
           ),
+          const SizedBox(height: 24),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8, top: 4),
+            child: Text(
+              'GARMIN-UHR',
+              style: TextStyle(fontSize: 11, letterSpacing: 2, color: Colors.white24),
+            ),
+          ),
+          Builder(builder: (context) {
+            final connectionAsync = ref.watch(garminProvider);
+            final connected = connectionAsync.value?.connected ?? false;
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppTheme.surface,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        connected ? Icons.watch : Icons.watch_off,
+                        color: connected ? AppTheme.ok : AppTheme.danger,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          connected ? 'Uhr verbunden' : 'Uhr nicht verbunden',
+                          style: const TextStyle(color: Colors.white70, fontSize: 14),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () async {
+                        final status = await ref.read(garminProvider.notifier).openWatchApp();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Status: $status')),
+                          );
+                        }
+                      },
+                      child: const Text('Watch-App öffnen'),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'In der Hauptansicht anzeigen',
+                          style: const TextStyle(color: Colors.white70, fontSize: 14),
+                        ),
+                      ),
+                      Switch(
+                        value: _s.garminHeaderIconVisible,
+                        onChanged: (v) {
+                          setState(() => _s.garminHeaderIconVisible = v);
+                          _save();
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }),
           const SizedBox(height: 24),
           FeedbackTab(
             settings: _s,

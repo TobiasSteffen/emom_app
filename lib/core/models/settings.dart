@@ -26,6 +26,7 @@ class AppSettings {
   String alarmSoundFile;
   bool trainingReminderEnabled;
   int trainingReminderMinutes; // Minuten seit Mitternacht, Default 08:00
+  bool garminHeaderIconVisible;
 
   AppSettings({
     this.vibrationEnabled = true,
@@ -37,6 +38,7 @@ class AppSettings {
     this.alarmSoundFile = 'alarm.wav',
     this.trainingReminderEnabled = false,
     this.trainingReminderMinutes = 480,
+    this.garminHeaderIconVisible = false,
   });
 
   static Future<AppSettings> load() async {
@@ -52,6 +54,8 @@ class AppSettings {
       trainingReminderEnabled:
           prefs.getBool('trainingReminderEnabled') ?? false,
       trainingReminderMinutes: prefs.getInt('trainingReminderMinutes') ?? 480,
+      garminHeaderIconVisible:
+          prefs.getBool('garminHeaderIconVisible') ?? false,
     );
   }
 
@@ -66,5 +70,6 @@ class AppSettings {
     await prefs.setString('alarmSoundFile', alarmSoundFile);
     await prefs.setBool('trainingReminderEnabled', trainingReminderEnabled);
     await prefs.setInt('trainingReminderMinutes', trainingReminderMinutes);
+    await prefs.setBool('garminHeaderIconVisible', garminHeaderIconVisible);
   }
 }
