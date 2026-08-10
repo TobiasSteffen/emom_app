@@ -16,10 +16,10 @@ class GarminHeaderIcon extends ConsumerWidget {
     if (!visible) return const SizedBox.shrink();
 
     final status = ref.watch(garminProvider).value;
-    final connected = status?.connected ?? false;
     final everConnected = status?.everConnected ?? false;
+    final appRunning = status?.appRunning ?? false;
 
-    final Color color = connected
+    final Color color = appRunning
         ? AppTheme.ok
         : (everConnected ? AppTheme.danger : AppTheme.textMuted);
 

@@ -30,7 +30,7 @@ void main() {
       ProviderScope(
         overrides: [
           garminProvider.overrideWith(
-            () => _FakeGarminNotifier(connected: true, everConnected: true),
+            () => _FakeGarminNotifier(everConnected: true, appRunning: true),
           ),
         ],
         child: MaterialApp(
@@ -43,20 +43,20 @@ void main() {
     expect(find.byKey(const Key('garminHeaderIcon')), findsNothing);
   });
 
-  testWidgets('gruen wenn verbunden', (tester) async {
+  testWidgets('gruen wenn appRunning', (tester) async {
     await pump(
       tester,
-      _FakeGarminNotifier(connected: true, everConnected: true),
+      _FakeGarminNotifier(everConnected: true, appRunning: true),
       () {},
     );
     final icon = tester.widget<Icon>(find.byKey(const Key('garminHeaderIcon')));
     expect(icon.color, AppTheme.ok);
   });
 
-  testWidgets('rot wenn nicht verbunden aber schon mal verbunden gewesen', (tester) async {
+  testWidgets('rot wenn everConnected aber appRunning false', (tester) async {
     await pump(
       tester,
-      _FakeGarminNotifier(connected: false, everConnected: true),
+      _FakeGarminNotifier(everConnected: true, appRunning: false),
       () {},
     );
     final icon = tester.widget<Icon>(find.byKey(const Key('garminHeaderIcon')));
@@ -66,16 +66,30 @@ void main() {
   testWidgets('grau wenn noch nie verbunden', (tester) async {
     await pump(
       tester,
-      _FakeGarminNotifier(connected: false, everConnected: false),
+      _FakeGarminNotifier(everConnected: false, appRunning: false),
       () {},
     );
     final icon = tester.widget<Icon>(find.byKey(const Key('garminHeaderIcon')));
     expect(icon.color, AppTheme.textMuted);
   });
 
+  testWidgets('appRunning-Wechsel aktualisiert die Icon-Farbe live', (tester) async {
+    final fake = _FakeGarminNotifier(everConnected: true, appRunning: false);
+    await pump(tester, fake, () {});
+
+    var icon = tester.widget<Icon>(find.byKey(const Key('garminHeaderIcon')));
+    expect(icon.color, AppTheme.danger);
+
+    fake.setAppRunning(true);
+    await tester.pump();
+
+    icon = tester.widget<Icon>(find.byKey(const Key('garminHeaderIcon')));
+    expect(icon.color, AppTheme.ok);
+  });
+
   testWidgets('Tap bei Grau ruft onSettings auf, nicht openWatchApp', (tester) async {
     var settingsCalled = false;
-    final fake = _FakeGarminNotifier(connected: false, everConnected: false);
+    final fake = _FakeGarminNotifier(everConnected: false, appRunning: false);
     await pump(tester, fake, () => settingsCalled = true);
 
     await tester.tap(find.byKey(const Key('garminHeaderIcon')));
@@ -87,7 +101,7 @@ void main() {
 
   testWidgets('Tap bei Rot ruft openWatchApp auf, nicht onSettings', (tester) async {
     var settingsCalled = false;
-    final fake = _FakeGarminNotifier(connected: false, everConnected: true);
+    final fake = _FakeGarminNotifier(everConnected: true, appRunning: false);
     await pump(tester, fake, () => settingsCalled = true);
 
     await tester.tap(find.byKey(const Key('garminHeaderIcon')));
@@ -99,19 +113,34 @@ void main() {
 }
 
 class _FakeGarminNotifier extends GarminNotifier {
-  final bool connected;
   final bool everConnected;
+  final bool appRunning;
   bool openWatchAppCalled = false;
 
-  _FakeGarminNotifier({required this.connected, required this.everConnected});
+  _FakeGarminNotifier({required this.everConnected, required this.appRunning});
 
   @override
-  Future<GarminConnectionStatus> build() async =>
-      GarminConnectionStatus(connected: connected, everConnected: everConnected);
+  Future<GarminConnectionStatus> build() async => GarminConnectionStatus(
+        connected: everConnected,
+        everConnected: everConnected,
+        appRunning: appRunning,
+      );
 
   @override
   Future<String> openWatchApp() async {
     openWatchAppCalled = true;
     return 'launched';
+  }
+
+  /// Simuliert ein eingehendes "opened"/"closed"-Event fuer Widget-Tests,
+  /// ohne echte Plattform-Kanaele zu mocken.
+  void setAppRunning(bool value) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(GarminConnectionStatus(
+      connected: current.connected,
+      everConnected: current.everConnected,
+      appRunning: value,
+    ));
   }
 }
