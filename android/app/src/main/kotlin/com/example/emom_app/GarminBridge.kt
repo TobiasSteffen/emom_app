@@ -109,23 +109,50 @@ class GarminBridge(private val context: Context) {
         }
     }
 
+    // connectIQ.registerForAppEvents() vertraegt, wie ensureSdkReady()/initialize(),
+    // keine wiederholte Registrierung pro Prozess -- registerAppEventListener() kann
+    // aber ueber EventChannel.onListen beliebig oft neu aufgerufen werden (z.B. bei
+    // jedem Oeffnen der Einstellungen, siehe Nachtrag oben). Diese drei Felder machen
+    // die Methode idempotent: appEventListenerRegistered/registrationInFlight sperren
+    // gegen wiederholte/parallele SDK-Registrierung, currentOnEvent erlaubt trotzdem,
+    // dass jeder Aufruf die Ziel-Callback aktualisiert.
+    private var appEventListenerRegistered = false
+    private var registrationInFlight = false
+    private var currentOnEvent: ((String) -> Unit)? = null
+
     fun registerAppEventListener(onEvent: (String) -> Unit) {
+        currentOnEvent = onEvent
+        if (appEventListenerRegistered || registrationInFlight) return
+        registrationInFlight = true
         ensureSdkReady { ready ->
-            if (!ready) return@ensureSdkReady
-            attemptRegisterAppEventListener(onEvent, attempt = 1)
+            if (!ready) {
+                registrationInFlight = false
+                Log.w(TAG, "registerAppEventListener: SDK nicht bereit, Registrierung abgebrochen")
+                return@ensureSdkReady
+            }
+            attemptRegisterAppEventListener(attempt = 1)
         }
     }
 
-    private fun attemptRegisterAppEventListener(onEvent: (String) -> Unit, attempt: Int) {
+    // Kein SDK-Unregister -- die einmalige Connect-IQ-Registrierung bleibt fuer die
+    // Prozesslaufzeit bestehen (siehe oben). Das hier trennt nur die Weiterleitung an
+    // den aktuellen EventSink, damit Events nach EventChannel.onCancel nicht an einen
+    // bereits geschlossenen Sink gehen.
+    fun unregisterAppEventListener() {
+        currentOnEvent = null
+    }
+
+    private fun attemptRegisterAppEventListener(attempt: Int) {
         val devices = connectIQ.connectedDevices
         val device: IQDevice? = devices?.firstOrNull()
         if (device == null) {
             if (attempt >= REGISTER_MAX_ATTEMPTS) {
+                registrationInFlight = false
                 Log.w(TAG, "registerAppEventListener: kein Geraet nach $attempt Versuchen, gebe auf")
                 return
             }
             Handler(Looper.getMainLooper()).postDelayed({
-                attemptRegisterAppEventListener(onEvent, attempt + 1)
+                attemptRegisterAppEventListener(attempt + 1)
             }, REGISTER_RETRY_DELAY_MS)
             return
         }
@@ -145,22 +172,30 @@ class GarminBridge(private val context: Context) {
                                     return
                                 }
                                 val payload = message.firstOrNull() as? String ?: return
-                                onEvent(payload)
+                                currentOnEvent?.invoke(payload)
                             }
                         })
+                        appEventListenerRegistered = true
+                        registrationInFlight = false
+                        Log.i(TAG, "registerAppEventListener: erfolgreich registriert")
                     } catch (e: InvalidStateException) {
+                        registrationInFlight = false
                         Log.e(TAG, "registerForAppEvents failed", e)
                     } catch (e: ServiceUnavailableException) {
+                        registrationInFlight = false
                         Log.e(TAG, "registerForAppEvents failed", e)
                     }
                 }
                 override fun onApplicationNotInstalled(applicationId: String) {
+                    registrationInFlight = false
                     Log.w(TAG, "App-Event-Registrierung: Watch-App nicht installiert")
                 }
             })
         } catch (e: InvalidStateException) {
+            registrationInFlight = false
             Log.e(TAG, "getApplicationInfo failed", e)
         } catch (e: ServiceUnavailableException) {
+            registrationInFlight = false
             Log.e(TAG, "getApplicationInfo failed", e)
         }
     }
