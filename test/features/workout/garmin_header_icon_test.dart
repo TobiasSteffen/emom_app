@@ -43,7 +43,7 @@ void main() {
     expect(find.byKey(const Key('garminHeaderIcon')), findsNothing);
   });
 
-  testWidgets('gruen wenn appRunning', (tester) async {
+  testWidgets('gruen wenn watchAppStatus running ist', (tester) async {
     await pump(
       tester,
       _FakeGarminNotifier(everConnected: true, watchAppStatus: WatchAppStatus.running),
@@ -53,10 +53,20 @@ void main() {
     expect(icon.color, AppTheme.ok);
   });
 
-  testWidgets('rot wenn everConnected aber appRunning false', (tester) async {
+  testWidgets('rot wenn everConnected aber watchAppStatus notRunning', (tester) async {
     await pump(
       tester,
       _FakeGarminNotifier(everConnected: true, watchAppStatus: WatchAppStatus.notRunning),
+      () {},
+    );
+    final icon = tester.widget<Icon>(find.byKey(const Key('garminHeaderIcon')));
+    expect(icon.color, AppTheme.danger);
+  });
+
+  testWidgets('rot wenn everConnected aber watchAppStatus unknown', (tester) async {
+    await pump(
+      tester,
+      _FakeGarminNotifier(everConnected: true, watchAppStatus: WatchAppStatus.unknown),
       () {},
     );
     final icon = tester.widget<Icon>(find.byKey(const Key('garminHeaderIcon')));
@@ -73,7 +83,7 @@ void main() {
     expect(icon.color, AppTheme.textMuted);
   });
 
-  testWidgets('appRunning-Wechsel aktualisiert die Icon-Farbe live', (tester) async {
+  testWidgets('watchAppStatus-Wechsel aktualisiert die Icon-Farbe live', (tester) async {
     final fake = _FakeGarminNotifier(everConnected: true, watchAppStatus: WatchAppStatus.notRunning);
     await pump(tester, fake, () {});
 

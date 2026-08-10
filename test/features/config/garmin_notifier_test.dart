@@ -59,7 +59,7 @@ void main() {
         .setMockStreamHandler(eventChannel, null);
   });
 
-  test('appRunning wird durch "opened"/"closed"-Events live aktualisiert',
+  test('watchAppStatus wird durch "opened"/"closed"-Events live aktualisiert',
       () async {
     final container = ProviderContainer();
     addTearDown(container.dispose);
@@ -78,7 +78,7 @@ void main() {
     expect(container.read(garminProvider).value?.watchAppStatus, WatchAppStatus.notRunning);
   });
 
-  test('openWatchApp() ueberschreibt den laufenden appRunning-Wert nicht',
+  test('openWatchApp() ueberschreibt den laufenden watchAppStatus-Wert nicht',
       () async {
     final container = ProviderContainer();
     addTearDown(container.dispose);
