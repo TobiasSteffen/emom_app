@@ -1,4 +1,5 @@
 import Toybox.Application;
+import Toybox.Communications;
 import Toybox.Lang;
 import Toybox.WatchUi;
 
@@ -10,10 +11,12 @@ class garmin_watch_appApp extends Application.AppBase {
 
     // onStart() is called on application start up
     function onStart(state as Dictionary?) as Void {
+        Communications.transmit("opened", {}, new AppStatusListener());
     }
 
     // onStop() is called when your application is exiting
     function onStop(state as Dictionary?) as Void {
+        Communications.transmit("closed", {}, new AppStatusListener());
     }
 
     // Return the initial view of your application here
