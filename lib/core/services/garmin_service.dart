@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class GarminService {
   static const _channel = MethodChannel('com.example.emom_app/garmin');
   static const _everConnectedKey = 'garminHasEverConnected';
+  static const _eventChannel = EventChannel('com.example.emom_app/garmin_events');
 
   /// Bluetooth-Laufzeitberechtigungen (Android 12+/API 31+): im Manifest
   /// deklariert reicht nicht, sie muessen zusaetzlich zur Laufzeit angefragt
@@ -49,5 +50,15 @@ class GarminService {
   Future<void> markEverConnected() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_everConnectedKey, true);
+  }
+
+  /// Live-Ereignisse der Watch-App: `true` bei "opened", `false` bei
+  /// "closed". Unbekannte Payloads werden verworfen statt einen Fehler
+  /// zu werfen (best-effort BLE-Zustellung, siehe Design-Spec).
+  Stream<bool> watchAppRunningEvents() {
+    return _eventChannel
+        .receiveBroadcastStream()
+        .where((event) => event == 'opened' || event == 'closed')
+        .map((event) => event == 'opened');
   }
 }

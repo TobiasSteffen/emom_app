@@ -76,4 +76,47 @@ void main() {
     final serviceAfterRestart = GarminService();
     expect(await serviceAfterRestart.hasEverConnected(), true);
   });
+
+  group('watchAppRunningEvents', () {
+    const eventChannel = EventChannel('com.example.emom_app/garmin_events');
+
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockStreamHandler(eventChannel, null);
+    });
+
+    test('mappt "opened" auf true und "closed" auf false', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockStreamHandler(
+        eventChannel,
+        MockStreamHandler.inline(
+          onListen: (Object? arguments, MockStreamHandlerEventSink events) {
+            events.success('opened');
+            events.success('closed');
+          },
+        ),
+      );
+
+      final service = GarminService();
+      final results = await service.watchAppRunningEvents().take(2).toList();
+      expect(results, [true, false]);
+    });
+
+    test('ignoriert unbekannte Payloads', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockStreamHandler(
+        eventChannel,
+        MockStreamHandler.inline(
+          onListen: (Object? arguments, MockStreamHandlerEventSink events) {
+            events.success('garbage');
+            events.success('opened');
+          },
+        ),
+      );
+
+      final service = GarminService();
+      final result = await service.watchAppRunningEvents().first;
+      expect(result, true);
+    });
+  });
 }
