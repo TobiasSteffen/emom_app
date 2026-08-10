@@ -1,6 +1,8 @@
 package com.example.emom_app
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import com.garmin.android.connectiq.ConnectIQ
 import com.garmin.android.connectiq.IQApp
@@ -9,6 +11,8 @@ import com.garmin.android.connectiq.exception.InvalidStateException
 import com.garmin.android.connectiq.exception.ServiceUnavailableException
 
 private const val TAG = "GarminBridge"
+private const val REGISTER_MAX_ATTEMPTS = 5
+private const val REGISTER_RETRY_DELAY_MS = 2000L
 
 class GarminBridge(private val context: Context) {
 
@@ -108,43 +112,56 @@ class GarminBridge(private val context: Context) {
     fun registerAppEventListener(onEvent: (String) -> Unit) {
         ensureSdkReady { ready ->
             if (!ready) return@ensureSdkReady
-            val devices = connectIQ.connectedDevices
-            val device: IQDevice? = devices?.firstOrNull()
-            if (device == null) return@ensureSdkReady
-            try {
-                connectIQ.getApplicationInfo(watchAppId, device, object : ConnectIQ.IQApplicationInfoListener {
-                    override fun onApplicationInfoReceived(app: IQApp) {
-                        try {
-                            connectIQ.registerForAppEvents(device, app, object : ConnectIQ.IQApplicationEventListener {
-                                override fun onMessageReceived(
-                                    receivedDevice: IQDevice,
-                                    receivedApp: IQApp,
-                                    message: MutableList<Any>,
-                                    status: ConnectIQ.IQMessageStatus
-                                ) {
-                                    if (status != ConnectIQ.IQMessageStatus.SUCCESS) {
-                                        Log.w(TAG, "App-Event mit Fehlerstatus verworfen: $status")
-                                        return
-                                    }
-                                    val payload = message.firstOrNull() as? String ?: return
-                                    onEvent(payload)
-                                }
-                            })
-                        } catch (e: InvalidStateException) {
-                            Log.e(TAG, "registerForAppEvents failed", e)
-                        } catch (e: ServiceUnavailableException) {
-                            Log.e(TAG, "registerForAppEvents failed", e)
-                        }
-                    }
-                    override fun onApplicationNotInstalled(applicationId: String) {
-                        Log.w(TAG, "App-Event-Registrierung: Watch-App nicht installiert")
-                    }
-                })
-            } catch (e: InvalidStateException) {
-                Log.e(TAG, "getApplicationInfo failed", e)
-            } catch (e: ServiceUnavailableException) {
-                Log.e(TAG, "getApplicationInfo failed", e)
+            attemptRegisterAppEventListener(onEvent, attempt = 1)
+        }
+    }
+
+    private fun attemptRegisterAppEventListener(onEvent: (String) -> Unit, attempt: Int) {
+        val devices = connectIQ.connectedDevices
+        val device: IQDevice? = devices?.firstOrNull()
+        if (device == null) {
+            if (attempt >= REGISTER_MAX_ATTEMPTS) {
+                Log.w(TAG, "registerAppEventListener: kein Geraet nach $attempt Versuchen, gebe auf")
+                return
             }
+            Handler(Looper.getMainLooper()).postDelayed({
+                attemptRegisterAppEventListener(onEvent, attempt + 1)
+            }, REGISTER_RETRY_DELAY_MS)
+            return
+        }
+        try {
+            connectIQ.getApplicationInfo(watchAppId, device, object : ConnectIQ.IQApplicationInfoListener {
+                override fun onApplicationInfoReceived(app: IQApp) {
+                    try {
+                        connectIQ.registerForAppEvents(device, app, object : ConnectIQ.IQApplicationEventListener {
+                            override fun onMessageReceived(
+                                receivedDevice: IQDevice,
+                                receivedApp: IQApp,
+                                message: MutableList<Any>,
+                                status: ConnectIQ.IQMessageStatus
+                            ) {
+                                if (status != ConnectIQ.IQMessageStatus.SUCCESS) {
+                                    Log.w(TAG, "App-Event mit Fehlerstatus verworfen: $status")
+                                    return
+                                }
+                                val payload = message.firstOrNull() as? String ?: return
+                                onEvent(payload)
+                            }
+                        })
+                    } catch (e: InvalidStateException) {
+                        Log.e(TAG, "registerForAppEvents failed", e)
+                    } catch (e: ServiceUnavailableException) {
+                        Log.e(TAG, "registerForAppEvents failed", e)
+                    }
+                }
+                override fun onApplicationNotInstalled(applicationId: String) {
+                    Log.w(TAG, "App-Event-Registrierung: Watch-App nicht installiert")
+                }
+            })
+        } catch (e: InvalidStateException) {
+            Log.e(TAG, "getApplicationInfo failed", e)
+        } catch (e: ServiceUnavailableException) {
+            Log.e(TAG, "getApplicationInfo failed", e)
         }
     }
 }
