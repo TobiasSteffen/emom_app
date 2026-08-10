@@ -27,18 +27,10 @@ class MainActivity : FlutterActivity() {
                     bridge.registerAppEventListener { payload -> events.success(payload) }
                 }
 
-                // Kein Abmelden beim Connect-IQ-SDK -- registerForAppEvents()
-                // bleibt bewusst fuer die Prozesslaufzeit der App bestehen
-                // (GarminBridge.registerAppEventListener() ist idempotent,
-                // siehe dort). onCancel() stoppt hier nur das Weiterleiten an
-                // den jetzt geschlossenen EventSink, damit spaetere SDK-Events
-                // nicht gegen einen veralteten Sink aufgerufen werden; ein
-                // spaeteres onListen() (z.B. wenn garminProvider nach
-                // Dispose neu aufgebaut wird) haengt per
-                // registerAppEventListener() einfach einen neuen Sink ein,
-                // ohne die SDK-Registrierung zu wiederholen.
+                // Kein explizites Abmelden beim Connect-IQ-SDK -- der Listener
+                // lebt fuer die Prozesslaufzeit der App, siehe Design-Spec
+                // ("nur im Vordergrund", kein Hintergrund-Betrieb im Scope).
                 override fun onCancel(arguments: Any?) {
-                    bridge.unregisterAppEventListener()
                 }
             }
         )
