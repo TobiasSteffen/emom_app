@@ -903,3 +903,328 @@ App-Daten löschen oder auf einem frischen Testgerät installieren, Icon-Sichtba
 - [ ] **Step 7: Ergebnis festhalten**
 
 Falls Abweichungen von den Erwartungen auftreten (insbesondere bei Schritt 4 oder 5), das Ergebnis in `CLAUDE.md` unter "Garmin Watch Integration" ergänzen — nach demselben Muster wie die bereits dort dokumentierten, durch echte Geräte-Tests gefundenen Erkenntnisse.
+
+**Zwischenergebnis (2026-08-10):** Schritt 3 schlug reproduzierbar fehl — Icon reagierte nicht live auf Uhr-seitig gestartete/beendete Watch-App. Live-Debugging (Logcat, `superpowers:systematic-debugging`) fand die Ursache: `registerAppEventListener()` bricht beim App-Start endgültig ab, wenn `connectIQ.connectedDevices` in diesem Moment noch leer ist (bekannte Eventual-Consistency-Macke der SDK, siehe `CLAUDE.md`) — ohne Retry, siehe Design-Spec-Abschnitt "Korrektur nach Hardware-Verifikation (Task 7)". Tasks 8–9 beheben das (Kotlin-Retry + `WatchAppStatus`-Enum statt `appRunning: bool`, um die zuvor unsichtbare Unterscheidung "läuft nicht" vs. "wissen wir nicht" explizit zu machen). Schritt 3 wird nach Task 9 im Rahmen von Task 10 wiederholt; Schritte 4–7 bleiben bis dahin offen.
+
+---
+
+### Task 8: Kotlin — Retry bei leerer Geräteliste in `registerAppEventListener()`
+
+**Files:**
+- Modify: `android/app/src/main/kotlin/com/example/emom_app/GarminBridge.kt`
+
+**Interfaces:**
+- Consumes: nichts Neues.
+- Produces: `registerAppEventListener(onEvent: (String) -> Unit)` bleibt öffentlich unverändert (Signatur, Aufrufer in `MainActivity.kt` bleibt unberührt) — nur das interne Verhalten bei leerem Geräte-Ergebnis ändert sich von "sofort aufgeben" zu "gebunden mit Backoff wiederholen".
+
+Kein automatisierter Test (reiner Hardware-Wrapper, bestehende Konvention). Verifikation: Debug-Build + gezielte Logcat-Beobachtung (siehe Step 3).
+
+- [ ] **Step 1: Retry-Logik einbauen**
+
+In `android/app/src/main/kotlin/com/example/emom_app/GarminBridge.kt` die bestehende `registerAppEventListener`-Methode ersetzen. Neue Imports ergänzen (`android.os.Handler`, `android.os.Looper`), zwei Konstanten neben `TAG` einfügen:
+
+```kotlin
+private const val REGISTER_MAX_ATTEMPTS = 5
+private const val REGISTER_RETRY_DELAY_MS = 2000L
+```
+
+`registerAppEventListener` wird zu:
+
+```kotlin
+    fun registerAppEventListener(onEvent: (String) -> Unit) {
+        ensureSdkReady { ready ->
+            if (!ready) return@ensureSdkReady
+            attemptRegisterAppEventListener(onEvent, attempt = 1)
+        }
+    }
+
+    private fun attemptRegisterAppEventListener(onEvent: (String) -> Unit, attempt: Int) {
+        val devices = connectIQ.connectedDevices
+        val device: IQDevice? = devices?.firstOrNull()
+        if (device == null) {
+            if (attempt >= REGISTER_MAX_ATTEMPTS) {
+                Log.w(TAG, "registerAppEventListener: kein Geraet nach $attempt Versuchen, gebe auf")
+                return
+            }
+            Handler(Looper.getMainLooper()).postDelayed({
+                attemptRegisterAppEventListener(onEvent, attempt + 1)
+            }, REGISTER_RETRY_DELAY_MS)
+            return
+        }
+        try {
+            connectIQ.getApplicationInfo(watchAppId, device, object : ConnectIQ.IQApplicationInfoListener {
+                override fun onApplicationInfoReceived(app: IQApp) {
+                    try {
+                        connectIQ.registerForAppEvents(device, app, object : ConnectIQ.IQApplicationEventListener {
+                            override fun onMessageReceived(
+                                receivedDevice: IQDevice,
+                                receivedApp: IQApp,
+                                message: MutableList<Any>,
+                                status: ConnectIQ.IQMessageStatus
+                            ) {
+                                if (status != ConnectIQ.IQMessageStatus.SUCCESS) {
+                                    Log.w(TAG, "App-Event mit Fehlerstatus verworfen: $status")
+                                    return
+                                }
+                                val payload = message.firstOrNull() as? String ?: return
+                                onEvent(payload)
+                            }
+                        })
+                    } catch (e: InvalidStateException) {
+                        Log.e(TAG, "registerForAppEvents failed", e)
+                    } catch (e: ServiceUnavailableException) {
+                        Log.e(TAG, "registerForAppEvents failed", e)
+                    }
+                }
+                override fun onApplicationNotInstalled(applicationId: String) {
+                    Log.w(TAG, "App-Event-Registrierung: Watch-App nicht installiert")
+                }
+            })
+        } catch (e: InvalidStateException) {
+            Log.e(TAG, "getApplicationInfo failed", e)
+        } catch (e: ServiceUnavailableException) {
+            Log.e(TAG, "getApplicationInfo failed", e)
+        }
+    }
+```
+
+Die innere `try`/`catch`-Struktur (getApplicationInfo → registerForAppEvents → onMessageReceived) bleibt inhaltlich identisch zur bisherigen Implementierung — nur der Geräte-Lookup davor bekommt den Retry. `attempt = 1` beim ersten Aufruf, damit die Log-Meldung bei Erschöpfung ("kein Geraet nach 5 Versuchen") menschlich lesbar ist (nicht "nach 4").
+
+- [ ] **Step 2: Android-Debug-Build anstoßen**
+
+Run: `flutter build apk --debug`
+Expected: Build erfolgreich, keine Kotlin-Compile-Fehler.
+
+- [ ] **Step 3: Manuell verifizieren, dass der Retry greift**
+
+`adb logcat GarminBridge:D "*:S"` mitlaufen lassen, App auf einem Gerät starten, bei dem die Uhr erst *nach* dem App-Start verbindet (oder Airplane-Mode-Trick: Bluetooth kurz nach App-Start aktivieren). Erwartet: mehrere `Handler.postDelayed`-Versuche im Abstand von 2s sichtbar (indirekt — kein eigener Log pro Versuch nötig, aber `attemptRegisterAppEventListener` sollte spätestens beim nächsten erfolgreichen Versuch `registerForAppEvents` ohne Fehler durchlaufen). Mindestens: der ursprüngliche Bug (Registrierung bricht bei leerem Geräte-Ergebnis endgültig ab) ist behoben, wenn ein Uhr-seitig gestarteter Watch-App-Vorgang nach App-Kaltstart zuverlässig ankommt, auch wenn die Uhr erst 2-8s nach dem Handy-App-Start verbindet.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add android/app/src/main/kotlin/com/example/emom_app/GarminBridge.kt
+git commit -m "$(cat <<'EOF'
+fix(android): registerAppEventListener wiederholt bei leerer Geraeteliste
+
+connectIQ.connectedDevices ist beim App-Start oft noch leer (bekannte
+Eventual-Consistency-Macke der Connect-IQ-SDK, siehe CLAUDE.md). Bisher
+brach die App-Event-Registrierung dann endgueltig ab -- kein Listener
+fuer die gesamte Sitzung, siehe Design-Spec "Korrektur nach
+Hardware-Verifikation (Task 7)". Jetzt gebundener Retry mit Backoff
+(5 Versuche, 2s Abstand).
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+```
+
+---
+
+### Task 9: Dart — `WatchAppStatus`-Enum ersetzt `appRunning: bool`
+
+**Files:**
+- Modify: `lib/features/config/garmin_notifier.dart`
+- Modify: `test/features/config/garmin_notifier_test.dart`
+- Modify: `lib/features/workout/widgets/garmin_header_icon.dart`
+- Modify: `test/features/workout/garmin_header_icon_test.dart`
+- Generate: `lib/features/config/garmin_notifier.g.dart` (via build_runner — Signatur des Providers ändert sich nicht, aber sicherheitshalber regenerieren)
+
+**Interfaces:**
+- Consumes: `GarminService.watchAppRunningEvents()` (`Stream<bool>`, unverändert — Task 4 bleibt gültig, keine Änderung an `garmin_service.dart`).
+- Produces: neues `enum WatchAppStatus { unknown, running, notRunning }`; `GarminConnectionStatus.appRunning` (bool) wird durch `GarminConnectionStatus.watchAppStatus` (`WatchAppStatus`, Default `unknown`) ersetzt. Konsumiert von `garmin_header_icon.dart`.
+
+Siehe Design-Spec, Abschnitt "Korrektur nach Hardware-Verifikation (Task 7)", Korrektur 2, für die Begründung.
+
+- [ ] **Step 1: Failing Tests schreiben — `garmin_notifier_test.dart`**
+
+In `test/features/config/garmin_notifier_test.dart` beide bestehenden Tests anpassen (nicht neu schreiben, nur die Assertions):
+- `expect(initial.appRunning, false)` → `expect(initial.watchAppStatus, WatchAppStatus.unknown)`
+- `expect(container.read(garminProvider).value?.appRunning, true)` (nach `watchEvents.add('opened')`) → `expect(container.read(garminProvider).value?.watchAppStatus, WatchAppStatus.running)`
+- `expect(container.read(garminProvider).value?.appRunning, false)` (nach `watchEvents.add('closed')`) → `expect(container.read(garminProvider).value?.watchAppStatus, WatchAppStatus.notRunning)`
+- Im zweiten Test (`openWatchApp() ueberschreibt...`): `expect(container.read(garminProvider).value?.appRunning, true)` → `expect(container.read(garminProvider).value?.watchAppStatus, WatchAppStatus.running)`
+
+Import ergänzen falls `WatchAppStatus` nicht schon über den bestehenden `garmin_notifier.dart`-Import sichtbar ist (ist es, da gleiche Datei).
+
+- [ ] **Step 2: Tests ausführen, Fehlschlag bestätigen**
+
+Run: `flutter test test/features/config/garmin_notifier_test.dart`
+Expected: FAIL — `The getter 'watchAppStatus' isn't defined for the type 'GarminConnectionStatus'`.
+
+- [ ] **Step 3: `garmin_notifier.dart` implementieren**
+
+Vollständiger neuer Inhalt von `lib/features/config/garmin_notifier.dart`:
+
+```dart
+import 'dart:async';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import '../../core/services/garmin_service.dart';
+
+part 'garmin_notifier.g.dart';
+
+enum WatchAppStatus { unknown, running, notRunning }
+
+class GarminConnectionStatus {
+  final bool connected;
+  final bool everConnected;
+  final WatchAppStatus watchAppStatus;
+
+  const GarminConnectionStatus({
+    required this.connected,
+    required this.everConnected,
+    this.watchAppStatus = WatchAppStatus.unknown,
+  });
+}
+
+@riverpod
+class GarminNotifier extends _$GarminNotifier {
+  final GarminService _service = GarminService();
+  StreamSubscription<bool>? _appRunningSub;
+
+  @override
+  Future<GarminConnectionStatus> build() async {
+    final connected = await _service.isWatchConnected();
+    if (connected) {
+      await _service.markEverConnected();
+    }
+    final everConnected = await _service.hasEverConnected();
+
+    _appRunningSub?.cancel();
+    _appRunningSub = _service.watchAppRunningEvents().listen((running) {
+      final current = state.value;
+      if (current == null) return;
+      state = AsyncData(GarminConnectionStatus(
+        connected: current.connected,
+        everConnected: current.everConnected,
+        watchAppStatus: running ? WatchAppStatus.running : WatchAppStatus.notRunning,
+      ));
+    });
+    ref.onDispose(() => _appRunningSub?.cancel());
+
+    return GarminConnectionStatus(connected: connected, everConnected: everConnected);
+  }
+
+  /// Fragt den Bluetooth-Status neu ab und liefert das Ergebnis von
+  /// openWatchApp() zurueck, OHNE den Notifier per invalidateSelf() neu
+  /// aufzubauen -- das wuerde die watchAppStatus-Stream-Subscription aus
+  /// build() abreissen und neu aufsetzen, mit einer Event-Luecke genau in
+  /// dem Moment, in dem die gerade gestartete Watch-App ihr "opened"
+  /// sendet (siehe Design-Spec, Architektur Punkt 5).
+  Future<String> openWatchApp() async {
+    final status = await _service.openWatchApp();
+    final connected = await _service.isWatchConnected();
+    if (connected) {
+      await _service.markEverConnected();
+    }
+    final everConnected = await _service.hasEverConnected();
+    final watchAppStatus = state.value?.watchAppStatus ?? WatchAppStatus.unknown;
+    state = AsyncData(GarminConnectionStatus(
+      connected: connected,
+      everConnected: everConnected,
+      watchAppStatus: watchAppStatus,
+    ));
+    return status;
+  }
+}
+```
+
+- [ ] **Step 4: `.g.dart` regenerieren**
+
+Run: `dart run build_runner build --delete-conflicting-outputs`
+
+- [ ] **Step 5: `garmin_notifier_test.dart` grün bestätigen**
+
+Run: `flutter test test/features/config/garmin_notifier_test.dart`
+Expected: PASS.
+
+- [ ] **Step 6: `garmin_header_icon.dart` anpassen**
+
+Zeilen 18-24 ersetzen:
+
+Alt:
+```dart
+    final status = ref.watch(garminProvider).value;
+    final everConnected = status?.everConnected ?? false;
+    final appRunning = status?.appRunning ?? false;
+
+    final Color color = appRunning
+        ? AppTheme.ok
+        : (everConnected ? AppTheme.danger : AppTheme.textMuted);
+```
+
+Neu:
+```dart
+    final status = ref.watch(garminProvider).value;
+    final everConnected = status?.everConnected ?? false;
+    final watchAppStatus = status?.watchAppStatus ?? WatchAppStatus.unknown;
+
+    final Color color = watchAppStatus == WatchAppStatus.running
+        ? AppTheme.ok
+        : (everConnected ? AppTheme.danger : AppTheme.textMuted);
+```
+
+(`WatchAppStatus` ist über den bestehenden `import '../../config/garmin_notifier.dart';` bereits sichtbar.)
+
+- [ ] **Step 7: `garmin_header_icon_test.dart` anpassen**
+
+In `test/features/workout/garmin_header_icon_test.dart` die `_FakeGarminNotifier`-Klasse und alle Aufrufstellen von `appRunning: <bool>` auf `watchAppStatus: <WatchAppStatus>` umstellen:
+- Klassenfeld: `final bool appRunning;` → `final WatchAppStatus watchAppStatus;`
+- `build()`: `appRunning: appRunning` → `watchAppStatus: watchAppStatus`
+- `setAppRunning(bool value)` → `setWatchAppStatus(WatchAppStatus value)`, Body entsprechend (`appRunning: value` → `watchAppStatus: value`)
+- Jede Testinstanziierung `_FakeGarminNotifier(everConnected: ..., appRunning: true)` → `_FakeGarminNotifier(everConnected: ..., watchAppStatus: WatchAppStatus.running)` (bzw. `WatchAppStatus.notRunning` für `appRunning: false`)
+- Im Live-Update-Test: `fake.setAppRunning(true)` → `fake.setWatchAppStatus(WatchAppStatus.running)`
+- Import ergänzen: `import 'package:emom_app/features/config/garmin_notifier.dart';` ist bereits vorhanden (für `GarminNotifier`), `WatchAppStatus` kommt darüber mit.
+
+- [ ] **Step 8: Volle Suite + Analyzer**
+
+Run: `flutter test`
+Expected: alle Tests grün.
+
+Run: `flutter analyze`
+Expected: No issues found!
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add lib/features/config/garmin_notifier.dart lib/features/config/garmin_notifier.g.dart test/features/config/garmin_notifier_test.dart lib/features/workout/widgets/garmin_header_icon.dart test/features/workout/garmin_header_icon_test.dart
+git commit -m "$(cat <<'EOF'
+refactor(dart): WatchAppStatus-Enum ersetzt appRunning: bool
+
+appRunning=false kollabierte bisher "wissen wir: laeuft nicht" und
+"wissen wir nicht" (z.B. Listener-Registrierung fehlgeschlagen) in
+denselben Wert -- genau das machte den in Task 7 gefundenen
+Registrierungs-Bug unsichtbar. WatchAppStatus{unknown,running,notRunning}
+macht die Unterscheidung explizit, ohne ein zusaetzliches, von appRunning
+abhaengiges Bool-Feld einzufuehren (siehe Design-Spec, Korrektur 2).
+Icon-Logik faengt unknown/notRunning weiterhin gleich (rot) ab --
+bewusste UX-Vereinfachung, jetzt aber auf Basis eines eindeutigen Werts.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+EOF
+)"
+```
+
+---
+
+### Task 10: Manuelle Verifikation auf echter Hardware wiederholen
+
+**Files:** keine (reine Verifikation, kein Repo-Code)
+
+- [ ] **Step 1: Debug-APK mit Tasks 8+9 installieren**
+
+`flutter build apk --debug`, auf Testgerät installieren (bereits per ADB verbunden), App-Prozess vorher beenden (`adb shell am force-stop com.example.emom_app`) für einen sauberen Kaltstart-Test.
+
+- [ ] **Step 2: Task 7 Schritt 3 wiederholen — Grundfall**
+
+Watch-App direkt auf der Uhr öffnen (nicht per Tap auf dem Handy). Erwartet: Icon wird auch bei Uhr-seitig initiiertem Start zeitnah grün — das ist der eigentliche Regressionstest für den Task-8-Fix. Watch-App auf der Uhr schließen (OK-Button). Erwartet: Icon wird zeitnah rot.
+
+- [ ] **Step 3: Kaltstart-Timing-Fall gezielt prüfen**
+
+Handy-App-Prozess beenden, Bluetooth zwischen Handy und Uhr kurz trennen (z.B. Flugmodus An/Aus auf der Uhr), Handy-App neu starten während die Uhr noch nicht verbunden ist, dann Uhr verbinden lassen. Erwartet: Registrierung gelingt trotzdem (Retry greift), sobald die Verbindung steht — kein dauerhaft blockierter Zustand mehr.
+
+- [ ] **Step 4: Task 7 Schritte 4-6 durchführen**
+
+Passiver Bildschirm-Timeout, Handfläche/Zurück-Swipe, grauer Zustand — wie in Task 7 beschrieben.
+
+- [ ] **Step 5: Ergebnis festhalten**
+
+Ergebnis (inkl. etwaiger Abweichungen) in `CLAUDE.md` unter "Garmin Watch Integration" ergänzen, analog zu den dort bereits dokumentierten Hardware-Erkenntnissen.
