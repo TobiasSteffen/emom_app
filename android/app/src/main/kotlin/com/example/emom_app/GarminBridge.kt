@@ -109,23 +109,48 @@ class GarminBridge(private val context: Context) {
         }
     }
 
+    // Die SDK vertraegt auch registerForAppEvents() nur einmal pro Prozess --
+    // registerAppEventListener() kann beliebig oft aufgerufen werden (jedes
+    // EventChannel.onListen auf Dart-Seite loest einen Aufruf aus, siehe
+    // MainActivity.kt), aber connectIQ.registerForAppEvents() selbst darf nur
+    // beim allerersten erfolgreichen Durchlauf passieren. Weitere Aufrufe
+    // tauschen nur noch currentOnEvent aus.
+    private var appEventListenerRegistered = false
+    private var registrationInFlight = false
+    private var currentOnEvent: ((String) -> Unit)? = null
+
     fun registerAppEventListener(onEvent: (String) -> Unit) {
+        currentOnEvent = onEvent
+        if (appEventListenerRegistered || registrationInFlight) return
+        registrationInFlight = true
         ensureSdkReady { ready ->
-            if (!ready) return@ensureSdkReady
-            attemptRegisterAppEventListener(onEvent, attempt = 1)
+            if (!ready) {
+                registrationInFlight = false
+                Log.w(TAG, "registerAppEventListener: SDK nicht bereit, Registrierung abgebrochen")
+                return@ensureSdkReady
+            }
+            attemptRegisterAppEventListener(attempt = 1)
         }
     }
 
-    private fun attemptRegisterAppEventListener(onEvent: (String) -> Unit, attempt: Int) {
+    // Meldet nicht beim Connect-IQ-SDK ab (registerForAppEvents() bleibt fuer
+    // die Prozesslaufzeit bestehen, siehe oben) -- stoppt nur das Weiterleiten
+    // an einen inzwischen geschlossenen/veralteten EventSink.
+    fun unregisterAppEventListener() {
+        currentOnEvent = null
+    }
+
+    private fun attemptRegisterAppEventListener(attempt: Int) {
         val devices = connectIQ.connectedDevices
         val device: IQDevice? = devices?.firstOrNull()
         if (device == null) {
             if (attempt >= REGISTER_MAX_ATTEMPTS) {
+                registrationInFlight = false
                 Log.w(TAG, "registerAppEventListener: kein Geraet nach $attempt Versuchen, gebe auf")
                 return
             }
             Handler(Looper.getMainLooper()).postDelayed({
-                attemptRegisterAppEventListener(onEvent, attempt + 1)
+                attemptRegisterAppEventListener(attempt + 1)
             }, REGISTER_RETRY_DELAY_MS)
             return
         }
@@ -145,22 +170,30 @@ class GarminBridge(private val context: Context) {
                                     return
                                 }
                                 val payload = message.firstOrNull() as? String ?: return
-                                onEvent(payload)
+                                currentOnEvent?.invoke(payload)
                             }
                         })
+                        appEventListenerRegistered = true
+                        registrationInFlight = false
+                        Log.i(TAG, "registerAppEventListener: erfolgreich registriert")
                     } catch (e: InvalidStateException) {
+                        registrationInFlight = false
                         Log.e(TAG, "registerForAppEvents failed", e)
                     } catch (e: ServiceUnavailableException) {
+                        registrationInFlight = false
                         Log.e(TAG, "registerForAppEvents failed", e)
                     }
                 }
                 override fun onApplicationNotInstalled(applicationId: String) {
+                    registrationInFlight = false
                     Log.w(TAG, "App-Event-Registrierung: Watch-App nicht installiert")
                 }
             })
         } catch (e: InvalidStateException) {
+            registrationInFlight = false
             Log.e(TAG, "getApplicationInfo failed", e)
         } catch (e: ServiceUnavailableException) {
+            registrationInFlight = false
             Log.e(TAG, "getApplicationInfo failed", e)
         }
     }
