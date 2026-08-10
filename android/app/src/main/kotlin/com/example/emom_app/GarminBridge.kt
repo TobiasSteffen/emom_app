@@ -104,4 +104,47 @@ class GarminBridge(private val context: Context) {
             }
         }
     }
+
+    fun registerAppEventListener(onEvent: (String) -> Unit) {
+        ensureSdkReady { ready ->
+            if (!ready) return@ensureSdkReady
+            val devices = connectIQ.connectedDevices
+            val device: IQDevice? = devices?.firstOrNull()
+            if (device == null) return@ensureSdkReady
+            try {
+                connectIQ.getApplicationInfo(watchAppId, device, object : ConnectIQ.IQApplicationInfoListener {
+                    override fun onApplicationInfoReceived(app: IQApp) {
+                        try {
+                            connectIQ.registerForAppEvents(device, app, object : ConnectIQ.IQApplicationEventListener {
+                                override fun onMessageReceived(
+                                    receivedDevice: IQDevice,
+                                    receivedApp: IQApp,
+                                    message: MutableList<Any>,
+                                    status: ConnectIQ.IQMessageStatus
+                                ) {
+                                    if (status != ConnectIQ.IQMessageStatus.SUCCESS) {
+                                        Log.w(TAG, "App-Event mit Fehlerstatus verworfen: $status")
+                                        return
+                                    }
+                                    val payload = message.firstOrNull() as? String ?: return
+                                    onEvent(payload)
+                                }
+                            })
+                        } catch (e: InvalidStateException) {
+                            Log.e(TAG, "registerForAppEvents failed", e)
+                        } catch (e: ServiceUnavailableException) {
+                            Log.e(TAG, "registerForAppEvents failed", e)
+                        }
+                    }
+                    override fun onApplicationNotInstalled(applicationId: String) {
+                        Log.w(TAG, "App-Event-Registrierung: Watch-App nicht installiert")
+                    }
+                })
+            } catch (e: InvalidStateException) {
+                Log.e(TAG, "getApplicationInfo failed", e)
+            } catch (e: ServiceUnavailableException) {
+                Log.e(TAG, "getApplicationInfo failed", e)
+            }
+        }
+    }
 }
