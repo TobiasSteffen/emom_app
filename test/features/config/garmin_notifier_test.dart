@@ -63,6 +63,8 @@ void main() {
       () async {
     final container = ProviderContainer();
     addTearDown(container.dispose);
+    final sub = container.listen(garminProvider, (_, _) {});
+    addTearDown(sub.close);
 
     final initial = await container.read(garminProvider.future);
     expect(initial.appRunning, false);
@@ -80,6 +82,8 @@ void main() {
       () async {
     final container = ProviderContainer();
     addTearDown(container.dispose);
+    final sub = container.listen(garminProvider, (_, _) {});
+    addTearDown(sub.close);
 
     await container.read(garminProvider.future);
     watchEvents.add('opened');

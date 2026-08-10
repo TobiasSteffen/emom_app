@@ -20,7 +20,7 @@ final class GarminNotifierProvider
         argument: null,
         retry: null,
         name: r'garminProvider',
-        isAutoDispose: false,
+        isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -33,7 +33,7 @@ final class GarminNotifierProvider
   GarminNotifier create() => GarminNotifier();
 }
 
-String _$garminNotifierHash() => r'adab121eb93852275463c7c7fdb697ddc19f0401';
+String _$garminNotifierHash() => r'2defe83e58eaec7fa8839548264d2adf3191b690';
 
 abstract class _$GarminNotifier extends $AsyncNotifier<GarminConnectionStatus> {
   FutureOr<GarminConnectionStatus> build();

@@ -16,15 +16,7 @@ class GarminConnectionStatus {
   });
 }
 
-// keepAlive: true -- die appRunning-Stream-Subscription aus build() muss
-// unabhaengig davon leben, ob gerade ein Widget den Provider watched (die
-// Watch-App kann jederzeit "opened"/"closed" senden). Mit autoDispose
-// (dem @riverpod-Default) wuerde der Provider ohne aktiven Listener sofort
-// wieder verworfen und die Subscription mitsamt Events verloren gehen --
-// bestaetigt durch die beiden Tests in garmin_notifier_test.dart, die ohne
-// keepAlive fehlschlagen (state faellt nach dem ersten read() auf
-// AsyncLoading zurueck).
-@Riverpod(keepAlive: true)
+@riverpod
 class GarminNotifier extends _$GarminNotifier {
   final GarminService _service = GarminService();
   StreamSubscription<bool>? _appRunningSub;
