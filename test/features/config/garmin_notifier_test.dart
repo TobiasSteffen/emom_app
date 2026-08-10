@@ -67,15 +67,15 @@ void main() {
     addTearDown(sub.close);
 
     final initial = await container.read(garminProvider.future);
-    expect(initial.appRunning, false);
+    expect(initial.watchAppStatus, WatchAppStatus.unknown);
 
     watchEvents.add('opened');
     await Future<void>.delayed(Duration.zero);
-    expect(container.read(garminProvider).value?.appRunning, true);
+    expect(container.read(garminProvider).value?.watchAppStatus, WatchAppStatus.running);
 
     watchEvents.add('closed');
     await Future<void>.delayed(Duration.zero);
-    expect(container.read(garminProvider).value?.appRunning, false);
+    expect(container.read(garminProvider).value?.watchAppStatus, WatchAppStatus.notRunning);
   });
 
   test('openWatchApp() ueberschreibt den laufenden appRunning-Wert nicht',
@@ -88,10 +88,10 @@ void main() {
     await container.read(garminProvider.future);
     watchEvents.add('opened');
     await Future<void>.delayed(Duration.zero);
-    expect(container.read(garminProvider).value?.appRunning, true);
+    expect(container.read(garminProvider).value?.watchAppStatus, WatchAppStatus.running);
 
     await container.read(garminProvider.notifier).openWatchApp();
 
-    expect(container.read(garminProvider).value?.appRunning, true);
+    expect(container.read(garminProvider).value?.watchAppStatus, WatchAppStatus.running);
   });
 }

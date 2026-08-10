@@ -4,15 +4,17 @@ import '../../core/services/garmin_service.dart';
 
 part 'garmin_notifier.g.dart';
 
+enum WatchAppStatus { unknown, running, notRunning }
+
 class GarminConnectionStatus {
   final bool connected;
   final bool everConnected;
-  final bool appRunning;
+  final WatchAppStatus watchAppStatus;
 
   const GarminConnectionStatus({
     required this.connected,
     required this.everConnected,
-    this.appRunning = false,
+    this.watchAppStatus = WatchAppStatus.unknown,
   });
 }
 
@@ -36,7 +38,7 @@ class GarminNotifier extends _$GarminNotifier {
       state = AsyncData(GarminConnectionStatus(
         connected: current.connected,
         everConnected: current.everConnected,
-        appRunning: running,
+        watchAppStatus: running ? WatchAppStatus.running : WatchAppStatus.notRunning,
       ));
     });
     ref.onDispose(() => _appRunningSub?.cancel());
@@ -46,7 +48,7 @@ class GarminNotifier extends _$GarminNotifier {
 
   /// Fragt den Bluetooth-Status neu ab und liefert das Ergebnis von
   /// openWatchApp() zurueck, OHNE den Notifier per invalidateSelf() neu
-  /// aufzubauen -- das wuerde die appRunning-Stream-Subscription aus
+  /// aufzubauen -- das wuerde die watchAppStatus-Stream-Subscription aus
   /// build() abreissen und neu aufsetzen, mit einer Event-Luecke genau in
   /// dem Moment, in dem die gerade gestartete Watch-App ihr "opened"
   /// sendet (siehe Design-Spec, Architektur Punkt 5).
@@ -57,11 +59,11 @@ class GarminNotifier extends _$GarminNotifier {
       await _service.markEverConnected();
     }
     final everConnected = await _service.hasEverConnected();
-    final appRunning = state.value?.appRunning ?? false;
+    final watchAppStatus = state.value?.watchAppStatus ?? WatchAppStatus.unknown;
     state = AsyncData(GarminConnectionStatus(
       connected: connected,
       everConnected: everConnected,
-      appRunning: appRunning,
+      watchAppStatus: watchAppStatus,
     ));
     return status;
   }

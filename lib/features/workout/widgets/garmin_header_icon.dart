@@ -17,9 +17,9 @@ class GarminHeaderIcon extends ConsumerWidget {
 
     final status = ref.watch(garminProvider).value;
     final everConnected = status?.everConnected ?? false;
-    final appRunning = status?.appRunning ?? false;
+    final watchAppStatus = status?.watchAppStatus ?? WatchAppStatus.unknown;
 
-    final Color color = appRunning
+    final Color color = watchAppStatus == WatchAppStatus.running
         ? AppTheme.ok
         : (everConnected ? AppTheme.danger : AppTheme.textMuted);
 
