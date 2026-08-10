@@ -1233,13 +1233,13 @@ Ergebnis (inkl. etwaiger Abweichungen) in `CLAUDE.md` unter "Garmin Watch Integr
 
 ## Nachtrag: Whole-Branch-Review (2026-08-10)
 
-Nach Abschluss von Task 10 fand das abschließende Whole-Branch-Review (Opus, siehe SDD-Ledger) einen echten, cross-task-übergreifenden Bug, den keine der Einzel-Task-Reviews sehen konnte: `GarminBridge.registerAppEventListener()` wurde bislang implizit als "läuft genau einmal pro App-Sitzung" angenommen (Task 8's Review verließ sich explizit darauf). Tatsächlich läuft sie bei jedem `EventChannel.onListen` — und das feuert bei jedem neuen Watcher von `garminProvider`, nicht nur beim App-Start.
+Nach Abschluss von Task 10 fand das abschließende Whole-Branch-Review (Opus, Findings archiviert in `.superpowers/sdd/2026-08-08-garmin-app-status-rueckkanal/final-review-fix-report.md` — der SDD-Ledger `progress.md` bekommt erst mit Abschluss von Task 11-13 einen eigenen Eintrag dafür) einen echten, cross-task-übergreifenden Bug, den keine der Einzel-Task-Reviews sehen konnte: `GarminBridge.registerAppEventListener()` wurde bislang implizit als "läuft genau einmal pro App-Sitzung" angenommen (Task 8's Review verließ sich explizit darauf). Tatsächlich läuft sie bei jedem `EventChannel.onListen` — und das feuert bei jedem neuen Watcher von `garminProvider`, nicht nur beim App-Start.
 
 **Warum das im Standardfall sogar der Normalfall ist:** `AppSettings.garminHeaderIconVisible` ist standardmäßig `false` (`lib/core/models/settings.dart:41`). Solange der Nutzer das nicht einschaltet, watcht `GarminHeaderIcon` `garminProvider` gar nicht (früher Return vor `ref.watch`, siehe `garmin_header_icon.dart:16`). Der einzige verbleibende Watcher ist dann `ConfigScreen` (`lib/features/config/config_screen.dart:106`, `ref.watch(garminProvider)`) — und der lebt nur so lange, wie der Einstellungen-Screen offen ist. Jedes Öffnen/Schließen der Einstellungen disposed und rebuildet `garminProvider` (bewusstes, korrektes Riverpod-Verhalten seit Task 5/9) — und mit jedem Rebuild ruft `build()` erneut `_service.watchAppRunningEvents().listen(...)` auf, was `EventChannel.onListen` erneut auslöst.
 
-**Konsequenz ohne Fix:** Jeder Einstellungen-Öffnen-Zyklus startet eine neue, nicht abgebrochene Retry-Kette (Task 8) und einen neuen `connectIQ.registerForAppEvents(...)`-Aufruf bei der SDK — ohne dass der vorherige je abgemeldet wird. Das ist ein unbegrenzt wachsender Listener-Leak für die Prozesslaufzeit, und (falls das Icon sichtbar ist) verliert `watchAppStatus` bei jedem Rebuild sein Wissen über den laufenden Zustand (Reset auf `unknown`), ohne sich von selbst zu heilen, bis die Watch-App das nächste Mal den Zustand wechselt.
+**Konsequenz ohne Fix, zweigeteilt:** (1) Jeder Einstellungen-Öffnen-Zyklus startet eine neue, nicht abgebrochene Retry-Kette (Task 8) und einen neuen `connectIQ.registerForAppEvents(...)`-Aufruf bei der SDK — ohne dass der vorherige je abgemeldet wird. Das ist ein unbegrenzt wachsender Listener-Leak für die Prozesslaufzeit. **Das behebt Task 11.** (2) Falls das Icon sichtbar ist, verliert `watchAppStatus` bei jedem Rebuild sein Wissen über den laufenden Zustand (Reset auf `unknown`), bis die Watch-App das nächste Mal den Zustand wechselt. **Das behebt Task 11 NICHT** — und muss es auch nicht: `ConfigScreen` zeigt `watchAppStatus` nirgends an (`config_screen.dart:106-131` liest nur `connected`), und solange das Icon sichtbar ist, ist `GarminHeaderIcon` über den dauerhaft gemounteten `workout_header.dart:57` ein permanenter Watcher — der Provider disposed dann gar nicht erst, das Rebuild-Szenario tritt für `watchAppStatus` in der Praxis nur ein, wenn das Icon ohnehin unsichtbar ist (dann sieht der Nutzer den Statusverlust auch nicht). Kein separater Task nötig, hier nur explizit festgehalten statt implizit vorausgesetzt.
 
-Drei Tasks beheben das (Code + Doku), plus zwei kleinere Nacharbeiten aus demselben Review. **Diese drei Tasks sind neu geschrieben und noch nicht implementiert — die Implementierung vom selben Tag, die versehentlich ohne vorherige Plan-Review direkt losimplementiert hatte, wurde zurückgerollt (Commit `539f212` revertet `942b132`).**
+Drei Tasks beheben den Listener-Leak (Code + Doku), plus zwei kleinere Nacharbeiten aus demselben Review. **Diese drei Tasks sind neu geschrieben und noch nicht implementiert — die Implementierung vom selben Tag, die versehentlich ohne vorherige Plan-Review direkt losimplementiert hatte, wurde zurückgerollt (Commit `539f212` revertet `942b132`), und dieser Plan-Nachtrag wurde vor der Implementierung von einem zweiten Agenten (Opus, max. Reasoning-Aufwand) gegengelesen — Korrekturen aus diesem Gegenlesen sind bereits eingearbeitet.**
 
 ---
 
@@ -1257,9 +1257,16 @@ Kein automatisierter Test (reiner Hardware-Wrapper, bestehende Konvention). Veri
 
 - [ ] **Step 1: `registerAppEventListener` und `attemptRegisterAppEventListener` in `GarminBridge.kt` ersetzen**
 
-Drei neue Instanzfelder direkt vor `fun registerAppEventListener` einfügen (nach der bestehenden `pendingCallbacks`-Deklaration bzw. an der Stelle, wo aktuell `fun registerAppEventListener` beginnt):
+Drei neue Instanzfelder direkt oberhalb von `fun registerAppEventListener` einfügen (`GarminBridge.kt:112`):
 
 ```kotlin
+    // connectIQ.registerForAppEvents() vertraegt, wie ensureSdkReady()/initialize(),
+    // keine wiederholte Registrierung pro Prozess -- registerAppEventListener() kann
+    // aber ueber EventChannel.onListen beliebig oft neu aufgerufen werden (z.B. bei
+    // jedem Oeffnen der Einstellungen, siehe Nachtrag oben). Diese drei Felder machen
+    // die Methode idempotent: appEventListenerRegistered/registrationInFlight sperren
+    // gegen wiederholte/parallele SDK-Registrierung, currentOnEvent erlaubt trotzdem,
+    // dass jeder Aufruf die Ziel-Callback aktualisiert.
     private var appEventListenerRegistered = false
     private var registrationInFlight = false
     private var currentOnEvent: ((String) -> Unit)? = null
@@ -1282,6 +1289,10 @@ Drei neue Instanzfelder direkt vor `fun registerAppEventListener` einfügen (nac
         }
     }
 
+    // Kein SDK-Unregister -- die einmalige Connect-IQ-Registrierung bleibt fuer die
+    // Prozesslaufzeit bestehen (siehe oben). Das hier trennt nur die Weiterleitung an
+    // den aktuellen EventSink, damit Events nach EventChannel.onCancel nicht an einen
+    // bereits geschlossenen Sink gehen.
     fun unregisterAppEventListener() {
         currentOnEvent = null
     }
@@ -1350,6 +1361,8 @@ Drei neue Instanzfelder direkt vor `fun registerAppEventListener` einfügen (nac
 - `onMessageReceived` liest `currentOnEvent` (Instanzfeld) statt eines beim Erstellen der Listener-Closure eingefangenen Parameters — dadurch wirken spätere `currentOnEvent`-Änderungen auch auf den bereits einmalig registrierten SDK-Listener.
 - `registrationInFlight` verhindert, dass ein zweiter Aufruf während einer laufenden Retry-Kette (Gerät noch nicht gefunden) eine parallele zweite Kette startet — beide Aufrufe teilen sich dieselbe Kette, nur die Ziel-Callback wird aktualisiert.
 - `registrationInFlight` wird in *jedem* Fehlerpfad (SDK nicht bereit, Retries erschöpft, `onApplicationNotInstalled`, beide Exception-Typen an beiden Stellen) zurückgesetzt, nie aber im Erfolgsfall (dort übernimmt `appEventListenerRegistered` dauerhaft die Sperre) — so kann ein späterer Aufruf nach einem endgültigen Fehlschlag erneut versuchen, aber nach einem Erfolg nie wieder eine zweite SDK-Registrierung auslösen.
+- **Threading-Prämisse (keine explizite Synchronisierung nötig):** alle drei Felder werden ausschließlich auf dem Main-Thread mutiert — `EventChannel.onListen`/`onCancel` laufen auf dem Platform-Thread, `Handler(Looper.getMainLooper())` postet explizit auf den Main-Looper, und die Connect-IQ-SDK liefert ihre Callbacks über intern registrierte `BroadcastReceiver` (Main-Thread per Default). Dieselbe unsynchronisierte Prämisse nutzt bereits das bestehende `ensureSdkReady()` (`sdkReady`/`initializing`/`pendingCallbacks`) — wäre sie falsch, wäre das schon vor diesem Task kaputt gewesen.
+- Zwei geerbte Restrisiken, kein Regressions-Risiko dieses Tasks: Falls `getApplicationInfo` niemals einen der beiden Callbacks aufruft, bleibt `registrationInFlight` dauerhaft `true` (identisches Verhaltensmuster wie das bestehende `openWatchApp`, dort haengt dann der Dart-`Future` — hier bleiben stattdessen künftige Registrierungsversuche aus). `appEventListenerRegistered` wird in `onSdkShutDown()` nicht zurückgesetzt — unkritisch, weil eine erneute `initialize()` laut `CLAUDE.md` ohnehin für immer hängt und die Bridge in diesem Fall bereits tot ist.
 
 - [ ] **Step 2: `MainActivity.kt` — `onCancel` meldet die Weiterleitung ab**
 
@@ -1386,7 +1399,7 @@ Expected: Build erfolgreich, keine Kotlin-Compile-Fehler.
 ```bash
 git add android/app/src/main/kotlin/com/example/emom_app/GarminBridge.kt android/app/src/main/kotlin/com/example/emom_app/MainActivity.kt
 git commit -m "$(cat <<'EOF'
-fix(android): registerAppEventListener idempotent gegen wiederholte EventChannel.onListen-Aufrufe
+fix(android): GarminBridge registriert App-Events nur noch einmal
 
 Whole-Branch-Review deckte auf: registerAppEventListener() laeuft nicht
 nur einmal pro App-Start, sondern bei jedem EventChannel.onListen, das
@@ -1418,28 +1431,46 @@ Kein Test. Verifikation: Lesen, Abgleich mit dem tatsächlichen Code aus Task 11
 
 In der Zeile, die `GarminBridge.kt` beschreibt, `unregisterAppEventListener()` zur Liste der exponierten Methoden ergänzen:
 
-Alt: `exposes isWatchConnected() / openWatchApp() / registerAppEventListener(onEvent).`
-Neu: `exposes isWatchConnected() / openWatchApp() / registerAppEventListener(onEvent) / unregisterAppEventListener().`
+Alt: ``exposes `isWatchConnected()` / `openWatchApp()` / `registerAppEventListener(onEvent)`.``
+Neu: ``exposes `isWatchConnected()` / `openWatchApp()` / `registerAppEventListener(onEvent)` / `unregisterAppEventListener()`.``
 
-- [ ] **Step 2: `CLAUDE.md` — Retry-Absatz korrigieren**
+- [ ] **Step 2: `CLAUDE.md` — Pauschalaussage "All providers are keepAlive" korrigieren**
+
+`CLAUDE.md:24` endet mit dem Satz "All providers are `keepAlive: true` and async." Das stimmt für `garminProvider` nicht (siehe Design-Spec-Korrektur, `garmin_notifier.g.dart` zeigt `isAutoDispose: true`) — bislang stand die Korrektur dazu nur in der Design-Spec, nicht in `CLAUDE.md` selbst, obwohl das die Datei ist, die Agenten zuerst lesen. Satz ersetzen durch:
+
+```
+All providers are `keepAlive: true` and async, with one deliberate exception: `garminProvider` (`lib/features/config/garmin_notifier.dart`) is plain `@riverpod` (autoDispose) — see "Garmin Watch Integration" below for why.
+```
+
+- [ ] **Step 3: `CLAUDE.md` — Retry-Absatz korrigieren**
 
 Den Absatz, der mit "**Real device connectivity to a paired-but-idle watch is eventually-consistent...**" beginnt, vollständig ersetzen durch:
 
 ```
-   - **Real device connectivity to a paired-but-idle watch is eventually-consistent, and this cost a real bug:** `connectedDevices` can return an empty list immediately after the very first `onSdkReady()` even though Garmin Connect Mobile already shows the watch as connected, then correctly populates a few seconds later. For `isWatchConnected()`/`openWatchApp()` this is harmless (any later tap re-queries fresh). But `registerAppEventListener()` — invoked from `EventChannel.onListen`, which fires not just once at app start but every time `garminProvider` gets a fresh watcher after being disposed (since `garminHeaderIconVisible` defaults to `false`, `ConfigScreen` is commonly the *only* watcher, so in practice this means "whenever the Settings screen is opened") — originally bailed out permanently on an empty list on its very first attempt — confirmed by on-device logcat (`connectedDevices=[]` right at startup) during hardware verification, reproducing as "the header icon never turns green no matter how often the watch app is opened, for the entire phone-app session." Fixed with a bounded retry (`REGISTER_MAX_ATTEMPTS = 5`, `REGISTER_RETRY_DELAY_MS = 2000L`, `Handler.postDelayed`) in `GarminBridge.attemptRegisterAppEventListener()` — a one-time convergence wait per attempt on a known-bounded SDK delay, not background polling. `registerAppEventListener()` is also idempotent: `connectIQ.registerForAppEvents()` itself is called at most once per process (`appEventListenerRegistered`/`registrationInFlight` guards), no matter how many times `onListen` re-invokes it — later calls just swap which callback (`currentOnEvent`) receives forwarded events. `EventChannel.onCancel` calls `GarminBridge.unregisterAppEventListener()`, which clears that callback (not an SDK-level unregister) so events don't get forwarded to a closed `EventSink`.
+   - **Real device connectivity to a paired-but-idle watch is eventually-consistent, and this cost a real bug:** `connectedDevices` can return an empty list immediately after the very first `onSdkReady()` even though Garmin Connect Mobile already shows the watch as connected, then correctly populates a few seconds later. For `isWatchConnected()`/`openWatchApp()` this is harmless (any later tap re-queries fresh). But `registerAppEventListener()` — invoked from `EventChannel.onListen`, which fires not just once at app start but every time `garminProvider` gets a fresh watcher after being disposed (since `garminHeaderIconVisible` defaults to `false`, `ConfigScreen` is commonly the *only* watcher, so in practice this means "whenever the Settings screen is opened") — originally bailed out permanently on an empty list on its very first attempt — confirmed by on-device logcat (`connectedDevices=[]` right at startup) during hardware verification, reproducing as "the header icon never turns green no matter how often the watch app is opened, for the entire phone-app session." Fixed with a bounded retry (`REGISTER_MAX_ATTEMPTS = 5`, `REGISTER_RETRY_DELAY_MS = 2000L`, `Handler.postDelayed`) in `GarminBridge.attemptRegisterAppEventListener()` — a bounded convergence wait on a known-bounded SDK delay, not background polling. `registerAppEventListener()` is also idempotent: `connectIQ.registerForAppEvents()` itself is called at most once per `GarminBridge` instance (i.e. per `configureFlutterEngine` call — `ConnectIQ.getInstance()` itself is a process-wide singleton, see the pre-existing Activity-recreation caveat below) via `appEventListenerRegistered`/`registrationInFlight` guards, no matter how many times `onListen` re-invokes it — later calls just swap which callback (`currentOnEvent`) receives forwarded events. `EventChannel.onCancel` calls `GarminBridge.unregisterAppEventListener()`, which clears that callback (not an SDK-level unregister) so events don't get forwarded to a closed `EventSink`.
 ```
 
-- [ ] **Step 3: Design-Spec — Architektur Punkt 3 korrigieren**
+- [ ] **Step 4: Design-Spec — Architektur Punkt 3 korrigieren**
 
 Punkt 3 im Abschnitt "Architektur & Datenfluss" vollständig ersetzen durch:
 
 ```
-3. **MainActivity.kt:** neuer `EventChannel` (`com.example.emom_app/garmin_events`) neben dem bestehenden `MethodChannel`; Registrierung bei der Connect-IQ-SDK startet beim ersten `onListen`, `onCancel` meldet **nicht** von der SDK ab (siehe Korrektur unten), sondern trennt nur die Weiterleitung an den aktuellen `EventSink`. **Korrektur:** `garminProvider` ist entgegen der Pauschalaussage in `CLAUDE.md` kein `keepAlive`-Provider (`@riverpod` ohne `keepAlive: true` in `garmin_notifier.dart`, verifiziert im generierten `garmin_notifier.g.dart` als `isAutoDispose: true`) — anders als die meisten übrigen Provider in diesem Projekt. `garminHeaderIconVisible` ist standardmäßig `false`; solange der Nutzer das nicht einschaltet, ist nicht `GarminHeaderIcon`, sondern `ConfigScreen` (`config_screen.dart`) der einzige Watcher von `garminProvider` — und der lebt nur so lange wie der Einstellungen-Screen offen ist. Jedes Öffnen/Schließen der Einstellungen disposed und rebuildet `garminProvider` also, und mit ihm feuert `EventChannel.onListen`/`onCancel` erneut. Deshalb ist `GarminBridge.registerAppEventListener()` bewusst idempotent gemacht (siehe Task 11 des Implementierungsplans): `connectIQ.registerForAppEvents()` wird nur beim allerersten erfolgreichen Aufruf tatsächlich bei der SDK registriert, jeder weitere `registerAppEventListener()`-Aufruf tauscht nur aus, welche Callback-Referenz eingehende Events bekommt. Das Rebuild-Verhalten selbst (Provider disposed und baut sich neu auf, wenn kein Watcher mehr da ist) bleibt beabsichtigtes, korrektes Riverpod-Verhalten — nur die SDK-Registrierung darf sich davon nicht wiederholen, sonst häufen sich Connect-IQ-Listener-Objekte für die gesamte Prozesslaufzeit an.
+3. **MainActivity.kt:** neuer `EventChannel` (`com.example.emom_app/garmin_events`) neben dem bestehenden `MethodChannel`; Registrierung bei der Connect-IQ-SDK startet beim ersten `onListen`. `onCancel` meldet **nicht** von der SDK ab, sondern trennt nur die Weiterleitung an den aktuellen `EventSink` — die einmalige SDK-Registrierung bleibt für die Prozesslaufzeit (genauer: für die Lebensdauer der `GarminBridge`-Instanz) bestehen. **Korrektur:** `garminProvider` ist entgegen der Pauschalaussage in `CLAUDE.md` kein `keepAlive`-Provider (`@riverpod` ohne `keepAlive: true` in `garmin_notifier.dart`, verifiziert im generierten `garmin_notifier.g.dart` als `isAutoDispose: true`) — anders als die meisten übrigen Provider in diesem Projekt. `garminHeaderIconVisible` ist standardmäßig `false`; solange der Nutzer das nicht einschaltet, ist nicht `GarminHeaderIcon`, sondern `ConfigScreen` (`config_screen.dart`) der einzige Watcher von `garminProvider` — und der lebt nur so lange wie der Einstellungen-Screen offen ist. Jedes Öffnen/Schließen der Einstellungen disposed und rebuildet `garminProvider` also, und mit ihm feuert `EventChannel.onListen`/`onCancel` erneut. Deshalb ist `GarminBridge.registerAppEventListener()` bewusst idempotent gemacht (siehe Task 11 des Implementierungsplans): `connectIQ.registerForAppEvents()` wird nur beim allerersten erfolgreichen Aufruf tatsächlich bei der SDK registriert, jeder weitere `registerAppEventListener()`-Aufruf tauscht nur aus, welche Callback-Referenz eingehende Events bekommt. Das Rebuild-Verhalten selbst (Provider disposed und baut sich neu auf, wenn kein Watcher mehr da ist) bleibt beabsichtigtes, korrektes Riverpod-Verhalten — nur die SDK-Registrierung darf sich davon nicht wiederholen, sonst häufen sich Connect-IQ-Listener-Objekte für die gesamte Prozesslaufzeit an.
 ```
 
-- [ ] **Step 4: Design-Spec — Transmit-Payload-Beschreibung korrigieren**
+Zusätzlich im Abschnitt "Fehlerbehandlung / Risiken" einen neuen Punkt anhängen (nach dem bestehenden Punkt "Vorbestehende Schwachstelle wird relevanter"), damit dieser Fund dort auffindbar ist wie der analoge Task-7-Fund:
 
-Unabhängiger Doku-Fehler, im selben Review gefunden: Architektur Punkt 1 und die Dateistruktur-Tabelle beschreiben noch ein Listen-Payload (`transmit(["opened"], null, listener)`) mit der Begründung "Connect-IQ-Messages sind kein Rohstring" — der tatsächlich ausgelieferte und auf Hardware verifizierte Code (`garmin_watch_app/source/garmin_watch_appApp.mc`) sendet aber einen rohen String mit leerem Options-Dict (`Communications.transmit("opened", {}, new AppStatusListener())`). In Architektur Punkt 1, den Satz "Payload ist eine Liste (Connect-IQ-Messages sind kein Rohstring), daher `["opened"]`/`["closed"]` statt `"opened"`." ersetzen durch:
+```
+- **Wiederholte `EventChannel.onListen`-Aufrufe lösten wiederholte SDK-Registrierung aus (gefunden im Whole-Branch-Review, behoben in Task 11):** `garminProvider` disposed und rebuildet bei jedem Verlust seines letzten Watchers — im Standardfall (`garminHeaderIconVisible == false`) ist `ConfigScreen` dieser Watcher, lebt also nur so lange wie der Einstellungen-Screen offen ist. Ohne Idempotenz-Schutz hätte das bei jedem Öffnen der Einstellungen eine neue `connectIQ.registerForAppEvents()`-Registrierung ausgelöst, ohne die vorherige abzumelden — ein unbegrenzt wachsender Listener-Leak für die Prozesslaufzeit. `GarminBridge.registerAppEventListener()` ist seit Task 11 idempotent (siehe Architektur Punkt 3).
+```
+
+- [ ] **Step 5: Design-Spec — Transmit-Payload-Beschreibung korrigieren (beide Stellen)**
+
+Unabhängiger Doku-Fehler, im selben Review gefunden: Architektur Punkt 1 und die Dateistruktur-Tabelle beschreiben noch ein Listen-Payload (`transmit(["opened"], null, listener)`) mit der Begründung "Connect-IQ-Messages sind kein Rohstring" — der tatsächlich ausgelieferte und auf Hardware verifizierte Code (`garmin_watch_app/source/garmin_watch_appApp.mc`) sendet aber einen rohen String mit leerem Options-Dict (`Communications.transmit("opened", {}, new AppStatusListener())`). Beide Stellen in Architektur Punkt 1 korrigieren, nicht nur eine — sonst widerspricht sich der Absatz selbst:
+
+Der **erste Satz** von Punkt 1 lautet aktuell: `onStart(state)` sendet `Communications.transmit(["opened"], null, listener)`; `onStop(state)` sendet `Communications.transmit(["closed"], null, listener)`. Ersetzen durch: `onStart(state)` sendet `Communications.transmit("opened", {}, new AppStatusListener())`; `onStop(state)` sendet `Communications.transmit("closed", {}, new AppStatusListener())`.
+
+Der **spätere Satz** "Payload ist eine Liste (Connect-IQ-Messages sind kein Rohstring), daher `["opened"]`/`["closed"]` statt `"opened"`." ersetzen durch:
 
 ```
 Payload ist der rohe String `"opened"`/`"closed"`, der zweite `transmit()`-Parameter ein leeres Options-Dict (`{}`) — auf echter Hardware verifiziert (Task 10), `GarminBridge.kt` liest ihn über `message.firstOrNull() as? String` entsprechend als einzelnes String-Element.
@@ -1447,7 +1478,7 @@ Payload ist der rohe String `"opened"`/`"closed"`, der zweite `transmit()`-Param
 
 In der Dateistruktur-Tabelle die Zeile zu `garmin_watch_appApp.mc` entsprechend von `transmit(["opened"]/["closed"], null, listener)` auf `transmit("opened"/"closed", {}, listener)` korrigieren.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add CLAUDE.md docs/superpowers/specs/2026-08-08-garmin-app-status-rueckkanal-design.md
@@ -1458,9 +1489,11 @@ Beide Dokumente behaupteten bislang "registerAppEventListener laeuft
 einmal pro App-Start" bzw. "wird bei onCancel abgemeldet" -- beides traf
 schon vor Task 11 nicht zu und widersprach sich mit dem tatsaechlichen
 Code. Korrigiert auf Basis von Task 11 (idempotente Registrierung,
-Callback-Swap statt SDK-Unregister). Ausserdem die Transmit-Payload-
-Beschreibung (Liste vs. roher String) an den tatsaechlich ausgelieferten,
-auf Hardware verifizierten Watch-App-Code angepasst.
+Callback-Swap statt SDK-Unregister). Ausserdem CLAUDE.md's Pauschalaussage
+"All providers are keepAlive" um die garminProvider-Ausnahme ergaenzt,
+und die Transmit-Payload-Beschreibung (Liste vs. roher String, an beiden
+Stellen) an den tatsaechlich ausgelieferten, auf Hardware verifizierten
+Watch-App-Code angepasst.
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 EOF
