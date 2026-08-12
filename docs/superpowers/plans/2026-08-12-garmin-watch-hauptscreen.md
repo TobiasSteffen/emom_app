@@ -65,7 +65,12 @@ In `test/core/services/garmin_service_test.dart`, in der bestehenden `group('wat
       expect(results, ['cmd_pause', 'cmd_skip']);
     });
 
-    test('watchAppRunningEvents und watchCommands teilen sich einen Listener', () async {
+    test('watchAppRunningEvents und watchCommands teilen sich einen Listener, auch ueber zwei GarminService-Instanzen', () async {
+      // Absichtlich ZWEI separate Instanzen, wie es in der echten App
+      // passiert (garmin_notifier.dart und garmin_workout_sync_notifier.dart
+      // legen je eine eigene GarminService()-Instanz an) -- eine einzelne
+      // gemeinsame Instanz wuerde den Bug nicht aufdecken, den dieser Test
+      // eigentlich verhindern soll (der Cache muss static sein).
       var listenCount = 0;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockStreamHandler(
@@ -79,9 +84,10 @@ In `test/core/services/garmin_service_test.dart`, in der bestehenden `group('wat
         ),
       );
 
-      final service = GarminService();
-      final runningSub = service.watchAppRunningEvents().listen((_) {});
-      final commandsSub = service.watchCommands().listen((_) {});
+      final serviceA = GarminService();
+      final serviceB = GarminService();
+      final runningSub = serviceA.watchAppRunningEvents().listen((_) {});
+      final commandsSub = serviceB.watchCommands().listen((_) {});
       await Future<void>.delayed(Duration.zero);
       expect(listenCount, 1);
       await runningSub.cancel();
@@ -100,13 +106,17 @@ Expected: FAIL — `watchCommands` ist keine Methode von `GarminService`, und `l
 In `lib/core/services/garmin_service.dart`, das bestehende `watchAppRunningEvents()` ersetzen und `watchCommands()` ergänzen:
 
 ```dart
-  Stream<Object?>? _rawEventsCache;
+  static Stream<Object?>? _rawEventsCache;
 
   /// Genau ein `receiveBroadcastStream()`-Aufruf fuer die gesamte
   /// Prozesslaufzeit -- mehrere Aufrufe wuerden unabhaengige native
   /// onListen/onCancel-Zyklen ausloesen und sich gegenseitig die
   /// Zustellung kappen (siehe Design-Spec, Architektur-Abschnitt).
-  Stream<Object?> get _rawEvents =>
+  /// MUSS static sein: GarminService() wird an mehreren Stellen neu
+  /// instanziiert (garmin_notifier.dart, garmin_workout_sync_notifier.dart)
+  /// -- ein Instanzfeld wuerde pro Instanz einen eigenen Cache anlegen und
+  /// genau den Konflikt reproduzieren, den dieser Task beheben soll.
+  static Stream<Object?> get _rawEvents =>
       _rawEventsCache ??= _eventChannel.receiveBroadcastStream();
 
   /// Live-Ereignisse der Watch-App: `true` bei "opened", `false` bei
@@ -358,6 +368,7 @@ Expected: FAIL — Datei `lib/features/workout/garmin_watch_snapshot.dart` exist
 
 ```dart
 import '../../core/models/equipment_catalog.dart';
+import '../../core/models/settings.dart';
 import '../../core/models/training_plan.dart';
 import 'workout_notifier.dart';
 
@@ -510,6 +521,29 @@ An `test/features/workout/garmin_watch_snapshot_test.dart` anhängen:
       final b = _state(intervals: [_iv(), _iv()], waitingForConfirmation: true);
       expect(watchChangeKeyFor(a), isNot(watchChangeKeyFor(b)));
     });
+
+    test('unterschiedlicher Schluessel bei Reset/Planwechsel trotz gleicher Minute und isRunning', () {
+      // Realer Fall: Nutzer steht bei Minute 0, pausiert; wechselt in der
+      // Planbibliothek den aktiven Plan (Reset auf Minute 0). minute,
+      // isRunning, isPause, isTimed etc. sind hier alle identisch zu vorher
+      // -- ohne Intervall-Inhalt im Schluessel wuerde die Uhr die neue
+      // Uebung nie zu sehen bekommen.
+      final a = _state(intervals: [
+        _iv(exerciseTypeId: 'swing_beidarmig'),
+        _iv(),
+      ]);
+      final b = _state(intervals: [
+        _iv(exerciseTypeId: 'snatch'),
+        _iv(),
+      ]);
+      expect(watchChangeKeyFor(a), isNot(watchChangeKeyFor(b)));
+    });
+
+    test('unterschiedlicher Schluessel bei anderer Plan-Laenge (totalMinutes)', () {
+      final a = _state(intervals: [_iv(), _iv()]);
+      final b = _state(intervals: [_iv(), _iv(), _iv()]);
+      expect(watchChangeKeyFor(a), isNot(watchChangeKeyFor(b)));
+    });
   });
 ```
 
@@ -525,6 +559,7 @@ An `lib/features/workout/garmin_watch_snapshot.dart` anhängen:
 ```dart
 typedef WatchChangeKey = ({
   int minute,
+  int totalMinutes,
   bool isRunning,
   bool isPause,
   bool isTimed,
@@ -532,21 +567,40 @@ typedef WatchChangeKey = ({
   bool holdStarted,
   bool waitingForConfirmation,
   bool isFinished,
+  String equipmentTypeId,
+  String? variantId,
+  String exerciseTypeId,
+  ExerciseSide? side,
+  int reps,
+  int durationSeconds,
 });
 
 /// Nur wenn sich mindestens eines dieser Felder aendert, lohnt sich ein
 /// Push an die Uhr -- explizit NICHT bei jedem `secondsLeft`-Tick (siehe
-/// Design-Spec, Scope-Entscheidung 1).
-WatchChangeKey watchChangeKeyFor(WorkoutState s) => (
-      minute: s.currentMinute,
-      isRunning: s.isRunning,
-      isPause: s.intervals[s.currentMinute].isPause,
-      isTimed: s.currentIsTimed,
-      holdWaiting: s.holdWaiting,
-      holdStarted: s.holdStarted,
-      waitingForConfirmation: s.waitingForConfirmation,
-      isFinished: s.isFinished,
-    );
+/// Design-Spec, Scope-Entscheidung 1). Die letzten sechs Felder (Intervall-
+/// Inhalt) sind noetig, weil ein Reset/Planwechsel bei Minute 0 im
+/// Idle-Zustand sonst bitgleich zum vorherigen Schluessel waere, obwohl
+/// sich die angezeigte Uebung tatsaechlich geaendert hat (Korrekturlesung).
+WatchChangeKey watchChangeKeyFor(WorkoutState s) {
+  final iv = s.intervals[s.currentMinute];
+  return (
+    minute: s.currentMinute,
+    totalMinutes: s.totalMinutes,
+    isRunning: s.isRunning,
+    isPause: iv.isPause,
+    isTimed: s.currentIsTimed,
+    holdWaiting: s.holdWaiting,
+    holdStarted: s.holdStarted,
+    waitingForConfirmation: s.waitingForConfirmation,
+    isFinished: s.isFinished,
+    equipmentTypeId: iv.equipmentTypeId,
+    variantId: iv.variantId,
+    exerciseTypeId: iv.exerciseTypeId,
+    side: iv.side,
+    reps: iv.reps,
+    durationSeconds: iv.durationSeconds,
+  );
+}
 ```
 
 - [ ] **Step 4: Tests ausführen, müssen passen**
@@ -855,9 +909,14 @@ class MainActivity : FlutterActivity() {
                 }
                 "retryEventRegistration" -> {
                     // registerAppEventListener() ist idempotent (siehe GarminBridge) --
-                    // dauerhafte Dart-Abonnenten (Task 6) sorgen dafuer, dass der
+                    // dauerhafte Dart-Abonnenten (Task 6/7) sorgen dafuer, dass der
                     // native EventChannel.onListen nur einmal pro Prozess feuert,
-                    // deshalb dieser explizite Retry-Pfad bei App-Resume.
+                    // deshalb dieser explizite Retry-Pfad bei App-Resume. Ist die
+                    // Registrierung schon erfolgreich (appEventListenerRegistered)
+                    // oder laeuft gerade (registrationInFlight), ist der Aufruf ein
+                    // reines No-Op (siehe GarminBridge.registerAppEventListener) --
+                    // er greift nur nach einer zuvor endgueltig aufgegebenen
+                    // Registrierung (REGISTER_MAX_ATTEMPTS erschoepft).
                     currentEventSink?.let { sink ->
                         bridge.registerAppEventListener { payload -> sink.success(payload) }
                     }
@@ -1019,6 +1078,19 @@ class GarminWorkoutSyncNotifier extends _$GarminWorkoutSyncNotifier {
 
   @override
   Future<void> build() async {
+    // Kein Garmin-Geraet je verbunden -- garminProvider bewusst NICHT
+    // beobachten. Ein ref.listen weiter unten wuerde garminProvider sofort
+    // bauen, und GarminNotifier.build() fragt dabei Bluetooth-Permissions
+    // an (garmin_notifier.dart -> isWatchConnected() ->
+    // _ensureBluetoothPermissions()) -- das wuerde sonst JEDE Nutzerin
+    // gleich beim allerersten App-Start mit einem Bluetooth-Dialog
+    // begruessen, auch ganz ohne Garmin-Uhr. Verbindet sich der Nutzer
+    // waehrend dieser Sitzung zum allerersten Mal (ueber die Einstellungen,
+    // bestehender Weg), wird die Watch-Steuerung erst beim naechsten
+    // App-Start aktiv -- seltener Uebergangsfall, kein Blocker
+    // (Korrekturlesung, gefunden per Code-Ausfuehrung).
+    if (!await GarminService().hasEverConnected()) return;
+
     final catalog = await ref.read(equipmentCatalogProvider.future);
 
     ref.listen<AsyncValue<WorkoutState>>(workoutProvider, (previous, next) {
@@ -1090,7 +1162,7 @@ class GarminWorkoutSyncNotifier extends _$GarminWorkoutSyncNotifier {
 
 - [ ] **Step 2: `.g.dart` generieren**
 
-Run: `dart run build_runner build --delete-conflicting-outputs`
+Run: `dart run build_runner build`
 Expected: `lib/features/workout/garmin_workout_sync_notifier.g.dart` wird erzeugt, `garminWorkoutSyncProvider` ist darin definiert.
 
 - [ ] **Step 3: `flutter analyze`**
@@ -1220,7 +1292,7 @@ import Toybox.WatchUi;
 module WatchState {
     var current as Dictionary? = null;
     var localSecondsLeft as Number = 0;
-    var _tickTimer as Timer.Timer?;
+    var _ticker as WatchStateTicker?;
 
     function update(snapshot as Dictionary) as Void {
         current = snapshot;
@@ -1229,12 +1301,12 @@ module WatchState {
 
     // Einmal aus garmin_watch_appApp.onStart() aufgerufen, laeuft dauerhaft.
     function startTicking() as Void {
-        if (_tickTimer != null) { return; }
-        _tickTimer = new Timer.Timer();
-        _tickTimer.start(method(:onTick), 1000, true);
+        if (_ticker != null) { return; }
+        _ticker = new WatchStateTicker();
+        _ticker.start();
     }
 
-    function onTick() as Void {
+    function tick() as Void {
         if (current == null) { return; }
         var screenState = current.get("screenState") as String;
         // Nur running/holding zaehlen ueberhaupt runter -- paused/hold_waiting
@@ -1248,6 +1320,27 @@ module WatchState {
         if (floorAtZero && localSecondsLeft <= 0) { return; }
         localSecondsLeft -= 1;
         WatchUi.requestUpdate();
+    }
+}
+
+// `method(:symbol)` braucht ein Klassen-`self` -- ein `module` hat keins,
+// deshalb traegt eine eigene, winzige Klasse den Timer und delegiert jeden
+// Tick an WatchState.tick(). Gefunden beim tatsaechlichen Build gegen das
+// installierte SDK (Compile-Fehler "Cannot find symbol ':method' on type
+// 'self'" bei einem method()-Aufruf direkt im module).
+class WatchStateTicker {
+    private var _timer as Timer.Timer;
+
+    function initialize() {
+        _timer = new Timer.Timer();
+    }
+
+    function start() as Void {
+        _timer.start(method(:onTick), 1000, true);
+    }
+
+    function onTick() as Void {
+        WatchState.tick();
     }
 }
 ```
@@ -1274,8 +1367,11 @@ class StateSnapshotListener {
 
     function onMessage(msg as Communications.PhoneAppMessage) as Void {
         var data = msg.data;
-        if (data instanceof Dictionary && data.get("type").equals("state_snapshot")) {
-            WatchState.update(data as Dictionary);
+        if (!(data instanceof Dictionary)) { return; }
+        var dict = data as Dictionary;
+        var type = dict.get("type");
+        if (type != null && type.equals("state_snapshot")) {
+            WatchState.update(dict);
             WatchUi.requestUpdate();
         }
     }
@@ -1337,13 +1433,25 @@ Datei komplett ersetzen durch:
 
 ```monkeyc
 import Toybox.Lang;
+import Toybox.System;
 import Toybox.WatchUi;
 
 // onSelect() (oberer Button) beendete die App bisher (Hello-World-Spike-
 // Platzhalter) -- entfaellt jetzt, der obere Button steuert Pause/Weiter/
-// Start/Fertig. Exit laeuft stattdessen ueber die native Swipe-Rechts-Geste
-// des Touchscreens (Scope-Entscheidung 7 der Design-Spec, auf Hardware zu
-// verifizieren).
+// Start/Fertig. Der untere Button (onBack()) steuert Skip.
+//
+// KORREKTUR (Korrekturlesung): Exit laeuft NICHT ueber die native
+// Swipe-Rechts-Geste, wie eine fruehere Fassung dieser Spec/dieses Plans
+// annahm. Laut SDK-Doku zu BehaviorDelegate.onBack() interpretieren manche
+// Geraete SWIPE_RIGHT intern als KEY_ESC -- auf solchen Geraeten wuerde ein
+// Exit-Swipe genau denselben onBack()-Callback ausloesen wie der untere
+// Button, also "cmd_skip" senden statt die App zu beenden, und es gaebe
+// gar keinen Exit-Weg mehr. Deshalb: Exit ueber eine eigene, von
+// onBack()/KEY_ESC unabhaengige Geste (Swipe nach LINKS statt rechts).
+// WICHTIG: onSwipe()/SwipeEvent/getDirection()/SWIPE_LEFT vor dem Bauen
+// gegen die installierte SDK-Doku verifizieren -- anders als die uebrigen
+// APIs in diesem Plan wurde dieser Teil (als Reaktion auf den Fund) noch
+// nicht gegen ein echtes SDK kompiliert.
 class garmin_watch_appDelegate extends WatchUi.BehaviorDelegate {
 
     function initialize() {
@@ -1380,6 +1488,16 @@ class garmin_watch_appDelegate extends WatchUi.BehaviorDelegate {
         return true;
     }
 
+    // Eigene, von onBack()/KEY_ESC unabhaengige Exit-Geste (siehe Kommentar
+    // oben am Klassenkopf).
+    function onSwipe(swipeEvent as WatchUi.SwipeEvent) as Boolean {
+        if (swipeEvent.getDirection() == WatchUi.SWIPE_LEFT) {
+            System.exit();
+            return true;
+        }
+        return false;
+    }
+
 }
 ```
 
@@ -1392,7 +1510,7 @@ cd garmin_watch_app
 ```
 
 (`$SDK`/`$KEY` wie in `CLAUDE.md`, Abschnitt "Garmin Watch Integration" beschrieben.)
-Expected: Build erfolgreich, keine Compile-Fehler. Bei Fehlern zu `registerForPhoneAppMessages()`/`onBack()`-Signatur: gegen die installierte SDK-Referenz korrigieren (siehe Kommentare in Step 2/4).
+Expected: Build erfolgreich, keine Compile-Fehler. Bei Fehlern zu `registerForPhoneAppMessages()`/`onBack()`-Signatur: gegen die installierte SDK-Referenz korrigieren (siehe Kommentare in Step 2/4). Besonders `onSwipe(swipeEvent as WatchUi.SwipeEvent)`/`getDirection()`/`WatchUi.SWIPE_LEFT` prüfen — dieser Teil wurde erst nachträglich ergänzt und noch nicht gegen ein echtes SDK kompiliert (anders als der Rest von Task 9/10, siehe Kommentar in Step 4).
 
 - [ ] **Step 6: Commit**
 
@@ -1500,7 +1618,12 @@ class garmin_watch_appView extends WatchUi.View {
         var totalMinutes = snapshot.get("totalMinutes") as Number;
         var minute = snapshot.get("minute") as Number;
         var degrees = totalMinutes > 0 ? (360.0 * minute / totalMinutes) : 0.0;
-        dc.drawArc(cx, cy, cx - 6, Graphics.ARC_CLOCKWISE, 90, 90 - degrees);
+        // drawArc() zeichnet laut SDK-Doku einen VOLLEN Kreis, wenn Start-
+        // und End-Winkel gleich sind -- bei Minute 0 (degrees == 0) waere
+        // das sonst ein Vollkreis statt gar keinem Fortschritt.
+        if (degrees >= 1) {
+            dc.drawArc(cx, cy, cx - 6, Graphics.ARC_CLOCKWISE, 90, 90 - degrees);
+        }
 
         drawCentered(dc, snapshot.get("line1") as String, cy - 55, Graphics.FONT_XTINY, Graphics.COLOR_WHITE);
         drawCentered(dc, snapshot.get("line2") as String, cy - 38, Graphics.FONT_XTINY, Graphics.COLOR_WHITE);
@@ -1594,7 +1717,7 @@ Wie in `CLAUDE.md` beschrieben: gebautes `garmin_watch_app/bin/garmin_watch_app.
 
 - [ ] **Step 2: Release-Build der Handy-App bauen und installieren**
 
-Run: `flutter build apk --debug` (Debug reicht für die Verifikation; Release nur falls ProguGarard-Regeln aus dem vorherigen Fix mitgeprüft werden sollen)
+Run: `flutter build apk --debug` (Debug reicht für die Verifikation; Release nur falls ProGuard-Regeln aus dem vorherigen Fix mitgeprüft werden sollen)
 Installieren auf dem Testgerät, mit der Uhr gekoppelt.
 
 - [ ] **Step 3: Testmatrix aus der Design-Spec durchgehen**
@@ -1609,7 +1732,8 @@ Jeden Punkt einzeln verifizieren (siehe `docs/superpowers/specs/2026-08-12-garmi
 - BLE-Verbindung während des Trainings kurz kappen und wiederherstellen → nächste Zustandsänderung bringt die Uhr wieder auf aktuellen Stand.
 - Trainingsende erreichen, während die Watch-App offen ist → Fertig-Screen erscheint automatisch, zeigt die letzte echte Übung.
 - Handy-Display ausschalten (App nicht schließen), Training währenddessen über die Uhr weitersteuern.
-- Exit-Swipe auf der Uhr während des Trainings → App schließt, Rückkanal meldet „closed".
+- Swipe nach links auf der Uhr während des Trainings → App schließt, Rückkanal meldet „closed" (Exit-Geste, siehe Task 9 — nicht Swipe rechts, das würde auf manchen Geräten mit dem unteren Button/Skip kollidieren).
+- Zusätzlich verifizieren: löst der untere Button (Skip) auf diesem konkreten Gerät versehentlich ebenfalls einen Exit aus, oder umgekehrt ein Swipe nach rechts versehentlich Skip? (Der in Task 9 dokumentierte `onBack()`/`KEY_ESC`-Alias ist laut SDK-Doku geräteabhängig und war zuvor nicht bekannt.)
 - Einstellungen am Handy öffnen und wieder schließen, während die Watch-App offen ist und Kommandos sendet → Kommando-Zustellung darf nicht abreißen.
 
 - [ ] **Step 4: Befunde dokumentieren**
