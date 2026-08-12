@@ -119,4 +119,60 @@ void main() {
       expect(result, true);
     });
   });
+
+  group('watchCommands', () {
+    const eventChannel = EventChannel('com.example.emom_app/garmin_events');
+
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockStreamHandler(eventChannel, null);
+    });
+
+    test('liefert nur cmd_*-Payloads, ignoriert opened/closed', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockStreamHandler(
+        eventChannel,
+        MockStreamHandler.inline(
+          onListen: (Object? arguments, MockStreamHandlerEventSink events) {
+            events.success('opened');
+            events.success('cmd_pause');
+            events.success('cmd_skip');
+          },
+        ),
+      );
+
+      final service = GarminService();
+      final results = await service.watchCommands().take(2).toList();
+      expect(results, ['cmd_pause', 'cmd_skip']);
+    });
+
+    test('watchAppRunningEvents und watchCommands teilen sich einen Listener, auch ueber zwei GarminService-Instanzen', () async {
+      // Absichtlich ZWEI separate Instanzen, wie es in der echten App
+      // passiert (garmin_notifier.dart und garmin_workout_sync_notifier.dart
+      // legen je eine eigene GarminService()-Instanz an) -- eine einzelne
+      // gemeinsame Instanz wuerde den Bug nicht aufdecken, den dieser Test
+      // eigentlich verhindern soll (der Cache muss static sein).
+      var listenCount = 0;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockStreamHandler(
+        eventChannel,
+        MockStreamHandler.inline(
+          onListen: (Object? arguments, MockStreamHandlerEventSink events) {
+            listenCount++;
+            events.success('opened');
+            events.success('cmd_pause');
+          },
+        ),
+      );
+
+      final serviceA = GarminService();
+      final serviceB = GarminService();
+      final runningSub = serviceA.watchAppRunningEvents().listen((_) {});
+      final commandsSub = serviceB.watchCommands().listen((_) {});
+      await Future<void>.delayed(Duration.zero);
+      expect(listenCount, 1);
+      await runningSub.cancel();
+      await commandsSub.cancel();
+    });
+  });
 }

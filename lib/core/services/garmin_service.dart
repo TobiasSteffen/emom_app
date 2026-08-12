@@ -52,13 +52,33 @@ class GarminService {
     await prefs.setBool(_everConnectedKey, true);
   }
 
+  static Stream<Object?>? _rawEventsCache;
+
+  /// Genau ein `receiveBroadcastStream()`-Aufruf fuer die gesamte
+  /// Prozesslaufzeit -- mehrere Aufrufe wuerden unabhaengige native
+  /// onListen/onCancel-Zyklen ausloesen und sich gegenseitig die
+  /// Zustellung kappen (siehe Design-Spec, Architektur-Abschnitt).
+  /// MUSS static sein: GarminService() wird an mehreren Stellen neu
+  /// instanziiert (garmin_notifier.dart, garmin_workout_sync_notifier.dart)
+  /// -- ein Instanzfeld wuerde pro Instanz einen eigenen Cache anlegen und
+  /// genau den Konflikt reproduzieren, den dieser Task beheben soll.
+  static Stream<Object?> get _rawEvents =>
+      _rawEventsCache ??= _eventChannel.receiveBroadcastStream();
+
   /// Live-Ereignisse der Watch-App: `true` bei "opened", `false` bei
   /// "closed". Unbekannte Payloads werden verworfen statt einen Fehler
   /// zu werfen (best-effort BLE-Zustellung, siehe Design-Spec).
   Stream<bool> watchAppRunningEvents() {
-    return _eventChannel
-        .receiveBroadcastStream()
+    return _rawEvents
         .where((event) => event == 'opened' || event == 'closed')
         .map((event) => event == 'opened');
+  }
+
+  /// Bedien-Kommandos von der Uhr (`cmd_pause`, `cmd_resume`, `cmd_confirm`,
+  /// `cmd_skip`). Geteilte Quelle mit [watchAppRunningEvents] -- siehe dort.
+  Stream<String> watchCommands() {
+    return _rawEvents
+        .where((event) => event is String && event.startsWith('cmd_'))
+        .cast<String>();
   }
 }
