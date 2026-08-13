@@ -54,7 +54,10 @@ class GarminService {
 
   Future<void> sendStateSnapshot(Map<String, dynamic> payload) async {
     try {
-      await _channel.invokeMethod('sendStateSnapshot', payload);
+      final status = await _channel.invokeMethod<String>('sendStateSnapshot', payload);
+      if (status != 'SUCCESS') {
+        debugPrint('GarminService.sendStateSnapshot: watch reported $status');
+      }
     } on PlatformException catch (e) {
       debugPrint('GarminService.sendStateSnapshot failed: ${e.code} ${e.message}');
     }
