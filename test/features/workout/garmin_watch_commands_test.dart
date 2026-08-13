@@ -95,6 +95,20 @@ void main() {
     expect(calls.skip, 1);
   });
 
+  test('cmd_resume ist No-Op, wenn waitingForConfirmation gesetzt ist', () {
+    apply('cmd_resume', _state(isRunning: false, waitingForConfirmation: true));
+    expect(calls.start, 0);
+    expect(calls.startHold, 0);
+    expect(calls.finishHold, 0);
+  });
+
+  test('cmd_resume ist No-Op, wenn isFinished gesetzt ist', () {
+    apply('cmd_resume', _state(isRunning: false, isFinished: true));
+    expect(calls.start, 0);
+    expect(calls.startHold, 0);
+    expect(calls.finishHold, 0);
+  });
+
   test('unbekanntes Kommando loest nichts aus', () {
     apply('cmd_unbekannt', _state(isRunning: true));
     expect(calls.pause + calls.start + calls.confirm + calls.skip + calls.startHold + calls.finishHold, 0);
