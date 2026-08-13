@@ -5,6 +5,8 @@ import Toybox.WatchUi;
 
 class garmin_watch_appApp extends Application.AppBase {
 
+    var snapshotListener as StateSnapshotListener?;
+
     function initialize() {
         AppBase.initialize();
     }
@@ -12,6 +14,9 @@ class garmin_watch_appApp extends Application.AppBase {
     // onStart() is called on application start up
     function onStart(state as Dictionary?) as Void {
         Communications.transmit("opened", {}, new AppStatusListener());
+        snapshotListener = new StateSnapshotListener();
+        snapshotListener.register();
+        WatchState.startTicking();
     }
 
     // onStop() is called when your application is exiting
@@ -28,4 +33,10 @@ class garmin_watch_appApp extends Application.AppBase {
 
 function getApp() as garmin_watch_appApp {
     return Application.getApp() as garmin_watch_appApp;
+}
+
+// Sendet ein Bedien-Kommando ans Handy -- von garmin_watch_appDelegate bei
+// Tastendruck aufgerufen (siehe Design-Spec, Button-Zustandsmaschine).
+function sendWatchCommand(command as String) as Void {
+    Communications.transmit(command, {}, new AppStatusListener());
 }
