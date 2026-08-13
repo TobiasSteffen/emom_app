@@ -52,6 +52,22 @@ class GarminService {
     await prefs.setBool(_everConnectedKey, true);
   }
 
+  Future<void> sendStateSnapshot(Map<String, dynamic> payload) async {
+    try {
+      await _channel.invokeMethod('sendStateSnapshot', payload);
+    } on PlatformException catch (e) {
+      debugPrint('GarminService.sendStateSnapshot failed: ${e.code} ${e.message}');
+    }
+  }
+
+  Future<void> retryCommandRegistration() async {
+    try {
+      await _channel.invokeMethod('retryEventRegistration');
+    } on PlatformException catch (e) {
+      debugPrint('GarminService.retryCommandRegistration failed: ${e.code} ${e.message}');
+    }
+  }
+
   static Stream<Object?>? _rawEventsCache;
 
   /// Genau ein `receiveBroadcastStream()`-Aufruf fuer die gesamte

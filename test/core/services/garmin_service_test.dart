@@ -23,6 +23,10 @@ void main() {
           return true;
         case 'openWatchApp':
           return 'launched';
+        case 'sendStateSnapshot':
+          return 'SUCCESS';
+        case 'retryEventRegistration':
+          return null;
       }
       return null;
     });
@@ -75,6 +79,19 @@ void main() {
     // Neue Service-Instanz simuliert App-Neustart — Flag muss ueberleben.
     final serviceAfterRestart = GarminService();
     expect(await serviceAfterRestart.hasEverConnected(), true);
+  });
+
+  test('sendStateSnapshot ruft den MethodChannel mit dem Payload auf', () async {
+    final service = GarminService();
+    await service.sendStateSnapshot({'type': 'state_snapshot', 'minute': 5});
+    expect(calls.last.method, 'sendStateSnapshot');
+    expect(calls.last.arguments, {'type': 'state_snapshot', 'minute': 5});
+  });
+
+  test('retryCommandRegistration ruft den MethodChannel auf', () async {
+    final service = GarminService();
+    await service.retryCommandRegistration();
+    expect(calls.last.method, 'retryEventRegistration');
   });
 
   group('watchAppRunningEvents', () {
