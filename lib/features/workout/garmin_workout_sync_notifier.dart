@@ -16,6 +16,15 @@ class GarminWorkoutSyncNotifier extends _$GarminWorkoutSyncNotifier {
   StreamSubscription<String>? _commandSub;
   WatchChangeKey? _lastSentKey;
 
+  // Serialisiert alle _send()-Aufrufe strikt in Aufrufreihenfolge. Ohne das
+  // koennten zwei unawaited _send()-Aufrufe kurz hintereinander (z.B. beim
+  // Minutenwechsel: "isRunning: false" fuer die abgeschlossene Minute, dann
+  // synchron "isRunning: true" fuer den Start der naechsten) durch den
+  // asynchronen Kotlin-Roundtrip (getApplicationInfo -> sendMessage) in
+  // beliebiger Reihenfolge ankommen -- die Uhr wuerde dann auf dem aelteren,
+  // "ueberholenden" Snapshot stehenbleiben (finale Branch-Review).
+  Future<void> _sendChain = Future.value();
+
   @override
   Future<void> build() async {
     // Kein Garmin-Geraet je verbunden -- garminProvider bewusst NICHT
@@ -53,7 +62,9 @@ class GarminWorkoutSyncNotifier extends _$GarminWorkoutSyncNotifier {
         // wird, sofort einen frischen Snapshot schicken, unabhaengig vom
         // Aenderungs-Schluessel (siehe Design-Spec, Scope-Entscheidung 2).
         final state = ref.read(workoutProvider).value;
-        if (state != null) unawaited(_send(state, catalog));
+        if (state != null) {
+          _sendChain = _sendChain.then((_) => _send(state, catalog));
+        }
       }
     });
 
@@ -80,7 +91,7 @@ class GarminWorkoutSyncNotifier extends _$GarminWorkoutSyncNotifier {
     final key = watchChangeKeyFor(state);
     if (key == _lastSentKey) return;
     _lastSentKey = key;
-    unawaited(_send(state, catalog));
+    _sendChain = _sendChain.then((_) => _send(state, catalog));
   }
 
   Future<void> _send(WorkoutState state, EquipmentCatalog catalog) async {
