@@ -5,9 +5,8 @@ import Toybox.WatchUi;
 // Empfaengt state_snapshot-Nachrichten vom Handy (Gegenstueck zu
 // AppStatusListener.mc, das die Uhr->Handy-Richtung bedient). Registrierung
 // einmalig in garmin_watch_appApp.onStart().
-// WICHTIG: exakte registerForPhoneAppMessages()-Signatur vor dem Bauen
-// gegen die installierte Connect-IQ-SDK-Version verifizieren (siehe
-// Design-Spec, Abschnitt "Fehlerbehandlung").
+// Verifiziert: registerForPhoneAppMessages() kompiliert erfolgreich gegen
+// SDK 9.2.0 (siehe Design-Spec, Abschnitt "Fehlerbehandlung").
 class StateSnapshotListener {
     function register() as Void {
         Communications.registerForPhoneAppMessages(method(:onMessage));

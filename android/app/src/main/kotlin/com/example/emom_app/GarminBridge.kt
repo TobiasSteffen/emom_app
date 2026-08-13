@@ -109,10 +109,9 @@ class GarminBridge(private val context: Context) {
         }
     }
 
-    // WICHTIG: exakte ConnectIQ.sendMessage()-Signatur vor dem Bauen gegen
-    // die installierte Connect-IQ-SDK-Version verifizieren (siehe
-    // Design-Spec, Abschnitt "Fehlerbehandlung" -- nicht primaerquellen-
-    // verifiziert, da developer.garmin.com per Fetch nicht erreichbar war).
+    // Verifiziert: kompiliert erfolgreich gegen die installierte Connect-IQ-SDK
+    // (ConnectIQ.sendMessage()-Signatur wie hier verwendet, siehe Design-Spec,
+    // Abschnitt "Fehlerbehandlung").
     fun sendStateSnapshot(payload: Map<String, Any?>, callback: (String) -> Unit) {
         ensureSdkReady { ready ->
             if (!ready) {

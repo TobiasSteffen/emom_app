@@ -14,10 +14,8 @@ import Toybox.WatchUi;
 // Button, also "cmd_skip" senden statt die App zu beenden, und es gaebe
 // gar keinen Exit-Weg mehr. Deshalb: Exit ueber eine eigene, von
 // onBack()/KEY_ESC unabhaengige Geste (Swipe nach LINKS statt rechts).
-// WICHTIG: onSwipe()/SwipeEvent/getDirection()/SWIPE_LEFT vor dem Bauen
-// gegen die installierte SDK-Doku verifizieren -- anders als die uebrigen
-// APIs in diesem Plan wurde dieser Teil (als Reaktion auf den Fund) noch
-// nicht gegen ein echtes SDK kompiliert.
+// Verifiziert: onSwipe()/SwipeEvent/getDirection()/SWIPE_LEFT kompilierte
+// auf Anhieb erfolgreich gegen SDK 9.2.0.
 class garmin_watch_appDelegate extends WatchUi.BehaviorDelegate {
 
     function initialize() {

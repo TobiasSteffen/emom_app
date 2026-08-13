@@ -49,6 +49,11 @@ class MainActivity : FlutterActivity() {
                     bridge.registerAppEventListener { payload -> events.success(payload) }
                 }
 
+                // registerAppEventListener() registriert bei der Connect-IQ-SDK nur
+                // einmal pro Prozess (siehe GarminBridge) -- onCancel loest deshalb
+                // kein SDK-Unregister aus, sondern nur bridge.unregisterAppEventListener(),
+                // damit spaetere Events nicht an diesen bereits geschlossenen EventSink
+                // weitergereicht werden.
                 override fun onCancel(arguments: Any?) {
                     currentEventSink = null
                     bridge.unregisterAppEventListener()
