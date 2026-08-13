@@ -84,6 +84,7 @@ Map<String, dynamic> buildStateSnapshot(WorkoutState s, EquipmentCatalog catalog
     'line2': lines.line2,
     'isPause': iv.isPause,
     'isTimed': s.currentIsTimed,
+    'isRunning': s.isRunning,
     'reps': s.currentReps,
     'secondsLeft': s.secondsLeft,
     'duration': s.currentDuration,

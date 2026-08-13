@@ -27,9 +27,14 @@ module WatchState {
     function tick() as Void {
         if (current == null) { return; }
         var screenState = current.get("screenState") as String;
+        var isRunning = current.get("isRunning") as Boolean;
         // Nur running/holding zaehlen ueberhaupt runter -- paused/hold_waiting
-        // stehen still, confirming/finished zeigen keinen Live-Timer.
-        var counting = screenState.equals("running") || screenState.equals("holding");
+        // stehen still, confirming/finished zeigen keinen Live-Timer. Zusaetzlich
+        // muss isRunning true sein: screenState bleibt "holding", auch waehrend
+        // eine Zeit-Uebung pausiert ist (siehe watchScreenStateFor(), Handy-Seite),
+        // sonst zaehlt die Uhr in genau diesem Fall weiter, obwohl das Handy
+        // pausiert hat (Korrekturlesung, finale Branch-Review).
+        var counting = isRunning && (screenState.equals("running") || screenState.equals("holding"));
         if (!counting) { return; }
         // Ausser im holding-Zustand (Ueberzeit ist vorgesehen, siehe
         // TimerDisplay am Handy) haelt der Countdown bei 0 an, statt negativ

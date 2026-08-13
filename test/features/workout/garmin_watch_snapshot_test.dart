@@ -111,6 +111,7 @@ void main() {
       expect(snap['line2'], 'Swing einarmig · L');
       expect(snap['isPause'], false);
       expect(snap['isTimed'], false);
+      expect(snap['isRunning'], false);
       expect(snap['reps'], 14);
       expect(snap['screenState'], 'paused');
     });
@@ -122,6 +123,7 @@ void main() {
       expect(snap['line1'], 'Pause');
       expect(snap['line2'], '');
       expect(snap['isPause'], true);
+      expect(snap['isRunning'], false);
       expect(snap['reps'], 0);
     });
 
@@ -175,8 +177,28 @@ void main() {
       );
       final snap = buildStateSnapshot(s, _catalog);
       expect(snap['isTimed'], true);
+      expect(snap['isRunning'], false);
       expect(snap['reps'], 0);
       expect(snap['duration'], 45);
+    });
+
+    test(
+        'pausierter Zeit-Uebung-Hold: screenState bleibt holding, isRunning wird trotzdem als false mitgeschickt',
+        () {
+      // Der Bug, den dieser Test verhindert: watchScreenStateFor() liefert
+      // "holding" unabhaengig von isRunning (siehe dort), aber ohne
+      // isRunning im Snapshot konnte die Uhr eine pausierte Zeit-Uebung
+      // (z.B. durch Auto-Pause beim Seitenwechsel, workout_screen.dart)
+      // nicht von einer laufenden unterscheiden und zaehlte einfach weiter.
+      final s = _state(
+        intervals: [_iv(reps: 0, durationSeconds: 45)],
+        timedFlags: [true],
+        holdStarted: true,
+        isRunning: false,
+      );
+      final snap = buildStateSnapshot(s, _catalog);
+      expect(snap['screenState'], 'holding');
+      expect(snap['isRunning'], false);
     });
   });
 
