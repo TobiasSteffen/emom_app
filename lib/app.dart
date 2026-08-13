@@ -7,6 +7,7 @@ import 'core/providers/series_notifier.dart';
 import 'core/providers/settings_provider.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
+import 'features/workout/garmin_workout_sync_notifier.dart';
 import 'features/workout/workout_screen.dart';
 
 class KettlebellApp extends ConsumerStatefulWidget {
@@ -50,6 +51,9 @@ class _KettlebellAppState extends ConsumerState<KettlebellApp>
     // the screen can sleep normally when the app isn't visible.
     if (state == AppLifecycleState.resumed) {
       WakelockPlus.enable();
+      // Ersetzt den Selbstheilungs-Pfad, der bisher am wiederholten Oeffnen
+      // der Einstellungen hing (siehe garmin_workout_sync_notifier.dart).
+      ref.read(garminWorkoutSyncProvider.notifier).retryRegistration();
     } else {
       WakelockPlus.disable();
     }
@@ -57,6 +61,7 @@ class _KettlebellAppState extends ConsumerState<KettlebellApp>
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(garminWorkoutSyncProvider);
     return MaterialApp(
       title: 'Kettlebell EMOM',
       debugShowCheckedModeBanner: false,
