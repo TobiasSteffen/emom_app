@@ -109,6 +109,51 @@ class GarminBridge(private val context: Context) {
         }
     }
 
+    // WICHTIG: exakte ConnectIQ.sendMessage()-Signatur vor dem Bauen gegen
+    // die installierte Connect-IQ-SDK-Version verifizieren (siehe
+    // Design-Spec, Abschnitt "Fehlerbehandlung" -- nicht primaerquellen-
+    // verifiziert, da developer.garmin.com per Fetch nicht erreichbar war).
+    fun sendStateSnapshot(payload: Map<String, Any?>, callback: (String) -> Unit) {
+        ensureSdkReady { ready ->
+            if (!ready) {
+                callback("error")
+                return@ensureSdkReady
+            }
+            try {
+                val devices = connectIQ.connectedDevices
+                val device: IQDevice? = devices?.firstOrNull()
+                if (device == null) {
+                    callback("no_device")
+                    return@ensureSdkReady
+                }
+                connectIQ.getApplicationInfo(watchAppId, device, object : ConnectIQ.IQApplicationInfoListener {
+                    override fun onApplicationInfoReceived(app: IQApp) {
+                        try {
+                            connectIQ.sendMessage(device, app, payload) { _, _, status ->
+                                callback(status.name)
+                            }
+                        } catch (e: InvalidStateException) {
+                            Log.e(TAG, "sendMessage failed", e)
+                            callback("error")
+                        } catch (e: ServiceUnavailableException) {
+                            Log.e(TAG, "sendMessage failed", e)
+                            callback("error")
+                        }
+                    }
+                    override fun onApplicationNotInstalled(applicationId: String) {
+                        callback("not_installed")
+                    }
+                })
+            } catch (e: InvalidStateException) {
+                Log.e(TAG, "getApplicationInfo failed", e)
+                callback("error")
+            } catch (e: ServiceUnavailableException) {
+                Log.e(TAG, "getApplicationInfo failed", e)
+                callback("error")
+            }
+        }
+    }
+
     // connectIQ.registerForAppEvents() vertraegt, wie ensureSdkReady()/initialize(),
     // keine wiederholte Registrierung pro Prozess -- registerAppEventListener() kann
     // aber ueber EventChannel.onListen beliebig oft neu aufgerufen werden (z.B. bei
