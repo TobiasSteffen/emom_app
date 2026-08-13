@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../core/models/equipment_catalog.dart';
 import '../../core/providers/equipment_catalog_notifier.dart';
@@ -95,10 +96,20 @@ class GarminWorkoutSyncNotifier extends _$GarminWorkoutSyncNotifier {
   }
 
   Future<void> _send(WorkoutState state, EquipmentCatalog catalog) async {
-    if (ref.read(garminProvider).value?.watchAppStatus != WatchAppStatus.running) {
-      return;
+    try {
+      if (ref.read(garminProvider).value?.watchAppStatus != WatchAppStatus.running) {
+        return;
+      }
+      await _service.sendStateSnapshot(buildStateSnapshot(state, catalog));
+    } catch (e) {
+      // Verhindert, dass ein einzelner Fehler (z.B. aus buildStateSnapshot
+      // oder einer nicht-PlatformException aus dem Platform-Channel)
+      // _sendChain dauerhaft und stillschweigend blockiert -- ohne dieses
+      // catch wuerde jeder folgende _sendChain.then((_) => _send(...)) die
+      // bereits fehlgeschlagene Future erben und nie wieder _send()
+      // aufrufen (finale Branch-Review).
+      debugPrint('GarminWorkoutSyncNotifier._send failed: $e');
     }
-    await _service.sendStateSnapshot(buildStateSnapshot(state, catalog));
   }
 
   /// Wird bei jedem `AppLifecycleState.resumed` erneut aufgerufen (siehe
