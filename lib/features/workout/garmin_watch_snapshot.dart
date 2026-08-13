@@ -92,3 +92,48 @@ Map<String, dynamic> buildStateSnapshot(WorkoutState s, EquipmentCatalog catalog
     'totalReps': s.totalReps,
   };
 }
+
+typedef WatchChangeKey = ({
+  int minute,
+  int totalMinutes,
+  bool isRunning,
+  bool isPause,
+  bool isTimed,
+  bool holdWaiting,
+  bool holdStarted,
+  bool waitingForConfirmation,
+  bool isFinished,
+  String equipmentTypeId,
+  String? variantId,
+  String exerciseTypeId,
+  ExerciseSide? side,
+  int reps,
+  int durationSeconds,
+});
+
+/// Nur wenn sich mindestens eines dieser Felder aendert, lohnt sich ein
+/// Push an die Uhr -- explizit NICHT bei jedem `secondsLeft`-Tick (siehe
+/// Design-Spec, Scope-Entscheidung 1). Die letzten sechs Felder (Intervall-
+/// Inhalt) sind noetig, weil ein Reset/Planwechsel bei Minute 0 im
+/// Idle-Zustand sonst bitgleich zum vorherigen Schluessel waere, obwohl
+/// sich die angezeigte Uebung tatsaechlich geaendert hat (Korrekturlesung).
+WatchChangeKey watchChangeKeyFor(WorkoutState s) {
+  final iv = s.intervals[s.currentMinute];
+  return (
+    minute: s.currentMinute,
+    totalMinutes: s.totalMinutes,
+    isRunning: s.isRunning,
+    isPause: iv.isPause,
+    isTimed: s.currentIsTimed,
+    holdWaiting: s.holdWaiting,
+    holdStarted: s.holdStarted,
+    waitingForConfirmation: s.waitingForConfirmation,
+    isFinished: s.isFinished,
+    equipmentTypeId: iv.equipmentTypeId,
+    variantId: iv.variantId,
+    exerciseTypeId: iv.exerciseTypeId,
+    side: iv.side,
+    reps: iv.reps,
+    durationSeconds: iv.durationSeconds,
+  );
+}

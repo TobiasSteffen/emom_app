@@ -179,4 +179,53 @@ void main() {
       expect(snap['duration'], 45);
     });
   });
+
+  group('watchChangeKeyFor', () {
+    test('gleicher Schluessel bei reinem secondsLeft-Wechsel', () {
+      final a = _state(intervals: [_iv()], isRunning: true, secondsLeft: 42);
+      final b = _state(intervals: [_iv()], isRunning: true, secondsLeft: 41);
+      expect(watchChangeKeyFor(a), watchChangeKeyFor(b));
+    });
+
+    test('unterschiedlicher Schluessel bei Minutenwechsel', () {
+      final a = _state(intervals: [_iv(), _iv()], currentMinute: 0);
+      final b = _state(intervals: [_iv(), _iv()], currentMinute: 1);
+      expect(watchChangeKeyFor(a), isNot(watchChangeKeyFor(b)));
+    });
+
+    test('unterschiedlicher Schluessel bei isRunning-Wechsel', () {
+      final a = _state(intervals: [_iv()], isRunning: false);
+      final b = _state(intervals: [_iv()], isRunning: true);
+      expect(watchChangeKeyFor(a), isNot(watchChangeKeyFor(b)));
+    });
+
+    test('unterschiedlicher Schluessel bei waitingForConfirmation-Wechsel', () {
+      final a = _state(intervals: [_iv(), _iv()], waitingForConfirmation: false);
+      final b = _state(intervals: [_iv(), _iv()], waitingForConfirmation: true);
+      expect(watchChangeKeyFor(a), isNot(watchChangeKeyFor(b)));
+    });
+
+    test('unterschiedlicher Schluessel bei Reset/Planwechsel trotz gleicher Minute und isRunning', () {
+      // Realer Fall: Nutzer steht bei Minute 0, pausiert; wechselt in der
+      // Planbibliothek den aktiven Plan (Reset auf Minute 0). minute,
+      // isRunning, isPause, isTimed etc. sind hier alle identisch zu vorher
+      // -- ohne Intervall-Inhalt im Schluessel wuerde die Uhr die neue
+      // Uebung nie zu sehen bekommen.
+      final a = _state(intervals: [
+        _iv(exerciseTypeId: 'swing_beidarmig'),
+        _iv(),
+      ]);
+      final b = _state(intervals: [
+        _iv(exerciseTypeId: 'snatch'),
+        _iv(),
+      ]);
+      expect(watchChangeKeyFor(a), isNot(watchChangeKeyFor(b)));
+    });
+
+    test('unterschiedlicher Schluessel bei anderer Plan-Laenge (totalMinutes)', () {
+      final a = _state(intervals: [_iv(), _iv()]);
+      final b = _state(intervals: [_iv(), _iv(), _iv()]);
+      expect(watchChangeKeyFor(a), isNot(watchChangeKeyFor(b)));
+    });
+  });
 }
