@@ -652,7 +652,15 @@ Kopfzeile der Detailansicht: Datum, `X/30 Intervalle`, Gesamtreps-Aufschlüsselu
 
 - **Langfristige Architektur**: Mit wachsender Datenkomplexität (Kalender, Ernährung, mehrere Sportarten) ist eine Migration der Persistenzschicht auf eine lokale SQLite-Datenbank (`drift`-Paket) zu evaluieren.
 
-- **Garmin-Integration** *(Hello-World-Spike + App-Status-Rückkanal abgeschlossen, weitere Schritte offen)*:
+- **Garmin-Integration** *(Hello-World-Spike + App-Status-Rückkanal + Hauptscreen-Spiegelung (Kern) abgeschlossen, Hardware-Befunde offen für Folge-Plan)*:
+
+  **Umgesetzt (Stand 2026-08-13):** Der Trainings-Hauptscreen wird jetzt auf die Uhr gespiegelt — Anzeige (aktuelle Übung, Reps/Zeit, Countdown, Phasenfarbe, Vorschau der nächsten Übung) plus Steuerung über die zwei physischen Buttons (Pause/Weiter/Start/Fertig oben, Skip unten). Bidirektionale Erweiterung der bestehenden Connect-IQ-App-Messages: Handy pusht bei jeder relevanten Trainings-Zustandsänderung einen Snapshot, Uhr rechnet den Countdown dazwischen lokal weiter. Alle 10 automatisierbaren Implementierungs-Tasks sind fertig, einzeln reviewed, plus ein finaler Whole-Branch-Review (fand und behob 3 Cross-Task-Bugs: Uhr zählte bei pausiertem Zeit-Halten weiter, unsortierte Doppel-Sends pro Minutenwechsel, verworfener Sende-Status — sowie eine Regression im eigenen Fix, ebenfalls behoben). 217/217 Tests grün. Details: `docs/superpowers/specs/2026-08-12-garmin-watch-hauptscreen-design.md`, `docs/superpowers/plans/2026-08-12-garmin-watch-hauptscreen.md`.
+
+  **Offen aus der manuellen Hardware-Verifikation (Task 11, auf echter Venu 4), für einen Folge-Plan:**
+  1. Kaltstart-Symbol (grau→rot) braucht aktuell einen vollständigen App-Neustart, um sich zu aktualisieren — kein UI-Weg über die Einstellungen, das ohne Neustart erneut anzustoßen.
+  2. Die drei Watch-Screens überlagerten sich beim ersten Hardware-Test — feste, geschätzte Pixel-Abstände statt tatsächlich gemessener Schrifthöhe (`dc.getFontHeight()`). Ein Fix-Ansatz (`drawStack()`-Helper mit dynamischer Zeilenhöhe) wurde entworfen, aber nicht fertig verifiziert (Build brach mit einer nicht existierenden `Graphics.TEXT_JUSTIFY_TOP`-Konstante ab) — verworfen zugunsten eines sauberen Neustarts im Folge-Plan.
+  3. Die native "App schließen"-Wischgeste (links nach rechts, `WatchUi.SWIPE_RIGHT`) wird auf der echten Venu 4 als `KEY_ESC` interpretiert und landet dadurch auf `onBack()` → löst Skip aus statt die App zu schließen — genau das SDK-dokumentierte Risiko, das beim Design-Review schon vermutet wurde. Der aktuell gebaute Exit-Weg (`onSwipe()` mit `SWIPE_LEFT`) ist die falsche Richtung für die von Nutzern erwartete Geste.
+  4. Neuer Wunsch: das Geräte-Icon (dieselbe Grafik wie in der `RepsCard` am Handy) soll auch auf dem Watch-Screen erscheinen — bisher wird nur Text gespiegelt, kein Icon-Identifier im Snapshot-Protokoll, keine Bitmap-Anzeige auf der Uhr.
 
   **Stand 2026-08-08:** Der erste Spike (Verbindung erkennen + Watch-App vom Handy aus öffnen) ist gebaut, getestet und auf der echten Venu 4 end-to-end bestätigt. Volle technische Details, Architektur und zwei dabei gefundene/behobene Bugs (fehlende Bluetooth-Laufzeitberechtigung, `ConnectIQ.initialize()` durfte nicht mehrfach aufgerufen werden) stehen in `CLAUDE.md` unter "Garmin Watch Integration"; Task-für-Task-Historie in `docs/superpowers/plans/2026-08-07-garmin-connect-spike.md`.
 
@@ -663,7 +671,7 @@ Kopfzeile der Detailansicht: Datum, `X/30 Intervalle`, Gesamtreps-Aufschlüsselu
   **Grobe Anforderung (Rohnotiz vom 2026-08-07, Ausgangspunkt für den Spike):**
   1. Handy-App erkennt, dass die Garmin-Uhr verbunden ist (Bluetooth-Pairing-Status). ✅ umgesetzt
   2. Beim Start eines Trainings auf dem Handy öffnet sich automatisch die Companion-App auf der Uhr. — Grundmechanismus (App vom Handy aus öffnen) ✅ umgesetzt; automatischer Trigger beim Trainingsstart noch offen (aktuell nur manueller Tap)
-  3. Die Uhr-App zeigt das laufende Training an (aktuelles Intervall/Minute, synchron zum Handy-Timer). — offen
+  3. Die Uhr-App zeigt das laufende Training an (aktuelles Intervall/Minute, synchron zum Handy-Timer). ✅ Kern umgesetzt (Anzeige + Steuerung), Hardware-Befunde (Layout-Überlagerung, Geste-Kollision, Kaltstart-Symbol, Geräte-Icon) offen für Folge-Plan
   4. Die Uhr-App zeigt Vitaldaten an — Herzfrequenz auf jeden Fall, plus was die Venu 4 sonst sinnvoll liefert (HRV, Kalorien, o.ä. — noch offen, muss recherchiert werden). — offen
   5. Diese Vitaldaten sollen (ggf.) auch auf dem Handy während des Workouts angezeigt werden. — offen
   6. Vitaldaten sollen in der Trainingshistorie mitgespeichert werden. — offen
