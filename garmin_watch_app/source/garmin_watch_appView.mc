@@ -20,8 +20,15 @@ class garmin_watch_appView extends WatchUi.View {
         if (resource == null) {
             return null;
         }
+        // _iconCacheId erst NACH erfolgreichem loadResource() setzen
+        // (gefunden im finalen Review): waere die ID schon vorher gesetzt
+        // und loadResource() wuerfe, bliebe der Cache auf der ID "gepinnt",
+        // waehrend _iconCacheBitmap noch das alte Icon haelt -- jeder
+        // spaetere Aufruf mit derselben ID traefe den Cache-Hit-Pfad und
+        // laege fuer den Rest der Session falsch.
+        var bitmap = WatchUi.loadResource(resource);
         _iconCacheId = iconId;
-        _iconCacheBitmap = WatchUi.loadResource(resource);
+        _iconCacheBitmap = bitmap;
         return _iconCacheBitmap;
     }
 
@@ -87,6 +94,14 @@ class garmin_watch_appView extends WatchUi.View {
         return {:kind => "bitmap", :value => bitmap, :color => color};
     }
 
+    private function elementHeight(dc as Dc, element as Dictionary) as Number {
+        if (element.get(:kind).equals("text")) {
+            return dc.getFontHeight(element.get(:font) as Graphics.FontDefinition);
+        }
+        var bitmap = element.get(:value) as WatchUi.BitmapResource or Graphics.BitmapReference;
+        return bitmap.getHeight();
+    }
+
     // Zeichnet Elemente (Text oder Bitmap) buendig untereinander, ohne
     // Ueberlappung, unabhaengig von den jeweiligen Schriftgroessen/Bitmap-
     // Hoehen (siehe Design-Spec Abschnitt 1 -- Graphics.TEXT_JUSTIFY_TOP
@@ -101,12 +116,7 @@ class garmin_watch_appView extends WatchUi.View {
         for (var i = 0; i < elements.size(); i++) {
             var element = elements[i];
             var kind = element.get(:kind) as String;
-            var h;
-            if (kind.equals("text")) {
-                h = dc.getFontHeight(element.get(:font));
-            } else {
-                h = element.get(:value).getHeight();
-            }
+            var h = elementHeight(dc, element);
             var centerY = y + h / 2;
             if (kind.equals("text")) {
                 dc.setColor(element.get(:color) as Number, Graphics.COLOR_TRANSPARENT);
@@ -131,12 +141,7 @@ class garmin_watch_appView extends WatchUi.View {
     private function stackHeight(dc as Dc, elements as Array) as Number {
         var total = 0;
         for (var i = 0; i < elements.size(); i++) {
-            var element = elements[i];
-            if (element.get(:kind).equals("text")) {
-                total += dc.getFontHeight(element.get(:font));
-            } else {
-                total += element.get(:value).getHeight();
-            }
+            total += elementHeight(dc, elements[i]);
         }
         return total;
     }
@@ -224,7 +229,7 @@ class garmin_watch_appView extends WatchUi.View {
             textElement("NÄCHSTE ÜBUNG", Graphics.FONT_SMALL, Graphics.COLOR_ORANGE),
             textElement(snapshot.get("nextText") as String, Graphics.FONT_XTINY, Graphics.COLOR_WHITE),
         ] as Array;
-        drawStack(dc, elements, cy - 30);
+        drawStack(dc, elements, cy - stackHeight(dc, elements) / 2);
     }
 
     private function drawFinished(dc as Dc, snapshot as Dictionary) as Void {
@@ -235,7 +240,7 @@ class garmin_watch_appView extends WatchUi.View {
             textElement(snapshot.get("totalReps").toString(), Graphics.FONT_NUMBER_MEDIUM, Graphics.COLOR_WHITE),
             textElement(summary, Graphics.FONT_XTINY, Graphics.COLOR_LT_GRAY),
         ] as Array;
-        drawStack(dc, elements, cy - 60);
+        drawStack(dc, elements, cy - stackHeight(dc, elements) / 2);
     }
 
     private function drawButtonHints(dc as Dc, screenState as String) as Void {
