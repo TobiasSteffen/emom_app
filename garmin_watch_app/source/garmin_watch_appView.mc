@@ -97,8 +97,7 @@ class garmin_watch_appView extends WatchUi.View {
     // wie viel Platz ein Stack braucht, BEVOR er seine Startposition
     // festlegt (z.B. um direkt oberhalb eines fix positionierten Ankers
     // wie der grossen Zahl zu enden, statt nur top-down von einer
-    // geschaetzten Konstante aus zu wachsen -- siehe Design-Notiz in
-    // drawRunning()).
+    // geschaetzten Konstante aus zu wachsen).
     private function stackHeight(dc as Dc, elements as Array) as Number {
         var total = 0;
         for (var i = 0; i < elements.size(); i++) {
@@ -142,6 +141,9 @@ class garmin_watch_appView extends WatchUi.View {
         var totalMinutes = snapshot.get("totalMinutes") as Number;
         var minute = snapshot.get("minute") as Number;
         var degrees = totalMinutes > 0 ? (360.0 * minute / totalMinutes) : 0.0;
+        // drawArc() zeichnet laut SDK-Doku einen VOLLEN Kreis, wenn Start-
+        // und End-Winkel gleich sind -- bei Minute 0 (degrees == 0) waere
+        // das sonst ein Vollkreis statt gar keinem Fortschritt.
         if (degrees >= 1) {
             dc.drawArc(cx, cy, cx - 6, Graphics.ARC_CLOCKWISE, 90, 90 - degrees);
         }
