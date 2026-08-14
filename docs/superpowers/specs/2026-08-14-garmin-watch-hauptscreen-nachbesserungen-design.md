@@ -277,63 +277,69 @@ Settings-Besuch im Hintergrund gemountet (`ConfigScreen` wird nur darüber gepus
 übersteht den Settings-Besuch in diesem Fall also, wird aber **nicht neu abgefragt**: der einmalige
 Bluetooth-Check in `build()` lief nur beim allerersten Mal, das ist die bereits in `CLAUDE.md`
 dokumentierte "keine Live-Poll"-Entscheidung. Das Symptom ist also nicht fehlendes Am-Leben-Bleiben,
-sondern fehlendes erneutes Abfragen trotz Am-Leben-Bleiben. (`GarminWorkoutSyncNotifier` — separat
-geprüft — bricht bei `hasEverConnected() == false` vor seinem `ref.listen(garminProvider, ...)` ab
-und hält `garminProvider` in diesem Zustand ohnehin nicht zusätzlich am Leben; für die eigentliche
-Behebung dieses Bugs ist das nicht relevant, s. u. warum.)
+sondern fehlendes erneutes Abfragen trotz Am-Leben-Bleiben.
 
-**Fix — bewusst nur `garminProvider` invalidieren, nicht auch `garminWorkoutSyncProvider`:**
+**Fix — kein `invalidate()`, sondern ein In-Place-Recheck (dritte Korrektur dieses Abschnitts):**
+Ein Zwischenentwurf dieses Fixes nutzte `ref.invalidate(garminProvider)` (statt beide Provider zu
+invalidieren, s. u. warum das verworfen wurde). Das behebt zwar den gemeldeten Icon-Bug, führt aber
+einen **neuen, schwereren** Bug ein: `GarminNotifier.build()` baut `GarminConnectionStatus` nach
+einem Invalidieren immer mit `watchAppStatus: WatchAppStatus.unknown` neu auf (kein vorheriger State
+zum Fortschreiben) — und `GarminWorkoutSyncNotifier._send()` (`garmin_workout_sync_notifier.dart:100`)
+sendet **grundsätzlich keinen Snapshot**, solange `watchAppStatus != running`. Jedes Verlassen der
+Settings würde also die Live-Spiegelung zur Uhr stillschweigend stoppen, bis der Nutzer die
+Watch-App manuell schließt und neu öffnet — schlimmer als der Bug, den dieser Fix beheben soll,
+und ausgerechnet der wahrscheinlichste Weg dorthin ("Watch-App öffnen"-Button sitzt in
+`ConfigScreen` selbst, `config_screen.dart:137").
+
+Stattdessen: `GarminNotifier` bekommt eine neue Methode `refreshConnection()`, die exakt dem
+bereits bestehenden, bewährten Muster von `openWatchApp()` folgt (`garmin_notifier.dart:55-69`) —
+Bluetooth-Status neu abfragen, `state` direkt per `AsyncData(...)` ersetzen, dabei
+`state.value?.watchAppStatus` unverändert übernehmen — nur ohne den `_service.openWatchApp()`-Aufruf:
+
+```dart
+  Future<void> refreshConnection() async {
+    final connected = await _service.isWatchConnected();
+    if (connected) {
+      await _service.markEverConnected();
+    }
+    final everConnected = await _service.hasEverConnected();
+    final watchAppStatus = state.value?.watchAppStatus ?? WatchAppStatus.unknown;
+    state = AsyncData(GarminConnectionStatus(
+      connected: connected,
+      everConnected: everConnected,
+      watchAppStatus: watchAppStatus,
+    ));
+  }
+```
+
+`workout_screen.dart::_openConfig()`:
 
 ```dart
 if (!mounted) return;
-ref.invalidate(garminProvider);
+await ref.read(garminProvider.notifier).refreshConnection();
+if (!mounted) return;
 ref.read(workoutProvider.notifier).updateSettings(ref.read(settingsProvider).requireValue);
 ```
 
-Ein früherer Entwurf dieses Fixes invalidierte zusätzlich `garminWorkoutSyncProvider`, um dessen
-`hasEverConnected()`-Guard bei einer ersten Verbindung während der laufenden Session neu zu
-bewerten. Das wurde verworfen: `garminProvider` und `garminWorkoutSyncProvider` teilen sich einen
-einzigen nativen EventChannel-Stream (`GarminService._rawEvents`, statisch gecacht,
-`garmin_service.dart:84`) mit genau zwei Abonnenten (`GarminNotifier._appRunningSub`,
-`GarminWorkoutSyncNotifier._commandSub`). `receiveBroadcastStream()` feuert das native `onCancel`
-erst, wenn der **letzte** Abonnent abbestellt — invalidiert man **beide** Provider gleichzeitig,
-fällt die Abonnentenzahl garantiert auf null, `MainActivity.kt` ruft
-`bridge.unregisterAppEventListener()` auf, und für die Dauer der beiden `build()`-Neuaufbauten
-(mehrere `await`s: Bluetooth-Berechtigung, eventually-consistent Geräteabfrage, `hasEverConnected()`,
-`equipmentCatalogProvider.future`) gehen **alle** Connect-IQ-Events verloren — nicht nur der
-Status, sondern auch jeder `cmd_*`-Tastendruck von der Uhr. Invalidiert man dagegen nur
-`garminProvider`, bleibt `GarminWorkoutSyncNotifier._commandSub` die ganze Zeit aktiv, die
-Abonnentenzahl fällt nie auf null, `onCancel` feuert nie — kein Event-Verlust.
+Das ist kein `invalidateSelf()`/`invalidate()` — der Notifier bleibt exakt dieselbe Instanz, seine
+`_appRunningSub`-Subscription auf den gemeinsam mit `GarminWorkoutSyncNotifier` genutzten
+`GarminService._rawEvents`-Stream (`garmin_service.dart:84`) wird nie beendet. Damit erledigen sich
+zwei Sorgen aus früheren Entwürfen dieses Abschnitts gleichzeitig: kein `watchAppStatus`-Reset (der
+neue Bug oben ist unmöglich, weil `state.value?.watchAppStatus` durchgereicht wird) **und** kein
+Event-Kanal-Abriss (der Grund, warum ein früherer Entwurf `garminWorkoutSyncProvider` bewusst NICHT
+mit-invalidierte) — beide Probleme entstehen nur beim Invalidieren, und hier wird nichts invalidiert.
+Die vormals dokumentierte "bekannte Rest-Einschränkung" (Sync-Notifier bleibt bei einer ersten
+Verbindung mitten in der Session bis zum Neustart inaktiv) entfällt ebenfalls ersatzlos — sie war
+nur eine Folge des verworfenen `invalidate()`-Ansatzes.
 
-Die Kehrseite: der `hasEverConnected()`-Guard von `GarminWorkoutSyncNotifier` wird durch diesen Fix
-**nicht** neu bewertet. Verbindet sich der Nutzer während der laufenden Session zum allerersten Mal
-(vorher `hasEverConnected() == false`), bleibt der Sync-Notifier inaktiv, bis die App neu gestartet
-wird — ein schmalerer Rest-Fall als der ursprünglich gemeldete Bug (der ist behoben), bewusst nicht
-mitgelöst, um nicht das gerade beschriebene Event-Verlust-Risiko einzugehen. Dokumentiert als
-bekannte Einschränkung, kein stiller Kompromiss.
+**Warum das den gemeldeten Bug behebt:** Der gemeldete Bug ist die Anzeige (grau/rot/grün), nicht
+der Sync-Mechanismus — `garminProvider`s `connected`/`everConnected`-State steuert direkt das Icon.
+`refreshConnection()` beim Verlassen der Settings erzwingt genau den fehlenden erneuten
+Bluetooth-Check, ohne `watchAppStatus` anzutasten.
 
-**Warum das den gemeldeten Bug trotzdem behebt:** Der gemeldete Bug ist die Anzeige
-(grau/rot/grün), nicht der Sync-Mechanismus — `garminProvider`s `connected`/`everConnected`/
-`watchAppStatus`-State steuert direkt das Icon. Ein `ref.invalidate(garminProvider)` beim Verlassen
-der Settings erzwingt genau den fehlenden erneuten Bluetooth-Check. Der bereits vorhandene
-"Watch-App öffnen"-Button (`config_screen.dart:137`) löst denselben Recheck schon heute aus, wenn
-der Nutzer ihn antippt — dieser Fix deckt zusätzlich den Fall ab, in dem sich die Verbindung
-während des Settings-Besuchs ändert, ohne dass dieser Button gedrückt wurde.
-
-**Bekannte Rest-Einschränkung, bewusst akzeptiert (kein neues Problem):** Nach der Invalidierung
-startet `watchAppStatus` wieder bei `unknown`, bis die Uhr die nächste "opened"-Transition sendet
-— Connect IQ kennt nur Push-bei-Zustandswechsel, keine Abfrage des aktuellen Zustands. War die
-Watch-App zum Zeitpunkt der Invalidierung schon offen, bleibt das Icon bis zum nächsten
-Schließen/Öffnen der Watch-App auf der neutralen Farbe stehen. Das ist dieselbe, bereits an anderer
-Stelle in `CLAUDE.md` dokumentierte und akzeptierte Einschränkung ("Cold-Start-Unknown ist real und
-akzeptiert, kein Bug") — hier taucht sie nur an einer weiteren Stelle auf. Riverpods
-`copyWithPrevious`-Verhalten sorgt dafür, dass die UI während des kurzen Rebuilds nicht auf
-grau/`unknown` zurückfällt, bevor der neue Wert da ist (kein sichtbares Flackern).
-
-**Testing:** Neuer Test in `garmin_notifier_test.dart` bzw. als Widget-Test:
-`_openConfig()`-Rückkehr ruft `ref.invalidate(garminProvider)` auf, `garminWorkoutSyncProvider`
-bleibt unangetastet (Regressionscheck: `_commandSub`-Subscription-Objekt bleibt über den
-Settings-Besuch hinweg identisch / wird nicht neu erstellt).
+**Testing:** Neuer Test in `garmin_notifier_test.dart`: `refreshConnection()` fragt
+`isWatchConnected()` erneut ab (Call-Counter auf dem gemockten Method-Channel) und lässt einen
+bereits gesetzten `watchAppStatus`-Wert unverändert, statt ihn auf `unknown` zurückzusetzen.
 
 ## Verifikation
 
@@ -343,5 +349,5 @@ Settings-Besuch hinweg identisch / wird nicht neu erstellt).
 - Punkt 3: `flutter test` unberührt; Simulator für Kurz/Lang-Unterscheidung an beiden Knöpfen und
   Tap-No-op; die eigentliche Swipe-Kollision und die exakte `KEY_*`-Konstante sind nur auf echter
   Hardware zu verifizieren (sieben konkrete Prüfergebnisse, s. dort)
-- Punkt 4: vollständig Dart-seitig, regulärer `flutter test`, inkl. Regressionscheck, dass
-  `garminWorkoutSyncProvider`/`_commandSub` beim Settings-Verlassen unangetastet bleibt
+- Punkt 4: vollständig Dart-seitig, regulärer `flutter test`, inkl. Test, dass `refreshConnection()`
+  einen bestehenden `watchAppStatus`-Wert nicht auf `unknown` zurücksetzt
