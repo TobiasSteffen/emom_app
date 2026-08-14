@@ -93,6 +93,25 @@ class garmin_watch_appView extends WatchUi.View {
         return y;
     }
 
+    // Wie drawStack(), aber ohne zu zeichnen -- damit ein Aufrufer weiss,
+    // wie viel Platz ein Stack braucht, BEVOR er seine Startposition
+    // festlegt (z.B. um direkt oberhalb eines fix positionierten Ankers
+    // wie der grossen Zahl zu enden, statt nur top-down von einer
+    // geschaetzten Konstante aus zu wachsen -- siehe Design-Notiz in
+    // drawRunning()).
+    private function stackHeight(dc as Dc, elements as Array) as Number {
+        var total = 0;
+        for (var i = 0; i < elements.size(); i++) {
+            var element = elements[i];
+            if (element.get(:kind).equals("text")) {
+                total += dc.getFontHeight(element.get(:font));
+            } else {
+                total += element.get(:value).getHeight();
+            }
+        }
+        return total;
+    }
+
     private function phaseColorForMinute(minute as Number) as Number {
         // Muss mit lib/core/models/settings.dart::phaseColorForMinute in
         // Sync bleiben (siehe CLAUDE.md, Abschnitt "Phase color coding").
@@ -136,11 +155,13 @@ class garmin_watch_appView extends WatchUi.View {
         if (!line2.equals("")) {
             headerElements.add(textElement(line2, Graphics.FONT_XTINY, Graphics.COLOR_WHITE));
         }
-        var headerEndY = drawStack(dc, headerElements, cy - 60);
 
         var isTimed = snapshot.get("isTimed") as Boolean;
         var numberFont = Graphics.FONT_NUMBER_MEDIUM;
-        var numberY = headerEndY + dc.getFontHeight(numberFont) / 2 + 6;
+        var numberY = cy;
+        var headerStartY = numberY - dc.getFontHeight(numberFont) / 2 - 6 - stackHeight(dc, headerElements);
+        drawStack(dc, headerElements, headerStartY);
+
         if (!isPause) {
             var big = isTimed ? snapshot.get("duration").toString() : snapshot.get("reps").toString();
             drawCentered(dc, big, numberY, numberFont, ringColor);
