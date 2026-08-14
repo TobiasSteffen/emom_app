@@ -9,6 +9,36 @@ import Toybox.WatchUi;
 // einfacher als drei statische Layouts zu pflegen.
 class garmin_watch_appView extends WatchUi.View {
 
+    private var _iconCacheId as String = "";
+    private var _iconCacheBitmap;
+
+    private function iconBitmapFor(iconId as String) {
+        if (iconId.equals(_iconCacheId)) {
+            return _iconCacheBitmap;
+        }
+        var resource = _iconResource(iconId);
+        if (resource == null) {
+            return null;
+        }
+        _iconCacheId = iconId;
+        _iconCacheBitmap = WatchUi.loadResource(resource);
+        return _iconCacheBitmap;
+    }
+
+    // Rez.Drawables.* sind Compile-Zeit-Konstanten, koennen nicht per
+    // Laufzeit-String indiziert werden -- deshalb diese explizite Map
+    // (siehe Design-Spec Abschnitt 2).
+    private function _iconResource(iconId as String) {
+        if (iconId.equals("kettlebell")) { return Rez.Drawables.kettlebell; }
+        if (iconId.equals("steelmace")) { return Rez.Drawables.steelmace; }
+        if (iconId.equals("pezziball")) { return Rez.Drawables.pezziball; }
+        if (iconId.equals("liegestuetz")) { return Rez.Drawables.liegestuetz; }
+        if (iconId.equals("kniebeuge")) { return Rez.Drawables.kniebeuge; }
+        if (iconId.equals("plank")) { return Rez.Drawables.plank; }
+        if (iconId.equals("dehnen")) { return Rez.Drawables.dehnen; }
+        return null;
+    }
+
     function initialize() {
         View.initialize();
     }
@@ -151,7 +181,14 @@ class garmin_watch_appView extends WatchUi.View {
         var headerElements = [] as Array;
         var line1 = snapshot.get("line1") as String;
         var line2 = snapshot.get("line2") as String;
-        if (!line1.equals("")) {
+        var iconId = snapshot.get("equipmentIcon");
+        var icon = (iconId != null && !iconId.equals("")) ? iconBitmapFor(iconId as String) : null;
+        if (icon != null) {
+            headerElements.add(bitmapElement(icon, ringColor));
+        } else if (!line1.equals("")) {
+            // Fallback, falls kein equipmentIcon ankam (Pause, unbekannte
+            // Ausruestung, oder ein aelterer Handy-Build ohne dieses Feld) --
+            // zeigt den Text statt gar nichts (siehe Design-Spec Abschnitt 2).
             headerElements.add(textElement(line1, Graphics.FONT_XTINY, Graphics.COLOR_WHITE));
         }
         if (!line2.equals("")) {

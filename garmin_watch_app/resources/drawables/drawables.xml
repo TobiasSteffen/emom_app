@@ -1,3 +1,10 @@
 <drawables xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
     <bitmap id="LauncherIcon" filename="launcher_icon.png" dithering="none" />
+    <bitmap id="kettlebell" filename="kettlebell.png" scaleX="40" scaleY="40" automaticPalette="false" />
+    <bitmap id="steelmace" filename="steelmace.png" scaleX="40" scaleY="40" automaticPalette="false" />
+    <bitmap id="pezziball" filename="pezziball.png" scaleX="40" scaleY="40" automaticPalette="false" />
+    <bitmap id="liegestuetz" filename="liegestuetz.png" scaleX="40" scaleY="40" automaticPalette="false" />
+    <bitmap id="kniebeuge" filename="kniebeuge.png" scaleX="40" scaleY="40" automaticPalette="false" />
+    <bitmap id="plank" filename="plank.png" scaleX="40" scaleY="40" automaticPalette="false" />
+    <bitmap id="dehnen" filename="dehnen.png" scaleX="40" scaleY="40" automaticPalette="false" />
 </drawables>
