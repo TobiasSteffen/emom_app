@@ -367,22 +367,20 @@ cp assets/icon/kettlebell.png assets/icon/steelmace.png assets/icon/pezziball.pn
 
 - [ ] **Step 2: Register the 7 bitmaps in `drawables.xml`**
 
-Replace the contents of `garmin_watch_app/resources/drawables/drawables.xml`. No `<palette>`/`disableTransparency` block is needed: the default `packingFormat` (i.e. omitting the attribute) already "supports alpha channel" per the SDK docs' Bitmap Packing Formats table, which covers the source PNGs' real alpha channel without extra configuration.
+Replace the contents of `garmin_watch_app/resources/drawables/drawables.xml`. Each `<bitmap>` needs `automaticPalette="false"` — **found during implementation, confirmed by a real runtime crash, not a hypothetical**: without it, the resource compiler auto-selects palette/indexed packing for these small 40×40 icons (the default `automaticPalette="true"` behavior on 16-bit-color devices), and `dc.drawBitmap2(..., {:tintColor => ...})` (needed for the icon tinting in Step 3) requires a true-color, non-indexed source bitmap — the simulator crashes with `Exception: Source must not use a color palette` the moment a tinted icon is drawn. `automaticPalette="false"` forces true-color packing and resolves it; verified working end-to-end in the simulator. (This is a different, more specific failure than the generic `InvalidPaletteException` risk flagged during design — that one turned out to be a non-issue given the default packing format's alpha support; this one is real and specifically about tinting a palette-packed bitmap.) No `<palette>` block is needed.
 
 ```xml
 <drawables xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
     <bitmap id="LauncherIcon" filename="launcher_icon.png" dithering="none" />
-    <bitmap id="kettlebell" filename="kettlebell.png" scaleX="40" scaleY="40" />
-    <bitmap id="steelmace" filename="steelmace.png" scaleX="40" scaleY="40" />
-    <bitmap id="pezziball" filename="pezziball.png" scaleX="40" scaleY="40" />
-    <bitmap id="liegestuetz" filename="liegestuetz.png" scaleX="40" scaleY="40" />
-    <bitmap id="kniebeuge" filename="kniebeuge.png" scaleX="40" scaleY="40" />
-    <bitmap id="plank" filename="plank.png" scaleX="40" scaleY="40" />
-    <bitmap id="dehnen" filename="dehnen.png" scaleX="40" scaleY="40" />
+    <bitmap id="kettlebell" filename="kettlebell.png" scaleX="40" scaleY="40" automaticPalette="false" />
+    <bitmap id="steelmace" filename="steelmace.png" scaleX="40" scaleY="40" automaticPalette="false" />
+    <bitmap id="pezziball" filename="pezziball.png" scaleX="40" scaleY="40" automaticPalette="false" />
+    <bitmap id="liegestuetz" filename="liegestuetz.png" scaleX="40" scaleY="40" automaticPalette="false" />
+    <bitmap id="kniebeuge" filename="kniebeuge.png" scaleX="40" scaleY="40" automaticPalette="false" />
+    <bitmap id="plank" filename="plank.png" scaleX="40" scaleY="40" automaticPalette="false" />
+    <bitmap id="dehnen" filename="dehnen.png" scaleX="40" scaleY="40" automaticPalette="false" />
 </drawables>
 ```
-
-If Step 6's simulator check shows a broken/garbled icon or a runtime `InvalidPaletteException`, the fallback is an explicit `<palette disableTransparency="false">` block with an enumerated color list inside the affected `<bitmap>` tag (per the SDK docs) — not expected to be needed given the above, but the concrete knob to reach for if it is.
 
 - [ ] **Step 3: Add the icon lookup map, cache, and loader to `garmin_watch_appView.mc`**
 
