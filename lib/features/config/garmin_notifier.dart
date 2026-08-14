@@ -76,12 +76,24 @@ class GarminNotifier extends _$GarminNotifier {
   /// kompletten Neuaufbau) und GarminWorkoutSyncNotifier._send() wuerde
   /// daraufhin jeden Snapshot-Versand stillschweigend unterdruecken, bis
   /// die naechste "opened"-Transition eintrifft.
+  ///
+  /// Guard (gefunden im finalen Review): garminProvider ist autoDispose.
+  /// Ist beim Rueckkehren aus den Settings weder das Header-Icon sichtbar
+  /// noch hasEverConnected() schon true (GarminWorkoutSyncNotifier haelt
+  /// den Provider dann nicht am Leben, s. Root-Cause oben), kann er
+  /// waehrend der await-Strecke hier disposed werden. `state = ...`
+  /// (der generierte Setter ruft intern ref._throwIfInvalidUsage() auf,
+  /// riverpod 3.3.2 lib/src/core/provider/notifier_provider.dart:89-94)
+  /// wirft dann eine UnmountedRefException -- ohne dieses Guard wuerde
+  /// dieser Fehler aus _openConfig() herauspropagieren und den
+  /// nachfolgenden updateSettings()-Aufruf verhindern.
   Future<void> refreshConnection() async {
     final connected = await _service.isWatchConnected();
     if (connected) {
       await _service.markEverConnected();
     }
     final everConnected = await _service.hasEverConnected();
+    if (!ref.mounted) return;
     final watchAppStatus = state.value?.watchAppStatus ?? WatchAppStatus.unknown;
     state = AsyncData(GarminConnectionStatus(
       connected: connected,

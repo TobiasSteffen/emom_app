@@ -129,4 +129,43 @@ void main() {
     expect(isWatchConnectedCalls, 2);
     expect(container.read(garminProvider).value?.watchAppStatus, WatchAppStatus.running);
   });
+
+  test('refreshConnection() wirft nicht, wenn niemand mehr zuhoert (Provider zwischendurch disposed)',
+      () async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    // Verzoegerung im gemockten MethodChannel-Handler: container.read()
+    // unten hoert kurz zu und schliesst synchron wieder (genau wie
+    // ProviderContainer.read() intern tut), was fuer diesen autoDispose-
+    // Provider einen Dispose ueber einen Timer(Duration.zero, ...)
+    // einplant (riverpod 3.3.2 core/element.dart mayNeedDispose() ->
+    // core/scheduler.dart scheduleProviderDispose()). Dieser Timer wird
+    // VOR dem Aufruf von refreshConnection() eingereiht. Ohne eine echte
+    // Verzoegerung hier loesen sich alle awaits in build()/
+    // refreshConnection() rein ueber Microtasks auf und laufen dem
+    // Dispose-Timer davon -- das war genau der Grund, warum die erste
+    // Fassung dieses Tests (kein Handler-Delay) nicht rot wurde, obwohl
+    // der Guard fehlte. Future.delayed(Duration.zero, ...) benutzt selbst
+    // einen Timer, der NACH dem Dispose-Timer eingereiht wird -> der
+    // Dispose feuert zuverlaessig zuerst, bevor refreshConnection() seinen
+    // state-Schreibzugriff erreicht.
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(methodChannel, (call) async {
+      await Future<void>.delayed(Duration.zero);
+      switch (call.method) {
+        case 'isWatchConnected':
+          return true;
+        case 'openWatchApp':
+          return 'launched';
+      }
+      return null;
+    });
+
+    // Kein container.listen() hier -- garminProvider ist autoDispose und
+    // hat direkt nach dem ersten Read keinen Watcher mehr, genau wie bei
+    // _openConfig() im echten Fall (Header-Icon aus, noch nie verbunden).
+    final notifier = container.read(garminProvider.notifier);
+    await expectLater(notifier.refreshConnection(), completes);
+  });
 }

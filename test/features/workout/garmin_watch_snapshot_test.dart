@@ -191,6 +191,28 @@ void main() {
       expect(snap['equipmentIcon'], '');
     });
 
+    // Deckt alle 4 eingebauten Ausruestungen ab (nicht nur Kettlebell wie
+    // oben) -- die restlichen 3 der 7 Icon-IDs (kniebeuge/plank/dehnen)
+    // sind nur ueber selbst angelegte Ausruestung im Wizard erreichbar,
+    // nicht ueber BuiltInEquipment, und bräuchten einen eigens gebauten
+    // Katalog, um sie zu testen -- hier bewusst nicht mitgemacht (final
+    // review: als "defensible" eingestuft, da alle 7 denselben Code-Pfad
+    // durchlaufen). Faengt trotzdem Drift zwischen kEquipmentIconAssets
+    // und den eingebauten Icon-Dateinamen ab.
+    for (final entry in const {
+      'kettlebell': 'kettlebell',
+      'steelmace': 'steelmace',
+      'pezziball': 'pezziball',
+      'bodyweight': 'liegestuetz',
+    }.entries) {
+      test('equipmentIcon fuer eingebaute Ausruestung ${entry.key}', () {
+        final iv = _iv(equipmentTypeId: entry.key);
+        final s = _state(intervals: [iv, _iv()]);
+        final snap = buildStateSnapshot(s, _catalog);
+        expect(snap['equipmentIcon'], entry.value);
+      });
+    }
+
     test('isTimed-Intervall: reps 0, duration ist das Ziel', () {
       final s = _state(
         intervals: [_iv(reps: 0, durationSeconds: 45), _iv()],
