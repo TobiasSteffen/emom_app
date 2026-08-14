@@ -15,10 +15,10 @@ Screenshot des Simulator-Fensters lässt sich direkt inspizieren. Für die Punkt
 dieser Loop zur Verifikation genutzt statt eines Sideloads auf die echte Uhr. Punkt 3 hat eine
 geräte-spezifische Eigenart, die der Simulator nicht nachbilden kann (siehe dort).
 
-Diese Fassung des Specs wurde nach einem unabhängigen technischen Review (Opus, hohe
-Prüftiefe) überarbeitet — der erste Entwurf enthielt mehrere echte Fehler, u. a. eine falsch
-verstandene SDK-API-Dispatch-Reihenfolge in Punkt 3 und eine falsche Root-Cause-Annahme in
-Punkt 4. Details dazu jeweils inline.
+Dieser Spec durchlief zwei unabhängige technische Reviews (Opus, hohe Prüftiefe). Beide fanden
+echte Fehler — auch die "Korrekturen" nach dem ersten Review enthielten einen neuen Fehler
+(falsche Root-Cause-Zuordnung in Punkt 4, s. dort). Diese Fassung ist die nach dem zweiten Review
+überarbeitete Version.
 
 ## Ziel / Scope
 
@@ -30,12 +30,10 @@ Vier der fünf zurückgestellten Punkte:
 4. Cold-Start-Verbindungs-Icon braucht vollständigen App-Neustart zum Aktualisieren
 
 Punkt "SnackBar entfernt" (ursprüngliche Findings-Liste, Punkt 2) ist **weiterhin offen**, nicht
-Teil dieses Zyklus — der erste Spec-Entwurf hatte fälschlich behauptet, das sei bereits erledigt.
-Laut `progress.md` Zeile 46 wurde der Fix explizit verworfen (`git checkout --`), nicht committet;
-der Code bestätigt das (`lib/features/workout/widgets/garmin_header_icon.dart:33-37` zeigt die
-SnackBar weiterhin an). Bleibt bewusst außerhalb dieses Scopes; bei Bedarf eigener kleiner Fix
-(dieselbe SnackBar existiert übrigens identisch auch in `lib/features/config/config_screen.dart:139-143`
-— falls angegangen, beide Stellen prüfen).
+Teil dieses Zyklus. Laut `progress.md` Zeile 46 wurde der Fix explizit verworfen (`git checkout --`),
+nicht committet; der Code bestätigt das (`lib/features/workout/widgets/garmin_header_icon.dart:33-37`
+zeigt die SnackBar weiterhin an; identisch auch in `lib/features/config/config_screen.dart:139-143`
+— falls später angegangen, beide Stellen prüfen).
 
 **Nicht-Ziel:** Equipment-Icon auf Confirming-/Finished-Screen (nur Running-Screen, wie
 angefragt). Vitaldaten-Sync (Herzfrequenz etc.) — separates, größeres Thema, nicht Teil dieses
@@ -75,17 +73,17 @@ drawStack(dc, elements, startY) -> endY
   return y
 ```
 
-Damit ist jedes Element intern konsistent an seiner vertikalen Mitte verankert (Text nutzt dafür
-`VCENTER` direkt, Bitmap rechnet die Mitte auf die von `drawBitmap()` verlangte Top-Left-Ecke
-um) — es gibt keine Vermischung zweier Anker-Konventionen mehr. Die kumulierte Höhe ist exakt,
-keine geschätzten Pixel-Offsets mehr.
+Element *i* belegt exakt `[y, y+h_i]`, aufeinanderfolgende Zentren liegen `(h_{i-1}+h_i)/2`
+auseinander — bündig, ohne Überlappung, unabhängig davon wie stark sich die Schriftgrößen der
+Zeilen unterscheiden (z. B. `FONT_XTINY` neben `FONT_NUMBER_MEDIUM`). Jedes Element ist intern an
+seiner vertikalen Mitte verankert (Text nutzt dafür `VCENTER` direkt, Bitmap rechnet die Mitte auf
+die von `drawBitmap()` verlangte Top-Left-Ecke um) — keine Vermischung zweier Anker-Konventionen.
 
-`startY` ist pro Screen ein Konstante (Top-anchored, kein weiteres Zentrierungsschema). Ring,
-große Reps/Zeit-Zahl und Countdown bleiben eigene `drawCentered()`-Aufrufe unterhalb des Stacks;
-ihre feste Y-Position wird so gewählt, dass sie unterhalb des von `drawStack()` zurückgegebenen
-`endY` liegt (für den worst case: Icon + eine Textzeile auf dem Running-Screen, zwei Textzeilen
-auf Confirming/Finished) — konkrete Pixelwerte werden beim Bauen gegen die echte Bildschirmgröße
-festgelegt und über den Simulator-Loop visuell verifiziert.
+`startY` ist pro Screen eine Konstante (Top-anchored). Ring, große Reps/Zeit-Zahl und Countdown
+bleiben eigene `drawCentered()`-Aufrufe unterhalb des Stacks; ihre Y-Position wird **aus dem von
+`drawStack()` zurückgegebenen `endY` abgeleitet** (z. B. `endY + Abstand`), nicht als unabhängige
+Konstante geraten — sonst bleibt `endY` ungenutzt und der Zusammenhang zwischen Stack-Höhe und
+nachfolgendem Element ist wieder nur geschätzt statt berechnet.
 
 **Testing:** Kein automatisierter Render-Test möglich (Monkey C hat kein Pixel-Vergleichs-
 Testing in diesem Projekt). Verifikation über den lokalen Simulator-Loop: Build → `monkeydo` →
@@ -98,27 +96,56 @@ running) und visuelle Kontrolle auf Überlappung.
 ein neues Feld `equipmentIcon: String`, abgeleitet aus dem `iconAsset`-Dateinamen des aktuellen
 Intervalls (z. B. `assets/icon/kettlebell.png` → `"kettlebell"` — Dateiname ohne Pfad/Extension).
 Bei Pause-Intervallen: leerer String — die Watch zeigt dann (wie bisher) nur den Text "Pause" als
-Stack-Element, kein Icon.
+Stack-Element, kein Icon. `watchChangeKeyFor()` braucht keine Anpassung, `equipmentTypeId` ist dort
+bereits enthalten.
 
 **Watch-Ressourcen:** Alle 7 bekannten Icons (`kettlebell`, `steelmace`, `pezziball`,
-`liegestuetz`, `kniebeuge`, `plank`, `dehnen` — feste Liste aus `kEquipmentIconAssets`, keine
-frei hochladbaren Bilder) werden als kleine Bitmaps (~40×40px) in
-`garmin_watch_app/resources/drawables/` gebündelt und per `resources.xml` als `Rez.Drawables.*`
-registriert. Die Original-PNGs sind anti-aliasiert (Farbverlauf, nicht nur zwei Farben) — beim
-Verkleinern/Exportieren für die Watch muss `drawables.xml` eine explizite Palette-Strategie
-bekommen (`automaticPalette`, oder ein festes reduziertes Farbschema), sonst kann
-`dc.drawBitmap()` zur Laufzeit `Graphics.InvalidPaletteException` werfen (SDK-dokumentiertes
-Verhalten, kein hypothetischer Fall). Das ist Teil der Bild-Export-Arbeit, nicht nur ein
-Ressourcen-Copy-Paste.
+`liegestuetz`, `kniebeuge`, `plank`, `dehnen` — feste Liste aus `kEquipmentIconAssets`, keine frei
+hochladbaren Bilder) werden als kleine Bitmaps (~40×40px) in `garmin_watch_app/resources/drawables/drawables.xml`
+gebündelt und als `Rez.Drawables.*` registriert. `Rez.Drawables.*`-Symbole sind Compile-Zeit-
+Konstanten und lassen sich nicht per Laufzeit-String indizieren — der Code braucht eine explizite
+statische Lookup-Map:
+
+```
+_ICONS = {
+  "kettlebell" => Rez.Drawables.kettlebell,
+  "steelmace"  => Rez.Drawables.steelmace,
+  "pezziball"  => Rez.Drawables.pezziball,
+  "liegestuetz" => Rez.Drawables.liegestuetz,
+  "kniebeuge"  => Rez.Drawables.kniebeuge,
+  "plank"      => Rez.Drawables.plank,
+  "dehnen"     => Rez.Drawables.dehnen,
+}
+```
+
+**Export-Entscheidung statt Palette-Annahme:** `automaticPalette` ist auf 16-Bit-Farb-Geräten
+(Venu 4) bereits Standard — eine explizite Palette-Angabe bringt hier nichts. Das eigentliche
+Risiko liegt bei Transparenz: Connect-IQ-Bitmaps kennen nur eine einzelne Transparenzfarbe, keinen
+Alphakanal. Ein Teil der 7 Original-PNGs hat halbtransparente Kantenpixel (Anti-Aliasing gegen
+Transparenz) — beim Herunterskalieren auf ~40×40px müssen diese Kanten bewusst gegen einen festen
+Hintergrund geglättet ("geflattet") werden, sonst entstehen harte Treppenstufen oder (SDK-
+dokumentiert) eine `Graphics.InvalidPaletteException` zur Laufzeit. `drawables.xml` kann den
+Resource-Compiler das Skalieren übernehmen lassen (`scaleX`/`scaleY`), das erspart einen manuellen
+Bild-Export-Schritt für die reine Größenänderung; die Transparenz-/Kantenentscheidung bleibt davon
+unberührt.
+
+**Farbgebung:** Am Handy werden dieselben Icons als Maske eingefärbt (`Image.asset(iconPath, …,
+color: phaseColor)`, `reps_card.dart`) — die eigentliche PNG-Farbe wird dort immer überschrieben.
+`dc.drawBitmap()` kennt kein Tinting, aber `dc.drawBitmap2(x, y, bitmap, {:tintColor => c})`
+existiert seit API 4.2.1 und ist für "Venu® 4 45mm" gelistet (Manifest-`minApiLevel` 6.0.2 deckt
+das ab). Damit wird das Icon mit `ringColor` eingefärbt (derselbe Wert, der schon für den
+Fortschrittsring berechnet wird — Phasenfarbe, bzw. Grau bei Pause) statt in der eingebackenen
+Originalfarbe zu erscheinen — sonst würde z. B. das rötliche `liegestuetz`-Icon fälschlich wie ein
+Peak-Phasen-Hinweis wirken, unabhängig von der tatsächlichen Minute.
 
 **Ressourcen-Laden:** SDK-Doku warnt ausdrücklich: *"Loading a resource can be an expensive
-operation, so do not load resources when handling screen updates"* — `onUpdate()` läuft aber
-einmal pro Sekunde (`WatchStateTicker`). Deshalb: ein Ein-Element-Cache (letzte geladene
-`equipmentIcon`-ID + zugehörige `BitmapResource`) auf Klassenebene in `garmin_watch_appView`.
-`drawRunning()` lädt per `Application.loadResource(Rez.Drawables.X)` nur dann neu, wenn die
-aktuelle `equipmentIcon`-ID vom gecachten Wert abweicht (passiert nur bei Intervallwechsel, nicht
-bei jedem Sekunden-Tick). Nicht alle 7 Bitmaps bleiben gleichzeitig resident, nur das gerade
-genutzte.
+operation, so do not load resources when handling screen updates."* `onUpdate()` wird zwar nicht
+buchstäblich jede Sekunde neu gezeichnet (`WatchState.tick()` ruft `requestUpdate()` nur während
+eines laufenden Countdowns auf), aber während eines aktiven Intervalls tut es das laufend. Deshalb:
+ein Ein-Element-Cache (letzte geladene `equipmentIcon`-ID + zugehörige `BitmapResource`) auf
+Klassenebene in `garmin_watch_appView`. `drawRunning()` lädt per `Application.loadResource()` nur
+dann neu, wenn die aktuelle `equipmentIcon`-ID vom gecachten Wert abweicht (passiert nur bei
+Intervallwechsel). Nicht alle 7 Bitmaps bleiben gleichzeitig resident, nur das gerade genutzte.
 
 **Rendering:** `drawRunning()` baut die Stack-Elemente für den Running-Screen als
 `[icon-oder-nichts, line2]` (Icon ersetzt die bisherige Zeile 1) und übergibt sie an `drawStack()`
@@ -126,13 +153,13 @@ genutzte.
 Entscheidung, s. Brainstorming).
 
 **Fehlerbehandlung:**
-- `equipmentIcon`-Wert ohne passenden `Rez.Drawables`-Eintrag (z. B. künftig neues Icon am Handy,
-  altes Watch-Build) → kein Icon-Element im Stack, Zeile bleibt leer statt abzustürzen.
-- `equipmentIcon`-Feld fehlt komplett im Snapshot (älterer Handy-Build ohne dieses Feld) →
-  `dict.get("equipmentIcon")` liefert `null`, gleiche Behandlung wie oben (kein Icon).
+- `equipmentIcon`-Wert ohne Eintrag in `_ICONS` (z. B. künftig neues Icon am Handy, altes
+  Watch-Build) oder Feld fehlt komplett im Snapshot (älterer Handy-Build) → **Fallback auf den
+  bisherigen Text** (`line1`, z. B. "Kettlebell 16kg") statt auf eine leere Zeile — verliert dann
+  zwar die Icon-Optik, aber nicht die Information, welches Gerät gemeint ist.
 - Phone-seitig: `catalog.findType() == null` liefert weiterhin `'?'` als `line1` (bestehender
-  Pfad) — für diesen Fall ist `equipmentIcon` ebenfalls leerer String, keine neue Fallunterscheidung
-  nötig.
+  Pfad); `equipmentIcon` ist in diesem Fall leerer String, Watch fällt auf `'?'`-Text zurück (s.
+  oben) — keine neue Fallunterscheidung nötig.
 
 **Betroffene Screen-Zustände:** `drawRunning()` wird von `running`, `paused`, `holdWaiting` und
 `holding` genutzt (nicht nur vom namensgebenden `running`-Zustand) — das Icon erscheint in allen
@@ -141,20 +168,19 @@ vieren, dem Zustand entsprechend mit demselben Intervall-Inhalt wie bisher Zeile
 **Testing:** Dart-seitig neuer Test in `garmin_watch_snapshot_test.dart` (Mapping `iconAsset` →
 `equipmentIcon`-ID für alle 7 Fälle + Pause-Fall + fehlender/unbekannter Catalog-Eintrag).
 Watch-seitig: Simulator-Loop wie bei Punkt 1, zusätzlich Build-Erfolg als Nachweis, dass die
-Palette-Definition keinen Laufzeitfehler verursacht (Simulator zeigt `InvalidPaletteException`
+Bitmap-Ressourcen keinen Laufzeitfehler verursachen (Simulator zeigt `InvalidPaletteException`
 als Absturz, falls es doch auftritt).
 
 ## 3. Gesten sollen nie etwas auslösen — nur physische Knöpfe steuern die App
 
 **Ziel (final geklärt mit Nutzer):** Nur drei Eingaben lösen etwas aus: oberer Knopf kurz =
 Pause/Weiter/Bestätigen (unverändert), unterer Knopf kurz = Skip (unverändert), unterer Knopf
-**gehalten** = Exit. Jede Wisch-Geste, egal in welche Richtung, soll **nichts** tun.
+**gehalten** = Exit. Jede Wisch-Geste und jeder Bildschirm-Tap sollen **nichts** tun.
 
 **Warum diese Zuordnung und nicht z. B. "oben halten = Skip":** Skip ist die mit Abstand
 häufigste Aktion (potenziell jede Minute bei einem 30-Minuten-EMOM) — ein Halten-Erfordernis
 würde den Workout-Fluss spürbar bremsen. Exit passiert höchstens einmal pro Session — genau die
-Art seltener, folgenreicher Aktion, für die ein bewusstes Halten laut UX-Konvention gedacht ist
-(verhindert versehentliches Auslösen, kostet aber im Normalbetrieb keine Zeit).
+Art seltener, folgenreicher Aktion, für die ein bewusstes Halten laut UX-Konvention gedacht ist.
 
 **Root Cause der Kollision (SDK-Doku-bestätigt, `BehaviorDelegate.onBack()`):**
 *"Some devices interpret SWIPE_RIGHT SwipeEvents as KEY_ESC events. On these devices, returning
@@ -162,118 +188,125 @@ Art seltener, folgenreicher Aktion, für die ein bewusstes Halten laut UX-Konven
 "App schließen"-Wischgeste (Swipe-Rechts) vom Betriebssystem **unterhalb** der App-Logik in ein
 `KEY_ESC`-Ereignis umgewandelt, bevor `onSwipe()` sie je sieht. Dieses `KEY_ESC` landet zuerst bei
 der High-Level-Behandlung `onBack()` — **nicht** bei den Low-Level-Events `onKeyPressed`/
-`onKeyReleased`, wie der erste Entwurf dieses Specs fälschlich annahm (dort stand, diese seien
-eine "niedrigere API-Ebene" und würden daher zuerst greifen — laut Doku ist es umgekehrt: `onBack()`
-bekommt das Ereignis zuerst, und nur ein `false`-Return lässt es zu `onKey()` durchfallen). Ein
-reiner Halten-Timer auf `onKeyPressed`/`onKeyReleased` (wie im ersten Entwurf) hätte die Wisch-
-Geste nie gesehen — sie wäre weiterhin bei `onBack()` als Skip gelandet. Zusätzlich hat eine
-Wisch-Geste ohnehin keine nennenswerte "Halten"-Dauer, selbst wenn sie den Handler erreichen
-würde.
+`onKeyReleased`. `onBack()` bekommt das Ereignis zuerst; nur ein `false`-Return lässt es zu
+`onKey()` durchfallen. Allgemeiner (SDK-Doku, `BehaviorDelegate`-Übersicht): *"If a
+BehaviorDelegate returns true for a function … then the InputDelegate function that corresponds
+to the behavior will not be called."* Dieselbe Logik gilt für `onSelect()` — laut Doku wird das
+**auch durch einen Bildschirm-Tap ausgelöst** (`CLICK_TYPE_TAP` auf Touchscreen-Geräten, Venu 4
+hat einen), nicht nur durch den physischen Knopf. Ein Entwurf, der `onSelect()` unverändert lässt,
+würde also weiterhin jeden Tap auf den Bildschirm als Pause/Weiter/Bestätigen behandeln — das
+widerspräche dem Ziel "keine Geste tut etwas" direkt.
 
-**Fix (Kanaltrennung statt Zeitmessung an der falschen Stelle):**
+**Fix (Kanaltrennung für beide Knöpfe, nicht nur den unteren):**
 
-- **`onKeyPressed(keyEvent)` / `onKeyReleased(keyEvent)`** — implementieren die Skip/Exit-
-  Unterscheidung für den unteren Knopf per echter Press/Release-Zeitmessung (Schwelle 600ms).
-  Diese Events feuern nur bei echtem physischem Tastendruck. Filterung: nur reagieren, wenn
-  `keyEvent.getKey()` dem Back/Lap-Tasten-Konstanten entspricht (exakte `WatchUi.KEY_*`-Konstante
-  wird beim Bauen gegen SDK 9.2.0 verifiziert); für jede andere Taste `false` zurückgeben, damit
-  z. B. der obere Knopf normal über `onSelect()` bedient wird. Zeitstempel wird zusammen mit der
-  gedrückten Taste gespeichert; ein `onKeyReleased` mit abweichender Taste oder ohne vorherigen
-  Press wird ignoriert (schützt gegen den Fall, dass ein Halten vom System nie mit einem Release
-  quittiert wird — z. B. App wird während des Haltens pausiert/beendet).
-  Exit ist **nicht** hinter dem bisherigen `WatchState.current == null`-Guard versteckt: auch auf
-  dem "Verbinde..."-Screen (kein Snapshot vom Handy) muss Halten funktionieren, sonst gibt es dort
-  keinen Ausweg.
-- **`onBack()`** gibt `false` zurück (lehnt explizit ab), statt wie bisher `true`. Laut Doku
-  fällt das Ereignis dadurch zu `onKey()` durch.
-- **`onKey(keyEvent)`** — no-op (`return true`, keine Aktion). Fängt alles ab, was hier über den
-  Fallthrough ankommt (im schlechtesten Fall: die getarnte Wisch-Geste) und lässt es folgenlos
-  verpuffen — weder Skip noch Exit.
-- **`onSwipe(swipeEvent)`** — no-op für alle Richtungen (`return true`, keine Aktion). Deckt den
-  Fall ab, dass eine Wisch-Geste ganz regulär als `SwipeEvent` ankommt (nicht als getarntes
-  `KEY_ESC`).
+- **`onSelect()`** gibt `false` zurück (lehnt ab). Die Play/Pause/Bestätigen-Logik wandert in
+  **`onKey(keyEvent)`**, gefiltert auf die Enter/Action-Tasten-Konstante des oberen Knopfs (exakte
+  `WatchUi.KEY_*`-Konstante wird beim Bauen verifiziert, s. u.).
+- **`onTap(clickEvent)`** — no-op (`return true`, keine Aktion). Schließt den Touchscreen-Tap-Kanal.
+- **`onBack()`** gibt `false` zurück (lehnt ab), statt wie bisher `true`.
+- **`onKeyPressed(keyEvent)` / `onKeyReleased(keyEvent)`** — implementieren für den unteren Knopf
+  die Skip/Exit-Unterscheidung per echter Press/Release-Zeitmessung (Schwelle 600ms), gefiltert auf
+  die Back/Lap-Tasten-Konstante. Zeitstempel wird zusammen mit der gedrückten Taste gespeichert;
+  ein `onKeyReleased` mit abweichender Taste oder ohne vorherigen Press wird ignoriert (schützt
+  gegen den Fall, dass ein Halten vom System nie mit einem Release quittiert wird). Exit ist
+  **nicht** hinter dem bisherigen `WatchState.current == null`-Guard versteckt: auch auf dem
+  "Verbinde..."-Screen muss Halten funktionieren.
+- **`onKey(keyEvent)`** (der gemeinsame Fallthrough-Handler für beide Tasten) — alles, was hier
+  ankommt und nicht auf die beiden oben gefilterten Tasten passt (im schlechtesten Fall: die
+  getarnte Wisch-Geste über den `onBack()`-Fallthrough), verpufft folgenlos.
+- **`onSwipe(swipeEvent)`** — no-op für alle Richtungen. Deckt den Fall ab, dass eine Wisch-Geste
+  ganz regulär als `SwipeEvent` ankommt (nicht als getarntes `KEY_ESC`).
+
+**Befristeter Fallback — `SWIPE_LEFT` bleibt vorerst als zusätzlicher Exit-Weg aktiv:** Der
+bisherige, nachweislich funktionierende Exit über `onSwipe()`/`SWIPE_LEFT` (rechts nach links) wird
+**nicht** entfernt, bevor Halten-zum-Beenden auf echter Hardware bestätigt ist. Das widerspricht
+kurzzeitig dem Ziel "keine Geste tut etwas", verhindert aber, dass die App im Fall einer falschen
+Annahme zur Event-Reihenfolge komplett unbeendbar wird. `SWIPE_LEFT` bewusst nicht auf die
+"natürliche" Richtung (links nach rechts / `SWIPE_RIGHT`) gelegt — das ist exakt die Richtung, die
+auf dieser Venu 4 mit `KEY_ESC` kollidiert und vermutlich gar nicht bei `onSwipe()` ankäme. Sobald
+Halten-zum-Beenden auf der echten Uhr bestätigt ist, wird dieser Fallback in einem Folge-Commit
+entfernt (dann greift `onSwipe()`s No-op für alle Richtungen inkl. `SWIPE_LEFT`).
 
 **Verbleibende Unsicherheit (nur auf echter Hardware zu klären, nicht im Simulator):** Ob eine
 vom System als `KEY_ESC` getarnte Wisch-Geste tatsächlich `onKeyPressed`/`onKeyReleased`
 **nicht** auslöst (nur `onBack()` → `onKey()`), ist eine SDK-Doku-gestützte, aber nicht
 hardwareseitig bewiesene Annahme — die Doku beschreibt nur den Fallthrough zu `onKey()`, nicht
-explizit, ob `onKeyPressed`/`onKeyReleased` bei synthetischen Events feuern oder nicht. Der
-Simulator kann diese geräte-spezifische Übersetzung nicht nachbilden (SWIPE_RIGHT→KEY_ESC ist
-eine reale Geräte-Eigenart dieser Venu 4, keine Simulator-Eigenschaft). Konkret zu prüfende
-Ergebnisse auf echter Hardware:
-1. Swipe-Rechts → nichts passiert (Ziel)
+explizit, ob `onKeyPressed`/`onKeyReleased` bei synthetischen Events feuern. Der Simulator kann
+diese geräte-spezifische Übersetzung nicht nachbilden. Ebenso ist die exakte `KEY_*`-Konstante für
+Back/Lap eine Laufzeit-, keine Compile-Zeit-Frage — sowohl `KEY_ESC` als auch `KEY_LAP` existieren
+in `Toybox.WatchUi` und kompilieren beide anstandslos; welche tatsächlich ankommt, muss vor dem
+finalen Build per `System.println(keyEvent.getKey())` im Simulator geloggt werden, nicht geraten.
+Konkret zu prüfende Ergebnisse auf echter Hardware:
+1. Swipe-Rechts → nichts passiert (Ziel; Fallback `SWIPE_LEFT` bleibt vorerst als Exit aktiv)
 2. Kurzer Druck unterer Knopf → Skip
 3. Langer Druck (≥600ms) unterer Knopf → Exit
 4. Langer Druck wird vom System nicht konsumiert/unterbrochen (kein "hängender" Zustand)
+5. Bildschirm-Tap → nichts passiert
+6. Oberer Knopf → weiterhin Pause/Weiter/Bestätigen
 
-Sollte sich auf der Hardware zeigen, dass die getarnte Wisch-Geste doch über
-`onKeyPressed`/`onKeyReleased` ankommt (wider Erwarten), würde sie als kurzer Druck klassifiziert
-und Skip auslösen — das wäre dann ein Folge-Fix (z. B. Mindest-Zeitspanne zwischen zwei Presses,
-oder Auswertung von `keyEvent`-Zusatzinfos, falls vorhanden), nicht Teil dieses Specs, da nicht
-vorab lösbar ohne diese Information.
+Sollte sich zeigen, dass die getarnte Wisch-Geste doch über `onKeyPressed`/`onKeyReleased`
+ankommt, würde sie als kurzer Druck klassifiziert und Skip auslösen — das wäre dann ein Folge-Fix,
+nicht Teil dieses Specs, da nicht vorab lösbar ohne diese Information.
 
 **Testing:** Kein Dart-Code betroffen. Watch-seitig: Simulator erlaubt Halten der simulierten
-Taste — Kurz-vs-Lang-Unterscheidung am unteren Knopf lässt sich dort verifizieren. Die
-Swipe-Kollision selbst nur auf echter Hardware (s. oben).
+Taste — Kurz-vs-Lang-Unterscheidung an beiden Knöpfen lässt sich dort verifizieren, ebenso dass
+ein simulierter Tap nichts auslöst. Die Swipe-Kollision selbst nur auf echter Hardware (s. oben).
 
 ## 4. Cold-Start-Icon-Refresh
 
-**Korrigierte Root Cause:** Der erste Entwurf nahm an, das (standardmäßig ausgeblendete)
-Header-Icon halte `garminProvider` (autoDispose) am Leben. Tatsächlich ist es
-`garminWorkoutSyncProvider` (`GarminWorkoutSyncNotifier`, `keepAlive: true`) — dauerhaft
-beobachtet in `app.dart:64` (`ref.watch(garminWorkoutSyncProvider)`), unabhängig vom
-Header-Icon. Dessen `build()` ruft intern `ref.listen(garminProvider, ...)` auf und hält
-`garminProvider` dadurch faktisch für die gesamte App-Session am Leben, sobald `app.dart` einmal
-gebaut hat — der einmalige Bluetooth-Check in `garminProvider.build()` läuft dadurch nur beim
-allerersten Mal, nie wieder.
+**Root Cause (zweimal korrigiert — Details unten):** Für das konkret gemeldete Symptom
+("grau→rot braucht Neustart", also der *allererste* erfolgreiche Verbindungsaufbau während einer
+Session) gilt: `GarminWorkoutSyncNotifier.build()` bricht bei `hasEverConnected() == false` **vor**
+der Zeile ab, die `ref.listen(garminProvider, ...)` aufruft (`garmin_workout_sync_notifier.dart:42`
+vor Zeile 56) — in genau diesem Zustand hält der Sync-Notifier `garminProvider` also **nicht** am
+Leben. Ob `garminProvider` (autoDispose) einen Settings-Besuch übersteht, hängt in diesem Fall
+tatsächlich davon ab, ob das Header-Icon sichtbar ist (`garminHeaderIconVisible`) und damit
+dauerhaft beobachtet — der ursprüngliche erste Entwurf hatte hier recht. Eine Zwischenfassung
+dieses Specs hatte das fälschlich verneint (siehe git-Historie) und stattdessen ausschließlich den
+Sync-Notifier als Ursache benannt, was nur für den *bereits einmal verbunden gewesenen* Fall zutrifft.
 
-**Zusätzliches Risiko, das der erste Entwurf übersehen hat:** `GarminWorkoutSyncNotifier.build()`
-bricht früh ab, wenn `hasEverConnected()` beim *ersten* Build `false` war
-(`garmin_workout_sync_notifier.dart:42`) — und wird wegen `keepAlive` danach nie neu gebaut. Ein
-reiner Bluetooth-Status-Refresh (Icon grau→rot/grün) würde die Anzeige also korrigieren, *ohne*
-dass der Sync-Notifier reaktiviert wird: die Uhr würde als "verbunden" angezeigt, obwohl nie ein
-Snapshot gesendet wird und kein Watch-Knopf etwas bewirkt — eine falsche statt einer ehrlich
-veralteten Anzeige. Das muss der Fix mit abdecken.
+**Deshalb: robuster statt cleverer Fix.** Eine auf dieser Fallunterscheidung (wie hängen
+`garminProvider` und `garminWorkoutSyncProvider` in welchem `everConnected`-Zustand zusammen)
+basierende, "nur bei Bedarf"-invalidierende Lösung ist fehleranfällig — das war bereits der Fehler
+im vorherigen Anlauf (Flip-Erkennung, die im Standardfall nie ausgelöst hätte, weil `everConnected`
+schon vor der Prüfung kippt). Stattdessen: `workout_screen.dart::_openConfig()` invalidiert **nach
+jedem** Verlassen der Settings unconditional **beide** Provider:
 
-**Fix, zweigeteilt:**
+```dart
+if (!mounted) return;
+ref.invalidate(garminProvider);
+ref.invalidate(garminWorkoutSyncProvider);
+ref.read(workoutProvider.notifier).updateSettings(ref.read(settingsProvider).requireValue);
+```
 
-1. Neue Methode `GarminNotifier.refreshConnectivity()` (`lib/features/config/garmin_notifier.dart`):
-   wiederverwendet den bereits non-invasiven Bluetooth-Recheck-Code aus `openWatchApp()`
-   (`isWatchConnected()` / `markEverConnected()` / `hasEverConnected()` + `state = AsyncData(...)`),
-   aber *ohne* `_service.openWatchApp()` aufzurufen und *ohne* `invalidateSelf()` (das würde laut
-   bestehendem Kommentar in dieser Datei, Zeilen 49–54, das `watchAppStatus`-EventChannel-Abo
-   unnötig abreißen). Der eigentliche Mehrwert gegenüber dem bereits vorhandenen "Watch-App
-   öffnen"-Button in den Settings (`config_screen.dart:138`, der über `openWatchApp()` denselben
-   Recheck bereits auslöst): derselbe Recheck, aber *ohne* dabei ungefragt zu versuchen, die
-   Watch-App zu starten.
-2. `workout_screen.dart::_openConfig()` liest `everConnected` vor und nach dem Aufruf von
-   `refreshConnectivity()`. Kippt der Wert von `false` auf `true` (erste Verbindung während der
-   laufenden Session), wird zusätzlich `ref.invalidate(garminWorkoutSyncProvider)` aufgerufen —
-   das reaktiviert den Sync-Notifier gezielt genau in dem einen Moment, in dem sein früher
-   `hasEverConnected()`-Guard sonst dauerhaft falsch bliebe. Kein Invalidieren im Normalfall
-   (Wert unverändert) — kein unnötiges Neuaufsetzen der `_commandSub`-Subscription bei jedem
-   Settings-Besuch.
+Das ersetzt die ursprünglich geplante separate `refreshConnectivity()`-Methode — die war nur nötig,
+um `invalidateSelf()` und den damit verbundenen Abriss des `watchAppStatus`-EventChannel-Abos zu
+vermeiden. Dieser Abriss ist beim Verlassen der Settings (seltener, bewusster Nutzer-Vorgang) ein
+akzeptabler, begrenzter Preis für Einfachheit und Korrektheit — anders als bei `openWatchApp()`
+(unverändert, bleibt non-invasiv), das im normalen Betrieb viel häufiger aufgerufen wird und dessen
+bestehendes Verhalten hier nicht angetastet wird.
 
-**Warum kein zusätzlicher Guard gegen unnötiges Neu-Erzeugen von `garminProvider` nötig ist**
-(anders als der erste Entwurf befürchtete): Da `garminWorkoutSyncProvider` bereits ab dem
-allerersten `app.dart`-Build dauerhaft lebt und `garminProvider` darüber transitiv mit am Leben
-hält, existiert `garminProvider` zu dem Zeitpunkt, an dem `_openConfig()` überhaupt aufgerufen
-werden kann (Nutzer muss schon auf dem Workout-Screen sein), so gut wie immer bereits — ein
-`ref.read(garminProvider.notifier)` dort erzeugt keine zusätzliche Create/Dispose-Churn.
+**Bekannte Rest-Einschränkung, bewusst akzeptiert (kein neues Problem):** Nach der Invalidierung
+startet `watchAppStatus` wieder bei `unknown`, bis die Uhr die nächste "opened"-Transition sendet
+— Connect IQ kennt nur Push-bei-Zustandswechsel, keine Abfrage des aktuellen Zustands. War die
+Watch-App zum Zeitpunkt der Invalidierung schon offen, bleibt das Icon bis zum nächsten
+Schließen/Öffnen der Watch-App auf der neutralen Farbe stehen. Das ist exakt dieselbe, bereits an
+anderer Stelle in `CLAUDE.md` dokumentierte und akzeptierte Einschränkung ("Cold-Start-Unknown ist
+real und akzeptiert, kein Bug") — hier taucht sie nur an einer weiteren Stelle auf, kein neu
+eingeführtes Verhalten.
 
-**Testing:** Neuer Test in `garmin_notifier_test.dart`: `refreshConnectivity()` aktualisiert
-`connected`/`everConnected`, lässt eine laufende `watchAppStatus`-Subscription unangetastet (kein
-`build()`-Rebuild). Neuer Test (Ort: `garmin_workout_sync_notifier_test.dart` falls vorhanden,
-sonst Integrationstest über `workout_screen`-Verhalten): `everConnected`-Flip von `false` auf
-`true` löst `garminWorkoutSyncProvider`-Invalidierung aus; unveränderter Wert löst sie nicht aus.
+**Testing:** Neuer Test (Widget-/Notifier-Test je nach bestehendem Muster in
+`garmin_notifier_test.dart` bzw. `garmin_workout_sync_notifier_test.dart`, falls vorhanden):
+`_openConfig()`-Rückkehr ruft `ref.invalidate()` für beide Provider auf. Bestehende Tests für
+`GarminWorkoutSyncNotifier` (Channel-Mock-Harness) unverändert nutzbar, da nur der
+Aufruf-Zeitpunkt/-Anlass neu ist, nicht die `build()`-Logik selbst.
 
 ## Verifikation
 
 - Punkte 1, 2: automatisiert (Dart-Test für Punkt 2) + visuelle Kontrolle über den lokalen
   Connect-IQ-Simulator-Loop (kein Hardware-Sideload nötig) + Build-Erfolg als Nachweis gegen
-  Palette-Laufzeitfehler (Punkt 2)
-- Punkt 3: `flutter test` unberührt; Simulator für Kurz/Lang-Unterscheidung; die eigentliche
-  Swipe-Kollision ist nur auf echter Hardware zu verifizieren (s. dort, vier konkrete
-  Prüfergebnisse)
-- Punkt 4: vollständig Dart-seitig, regulärer `flutter test`, inkl. neuem Test für die
-  `garminWorkoutSyncProvider`-Reaktivierung
+  Ressourcen-Laufzeitfehler (Punkt 2)
+- Punkt 3: `flutter test` unberührt; Simulator für Kurz/Lang-Unterscheidung an beiden Knöpfen und
+  Tap-No-op; die eigentliche Swipe-Kollision und die exakte `KEY_*`-Konstante sind nur auf echter
+  Hardware zu verifizieren (sechs konkrete Prüfergebnisse, s. dort)
+- Punkt 4: vollständig Dart-seitig, regulärer `flutter test`
