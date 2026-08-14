@@ -6,6 +6,7 @@ import '../../core/providers/plan_library_notifier.dart';
 import '../../core/providers/settings_provider.dart';
 import '../history/history_sheet.dart';
 import '../config/config_screen.dart';
+import '../config/garmin_notifier.dart';
 import '../plans/plan_library_screen.dart';
 import '../../core/models/app_page.dart';
 import '../calendar/calendar_screen.dart';
@@ -69,6 +70,14 @@ class _WorkoutScreenState extends ConsumerState<WorkoutScreen>
         builder: (_) => ConfigScreen(onBack: () => Navigator.pop(context)),
       ),
     );
+    if (!mounted) return;
+    // Erzwingt einen frischen Bluetooth-Check beim Verlassen der Settings
+    // (garminProvider prueft sonst nur beim allerersten Build, s. Design-
+    // Spec "Cold-Start-Icon-Refresh"). refreshConnection() statt
+    // ref.invalidate(garminProvider) -- Invalidieren wuerde watchAppStatus
+    // auf unknown zuruecksetzen und die laufende Snapshot-Zustellung zur
+    // Uhr stoppen (s. GarminWorkoutSyncNotifier._send()).
+    await ref.read(garminProvider.notifier).refreshConnection();
     if (!mounted) return;
     ref
         .read(workoutProvider.notifier)

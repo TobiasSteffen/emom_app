@@ -94,4 +94,39 @@ void main() {
 
     expect(container.read(garminProvider).value?.watchAppStatus, WatchAppStatus.running);
   });
+
+  test('refreshConnection() fragt Bluetooth erneut ab, ohne watchAppStatus zurueckzusetzen',
+      () async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    final sub = container.listen(garminProvider, (_, _) {});
+    addTearDown(sub.close);
+
+    var isWatchConnectedCalls = 0;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(methodChannel, (call) async {
+      switch (call.method) {
+        case 'isWatchConnected':
+          isWatchConnectedCalls++;
+          return true;
+        case 'openWatchApp':
+          return 'launched';
+      }
+      return null;
+    });
+
+    await container.read(garminProvider.future);
+    expect(isWatchConnectedCalls, 1);
+
+    // watchAppStatus auf "running" bringen, wie es ein echtes "opened"-Event
+    // von der Uhr taete.
+    watchEvents.add('opened');
+    await Future<void>.delayed(Duration.zero);
+    expect(container.read(garminProvider).value?.watchAppStatus, WatchAppStatus.running);
+
+    await container.read(garminProvider.notifier).refreshConnection();
+
+    expect(isWatchConnectedCalls, 2);
+    expect(container.read(garminProvider).value?.watchAppStatus, WatchAppStatus.running);
+  });
 }

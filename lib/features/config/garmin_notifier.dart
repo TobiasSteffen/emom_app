@@ -67,4 +67,26 @@ class GarminNotifier extends _$GarminNotifier {
     ));
     return status;
   }
+
+  /// Wie openWatchApp(), aber ohne die Watch-App zu starten -- fuer den
+  /// Cold-Start-Icon-Refresh beim Verlassen der Settings (siehe Design-
+  /// Spec). Schreibt state per AsyncData(...) direkt fest statt
+  /// invalidateSelf()/ref.invalidate() zu nutzen -- das wuerde
+  /// watchAppStatus auf unknown zuruecksetzen (kein Vorzustand bei einem
+  /// kompletten Neuaufbau) und GarminWorkoutSyncNotifier._send() wuerde
+  /// daraufhin jeden Snapshot-Versand stillschweigend unterdruecken, bis
+  /// die naechste "opened"-Transition eintrifft.
+  Future<void> refreshConnection() async {
+    final connected = await _service.isWatchConnected();
+    if (connected) {
+      await _service.markEverConnected();
+    }
+    final everConnected = await _service.hasEverConnected();
+    final watchAppStatus = state.value?.watchAppStatus ?? WatchAppStatus.unknown;
+    state = AsyncData(GarminConnectionStatus(
+      connected: connected,
+      everConnected: everConnected,
+      watchAppStatus: watchAppStatus,
+    ));
+  }
 }
