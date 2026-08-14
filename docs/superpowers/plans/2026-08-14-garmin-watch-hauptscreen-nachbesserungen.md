@@ -73,6 +73,28 @@ Add to the `group('buildStateSnapshot', ...)` block in `test/features/workout/ga
       final snap = buildStateSnapshot(s, _catalog);
       expect(snap['equipmentIcon'], '');
     });
+
+    // Deckt alle 4 eingebauten Ausruestungen ab (nicht nur Kettlebell wie
+    // oben) -- die restlichen 3 der 7 Icon-IDs (kniebeuge/plank/dehnen)
+    // sind nur ueber selbst angelegte Ausruestung im Wizard erreichbar,
+    // nicht ueber BuiltInEquipment, und bräuchten einen eigens gebauten
+    // Katalog, um sie zu testen -- hier bewusst nicht mitgemacht (final
+    // review: als "defensible" eingestuft, da alle 7 denselben Code-Pfad
+    // durchlaufen). Faengt trotzdem Drift zwischen kEquipmentIconAssets
+    // und den eingebauten Icon-Dateinamen ab.
+    for (final entry in const {
+      'kettlebell': 'kettlebell',
+      'steelmace': 'steelmace',
+      'pezziball': 'pezziball',
+      'bodyweight': 'liegestuetz',
+    }.entries) {
+      test('equipmentIcon fuer eingebaute Ausruestung ${entry.key}', () {
+        final iv = _iv(equipmentTypeId: entry.key);
+        final s = _state(intervals: [iv, _iv()]);
+        final snap = buildStateSnapshot(s, _catalog);
+        expect(snap['equipmentIcon'], entry.value);
+      });
+    }
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -208,7 +230,24 @@ Fix: anchor the big number at `cy` (screen center — this is the visual focus, 
     }
 ```
 
-Add this directly after `drawStack()`. Then replace the whole `drawRunning` function body with:
+Add this directly after `drawStack()`. **This same centering technique must also be applied to `drawConfirming()`/`drawFinished()` in Step 4 below** — they were not touched by this overflow fix originally, but they have the identical latent problem: their `cy - 30`/`cy - 60` starting offsets predate `drawStack()`'s cumulative-real-height cascade and were only ever safe under the old independent-`VCENTER`-per-element scheme. Once `drawStack()` cascades from them, they push content too far off `cy` on a round display (verified during final review: the finished screen's summary line moved into a ~150px-narrower part of the bezel than it occupied before this task). Step 4's code block already reflects the fix (`cy - stackHeight(dc, elements) / 2` as the `startY` argument) — implement it as given there, don't reintroduce the old constants.
+
+**Also fold in the DRY cleanup found during final review:** `drawStack()`/`stackHeight()` (and now, with three call sites, would have a third copy) duplicate the identical "kind == text ? getFontHeight : bitmap.getHeight()" branch. Extract it once:
+
+```javascript
+    private function elementHeight(dc as Dc, element as Dictionary) as Number {
+        if (element.get(:kind).equals("text")) {
+            return dc.getFontHeight(element.get(:font));
+        }
+        return element.get(:value).getHeight();
+    }
+```
+
+and have both `drawStack()` and `stackHeight()` call `elementHeight(dc, element)` instead of repeating the branch inline.
+
+**Round-display verification caveat (add to your mental checklist, not just vertical fit):** a Y-position within `[0, 454]` is necessary but not sufficient on a round display — usable horizontal width at a given Y is `2 * sqrt(227^2 - (y - 227)^2)`, shrinking fast near the top/bottom. A vertically-safe layout can still horizontally clip long strings. `nextText` on the running screen does this on long strings (see Step 6's accepted-trade-off note) — that's a known, documented limitation, not something Step 6 needs to newly re-discover.
+
+Then replace the whole `drawRunning` function body with:
 
 ```javascript
     private function drawRunning(dc as Dc, snapshot as Dictionary) as Void {
@@ -264,7 +303,7 @@ Verified by arithmetic against the real measured heights above (2-line header, n
 
 - [ ] **Step 4: Rewrite `drawConfirming()` and `drawFinished()` to use `drawStack()`**
 
-Replace both function bodies:
+Replace both function bodies. Note the `startY` argument: **centered** (`cy - stackHeight(...) / 2`), not the old guessed absolute offset — this is the fix described above Step 3, applied here where the original overflow investigation didn't reach:
 
 ```javascript
     private function drawConfirming(dc as Dc, snapshot as Dictionary) as Void {
@@ -273,7 +312,7 @@ Replace both function bodies:
             textElement("NÄCHSTE ÜBUNG", Graphics.FONT_SMALL, Graphics.COLOR_ORANGE),
             textElement(snapshot.get("nextText") as String, Graphics.FONT_XTINY, Graphics.COLOR_WHITE),
         ] as Array;
-        drawStack(dc, elements, cy - 30);
+        drawStack(dc, elements, cy - stackHeight(dc, elements) / 2);
     }
 
     private function drawFinished(dc as Dc, snapshot as Dictionary) as Void {
@@ -284,7 +323,7 @@ Replace both function bodies:
             textElement(snapshot.get("totalReps").toString(), Graphics.FONT_NUMBER_MEDIUM, Graphics.COLOR_WHITE),
             textElement(summary, Graphics.FONT_XTINY, Graphics.COLOR_LT_GRAY),
         ] as Array;
-        drawStack(dc, elements, cy - 60);
+        drawStack(dc, elements, cy - stackHeight(dc, elements) / 2);
     }
 ```
 
@@ -335,6 +374,17 @@ The app has no phone connected, so it shows "Verbinde..." (this is `WatchState.c
 ```
 
 Rebuild, re-run `monkeydo`, look at the simulator window (or take a screenshot), confirm no two text elements overlap. Repeat with `"screenState" => "confirming"` (also needs `"nextText"` non-empty) and `"screenState" => "finished"` (also needs `"totalReps"` set — already is above). **Revert the temporary `WatchState.update()` mock call before committing** — it must not ship.
+
+**Bewusst akzeptierter Trade-off (final review, nicht "pre-existing" wie ein früherer Implementer-
+Report es einordnete):** `nextText` auf dem Running-Screen sitzt bei langen Strings (z. B.
+`"Nächste: Kettlebell 16kg · Snatch"`) so weit von `cy` entfernt im Stack, dass die runde
+Displayform an dieser Y-Position nur noch ~266px Breite erlaubt (statt ~435px vor diesem Fix) —
+der Text wird horizontal abgeschnitten. Ursache: `FONT_NUMBER_MEDIUM` beansprucht allein 152px
+(ein Drittel des 454px-Displays), wodurch `nextText` zwangsläufig weit von `cy` entfernt landet,
+unabhängig von der Stack-Ankerstrategie. Echte Behebung (kleinere Gaps, `"Nächste: "`-Präfix
+weglassen, kleinere Zahlen-Schrift) ist eine Design-Entscheidung außerhalb des Scopes dieses
+Zyklus — explizit als bekannte Einschränkung dokumentiert statt stillschweigend als "schon immer
+so" abgetan.
 
 - [ ] **Step 7: Commit**
 
@@ -398,8 +448,15 @@ Add these as class-level fields and a private method (e.g. right after the class
         if (resource == null) {
             return null;
         }
+        // _iconCacheId erst NACH erfolgreichem loadResource() setzen
+        // (gefunden im finalen Review): waere die ID schon vorher gesetzt
+        // und loadResource() wuerfe, bliebe der Cache auf der ID "gepinnt",
+        // waehrend _iconCacheBitmap noch das alte Icon haelt -- jeder
+        // spaetere Aufruf mit derselben ID traefe den Cache-Hit-Pfad und
+        // laege fuer den Rest der Session falsch.
+        var bitmap = WatchUi.loadResource(resource);
         _iconCacheId = iconId;
-        _iconCacheBitmap = WatchUi.loadResource(resource);
+        _iconCacheBitmap = bitmap;
         return _iconCacheBitmap;
     }
 
@@ -765,12 +822,24 @@ Add this method to the `GarminNotifier` class (e.g. directly after `openWatchApp
   /// kompletten Neuaufbau) und GarminWorkoutSyncNotifier._send() wuerde
   /// daraufhin jeden Snapshot-Versand stillschweigend unterdruecken, bis
   /// die naechste "opened"-Transition eintrifft.
+  ///
+  /// Guard (gefunden im finalen Review): garminProvider ist autoDispose.
+  /// Ist beim Rueckkehren aus den Settings weder das Header-Icon sichtbar
+  /// noch hasEverConnected() schon true (GarminWorkoutSyncNotifier haelt
+  /// den Provider dann nicht am Leben, s. Root-Cause oben), kann er
+  /// waehrend der await-Strecke hier disposed werden. `state = ...`
+  /// (der generierte Setter ruft intern ref._throwIfInvalidUsage() auf,
+  /// riverpod 3.3.2 lib/src/core/provider/notifier_provider.dart:89-94)
+  /// wirft dann eine UnmountedRefException -- ohne dieses Guard wuerde
+  /// dieser Fehler aus _openConfig() herauspropagieren und den
+  /// nachfolgenden updateSettings()-Aufruf verhindern.
   Future<void> refreshConnection() async {
     final connected = await _service.isWatchConnected();
     if (connected) {
       await _service.markEverConnected();
     }
     final everConnected = await _service.hasEverConnected();
+    if (!ref.mounted) return;
     final watchAppStatus = state.value?.watchAppStatus ?? WatchAppStatus.unknown;
     state = AsyncData(GarminConnectionStatus(
       connected: connected,
@@ -778,6 +847,22 @@ Add this method to the `GarminNotifier` class (e.g. directly after `openWatchApp
       watchAppStatus: watchAppStatus,
     ));
   }
+```
+
+Add a second test right after the first one, in the same file, proving this guard matters (the existing test's `container.listen(garminProvider, ...)` pins the provider alive and can't exercise the no-listener path `_openConfig()` actually hits):
+
+```dart
+  test('refreshConnection() wirft nicht, wenn niemand mehr zuhoert (Provider zwischendurch disposed)',
+      () async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    // Kein container.listen() hier -- garminProvider ist autoDispose und
+    // hat direkt nach dem ersten await keinen Watcher mehr, genau wie bei
+    // _openConfig() im echten Fall (Header-Icon aus, noch nie verbunden).
+    final notifier = container.read(garminProvider.notifier);
+    await expectLater(notifier.refreshConnection(), completes);
+  });
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
