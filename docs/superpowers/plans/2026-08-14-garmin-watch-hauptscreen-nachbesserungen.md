@@ -124,7 +124,7 @@ git commit -m "feat(garmin): equipmentIcon-Feld im state_snapshot-Payload"
 - Modify: `garmin_watch_app/source/garmin_watch_appView.mc`
 
 **Interfaces:**
-- Produces: `drawStack(dc as Dc, elements as Array, startY as Number) as Number` (returns `endY`), plus two factory helpers `textElement(text as String, font, color as Number) as Dictionary` and `bitmapElement(bitmap, color as Number) as Dictionary`. Task 3 uses `bitmapElement()` and passes a bitmap-containing element into the same `drawStack()`.
+- Produces: `drawStack(dc as Dc, elements as Array, startY as Number) as Number` (returns `endY`), `stackHeight(dc as Dc, elements as Array) as Number` (total height without drawing — lets a caller anchor a stack's *end* at a fixed point instead of only growing top-down from a guess), plus two factory helpers `textElement(text as String, font, color as Number) as Dictionary` and `bitmapElement(bitmap, color as Number) as Dictionary`. Task 3 uses `bitmapElement()` and passes a bitmap-containing element into `headerElements` — `stackHeight()` already handles bitmap elements (same kind-dispatch as `drawStack()`), so Task 3 needs no changes to it.
 
 This task fixes the overlap bug using **text-only** stacks (matches current content exactly, just repositions it correctly). Task 3 adds the icon on top of this.
 
@@ -182,9 +182,33 @@ Add these three private functions to the `garmin_watch_appView` class (e.g. righ
     }
 ```
 
-- [ ] **Step 3: Rewrite `drawRunning()` to use `drawStack()`**
+- [ ] **Step 3: Add `stackHeight()`, then rewrite `drawRunning()` to use it + `drawStack()`**
 
-Replace the whole `drawRunning` function body with:
+**Design note (found during implementation, not in the original brief — read before writing code):** A pure top-down cascade starting from a guessed `cy - 60` — summing real measured font heights sequentially — overflows the physical display. Real measurements on venu445mm: `FONT_XTINY` = 37px, `FONT_NUMBER_MEDIUM` = **152px** (a third of the whole 454px screen), `FONT_MEDIUM` = 61px. A `cy - 60` start plus two `FONT_XTINY` header lines plus `FONT_NUMBER_MEDIUM` plus `FONT_MEDIUM` plus a `FONT_XTINY` next-text line needs ~340px of vertical space, but only ~287px is available before the bottom of the 454px circle — so `nextText` renders entirely off-canvas and the countdown gets clipped by the round bezel.
+
+Fix: anchor the big number at `cy` (screen center — this is the visual focus, same role the progress ring already plays there) and grow the header **upward** from it instead of cascading everything downward from a guessed top offset. This needs each stack's total height computed **before** it's drawn, so add a second small helper alongside `drawStack()`:
+
+```javascript
+    // Wie drawStack(), aber ohne zu zeichnen -- damit ein Aufrufer weiss,
+    // wie viel Platz ein Stack braucht, BEVOR er seine Startposition
+    // festlegt (z.B. um direkt oberhalb eines fix positionierten Ankers
+    // wie der grossen Zahl zu enden, statt nur top-down von einer
+    // geschaetzten Konstante aus zu wachsen -- siehe Design-Notiz oben).
+    private function stackHeight(dc as Dc, elements as Array) as Number {
+        var total = 0;
+        for (var i = 0; i < elements.size(); i++) {
+            var element = elements[i];
+            if (element.get(:kind).equals("text")) {
+                total += dc.getFontHeight(element.get(:font));
+            } else {
+                total += element.get(:value).getHeight();
+            }
+        }
+        return total;
+    }
+```
+
+Add this directly after `drawStack()`. Then replace the whole `drawRunning` function body with:
 
 ```javascript
     private function drawRunning(dc as Dc, snapshot as Dictionary) as Void {
@@ -211,11 +235,13 @@ Replace the whole `drawRunning` function body with:
         if (!line2.equals("")) {
             headerElements.add(textElement(line2, Graphics.FONT_XTINY, Graphics.COLOR_WHITE));
         }
-        var headerEndY = drawStack(dc, headerElements, cy - 60);
 
         var isTimed = snapshot.get("isTimed") as Boolean;
         var numberFont = Graphics.FONT_NUMBER_MEDIUM;
-        var numberY = headerEndY + dc.getFontHeight(numberFont) / 2 + 6;
+        var numberY = cy;
+        var headerStartY = numberY - dc.getFontHeight(numberFont) / 2 - 6 - stackHeight(dc, headerElements);
+        drawStack(dc, headerElements, headerStartY);
+
         if (!isPause) {
             var big = isTimed ? snapshot.get("duration").toString() : snapshot.get("reps").toString();
             drawCentered(dc, big, numberY, numberFont, ringColor);
@@ -234,7 +260,7 @@ Replace the whole `drawRunning` function body with:
     }
 ```
 
-(This is functionally identical content to before — same two lines, same big number, same countdown, same next-text — just positioned by accumulated measured heights instead of guessed constants. Task 3 will change the `headerElements` construction to swap in an icon.)
+Verified by arithmetic against the real measured heights above (2-line header, next-text present — the fullest case): header spans `[71, 145]`, number spans `[151, 303]`, countdown spans `[309, 369]`, next-text spans `[375, 411]` — all within the `[0, 454]` display, with margin on both ends. Confirm this visually in Step 6 anyway; the arithmetic covers the fullest case but Step 6 is what actually proves it.
 
 - [ ] **Step 4: Rewrite `drawConfirming()` and `drawFinished()` to use `drawStack()`**
 
