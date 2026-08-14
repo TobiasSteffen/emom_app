@@ -49,8 +49,9 @@ vorherige `drawStack()`-Versuch scheiterte deshalb am Build. Die bisherigen Y-Of
 Schrifthöhen.
 
 **Element-Modell (vereinheitlicht für Text und Icon, s. Punkt 2):** Ein Stack ist eine Liste aus
-Elementen, jedes entweder `{kind: "text", value, font, color}` oder `{kind: "bitmap", value}`.
-Leere Text-Werte (`""`) werden vor dem Aufbau der Liste weggelassen, verbrauchen keinen Slot.
+Elementen, jedes entweder `{kind: "text", value, font, color}` oder `{kind: "bitmap", value,
+color}` — auch das Bitmap-Element trägt eine Farbe, für das Tinting (s. Punkt 2). Leere Text-Werte
+(`""`) werden vor dem Aufbau der Liste weggelassen, verbrauchen keinen Slot.
 
 **Fix:** Neuer Helper in `garmin_watch_appView.mc`:
 
@@ -68,7 +69,7 @@ drawStack(dc, elements, startY) -> endY
                   Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER)
     else:
       var w = element.value.getWidth()
-      dc.drawBitmap(cx - w / 2, centerY - h / 2, element.value)   // Bitmap: Top-Left-Koordinate
+      dc.drawBitmap2(cx - w / 2, centerY - h / 2, element.value, {:tintColor => element.color})
     y += h
   return y
 ```
@@ -77,12 +78,14 @@ Element *i* belegt exakt `[y, y+h_i]`, aufeinanderfolgende Zentren liegen `(h_{i
 auseinander — bündig, ohne Überlappung, unabhängig davon wie stark sich die Schriftgrößen der
 Zeilen unterscheiden (z. B. `FONT_XTINY` neben `FONT_NUMBER_MEDIUM`). Jedes Element ist intern an
 seiner vertikalen Mitte verankert (Text nutzt dafür `VCENTER` direkt, Bitmap rechnet die Mitte auf
-die von `drawBitmap()` verlangte Top-Left-Ecke um) — keine Vermischung zweier Anker-Konventionen.
+die von `drawBitmap2()` verlangte Top-Left-Ecke um) — keine Vermischung zweier Anker-Konventionen.
 
-`startY` ist pro Screen eine Konstante (Top-anchored). Ring, große Reps/Zeit-Zahl und Countdown
-bleiben eigene `drawCentered()`-Aufrufe unterhalb des Stacks; ihre Y-Position wird **aus dem von
-`drawStack()` zurückgegebenen `endY` abgeleitet** (z. B. `endY + Abstand`), nicht als unabhängige
-Konstante geraten — sonst bleibt `endY` ungenutzt und der Zusammenhang zwischen Stack-Höhe und
+`startY` ist pro Screen eine Konstante (Top-anchored). Der Fortschrittsring bleibt unverändert ein
+eigener, bildschirmfüllender `dc.drawArc(cx, cy, ...)`-Aufruf (kein Stack-Element, keine Y-Position
+im hier beschriebenen Sinn). Große Reps/Zeit-Zahl, Countdown und `nextText` bleiben eigene
+`drawCentered()`-Aufrufe unterhalb des Stacks; ihre Y-Position wird **aus dem von `drawStack()`
+zurückgegebenen `endY` abgeleitet** (z. B. `endY + Abstand`), nicht als unabhängige Konstante
+geraten — sonst bleibt `endY` ungenutzt und der Zusammenhang zwischen Stack-Höhe und
 nachfolgendem Element ist wieder nur geschätzt statt berechnet.
 
 **Testing:** Kein automatisierter Render-Test möglich (Monkey C hat kein Pixel-Vergleichs-
@@ -133,9 +136,10 @@ unberührt.
 color: phaseColor)`, `reps_card.dart`) — die eigentliche PNG-Farbe wird dort immer überschrieben.
 `dc.drawBitmap()` kennt kein Tinting, aber `dc.drawBitmap2(x, y, bitmap, {:tintColor => c})`
 existiert seit API 4.2.1 und ist für "Venu® 4 45mm" gelistet (Manifest-`minApiLevel` 6.0.2 deckt
-das ab). Damit wird das Icon mit `ringColor` eingefärbt (derselbe Wert, der schon für den
-Fortschrittsring berechnet wird — Phasenfarbe, bzw. Grau bei Pause) statt in der eingebackenen
-Originalfarbe zu erscheinen — sonst würde z. B. das rötliche `liegestuetz`-Icon fälschlich wie ein
+das ab). Das Icon-Stack-Element (s. Punkt 1) bekommt `ringColor` als `color`-Feld mit (derselbe
+Wert, der schon für den Fortschrittsring berechnet wird — Phasenfarbe, bzw. Grau bei Pause) und
+`drawStack()` zeichnet Bitmap-Elemente entsprechend mit `drawBitmap2`/`:tintColor` statt in der
+eingebackenen Originalfarbe — sonst würde z. B. das rötliche `liegestuetz`-Icon fälschlich wie ein
 Peak-Phasen-Hinweis wirken, unabhängig von der tatsächlichen Minute.
 
 **Ressourcen-Laden:** SDK-Doku warnt ausdrücklich: *"Loading a resource can be an expensive
@@ -199,11 +203,25 @@ widerspräche dem Ziel "keine Geste tut etwas" direkt.
 
 **Fix (Kanaltrennung für beide Knöpfe, nicht nur den unteren):**
 
-- **`onSelect()`** gibt `false` zurück (lehnt ab). Die Play/Pause/Bestätigen-Logik wandert in
-  **`onKey(keyEvent)`**, gefiltert auf die Enter/Action-Tasten-Konstante des oberen Knopfs (exakte
-  `WatchUi.KEY_*`-Konstante wird beim Bauen verifiziert, s. u.).
-- **`onTap(clickEvent)`** — no-op (`return true`, keine Aktion). Schließt den Touchscreen-Tap-Kanal.
-- **`onBack()`** gibt `false` zurück (lehnt ab), statt wie bisher `true`.
+- **`onSelect()`** gibt `false` zurück (lehnt ab). Laut SDK-Doku (`BehaviorDelegate`-Übersicht:
+  "the InputDelegate function *that corresponds to the behavior* will not be called") heißt das
+  konkret: der physische Tastendruck (`KEY_ENTER`) fällt zu `onKey()` durch, ein Tap dagegen zu
+  `onTap()` — zwei getrennte Fallthrough-Ziele, kein gemeinsames. Die Play/Pause/Bestätigen-Logik
+  wandert deshalb in **`onKey(keyEvent)`**, dort aber ausschließlich auf `KEY_ENTER` reagierend
+  (exakte Konstante wird beim Bauen verifiziert, s. u.) — **jede andere Taste, insbesondere
+  `KEY_ESC`, wird in `onKey()` ignoriert (`return true`, keine Aktion, kein Skip/Exit-Branch)**.
+  Das ist wichtig: ein einzelner unterer Tastendruck erzeugt sowohl `onKeyPressed`/`onKeyReleased`
+  (dort greift die Skip/Exit-Logik) als auch — über den abgelehnten `onBack()` — ein zusätzliches
+  `onKey(KEY_ESC)`. Würde `onKey()` auch auf `KEY_ESC` reagieren, würde Skip doppelt ausgelöst.
+- **`onTap(clickEvent)`** — no-op (`return true`, keine Aktion). Fängt den Fallthrough von
+  `onSelect()` für Tap-Events auf.
+- **`onHold(clickEvent)` / `onRelease(clickEvent)` / `onDrag(dragEvent)` / `onFlick(flickEvent)`**
+  — ebenfalls no-op (`return true`). Für "Venu® 4 45mm" laut SDK-Doku unterstützt; ohne explizites
+  No-op wäre die Zielaussage "keine Geste tut etwas" nicht vollständig — heute nutzt die App keine
+  scrollbaren/`Selectable`-Elemente, die diese Events auslösen würden, aber die Handler sollen das
+  nicht dem Zufall überlassen.
+- **`onBack()`** gibt `false` zurück (lehnt ab), statt wie bisher `true`. Fällt laut Doku zu
+  `onKey(KEY_ESC)` durch.
 - **`onKeyPressed(keyEvent)` / `onKeyReleased(keyEvent)`** — implementieren für den unteren Knopf
   die Skip/Exit-Unterscheidung per echter Press/Release-Zeitmessung (Schwelle 600ms), gefiltert auf
   die Back/Lap-Tasten-Konstante. Zeitstempel wird zusammen mit der gedrückten Taste gespeichert;
@@ -211,9 +229,6 @@ widerspräche dem Ziel "keine Geste tut etwas" direkt.
   gegen den Fall, dass ein Halten vom System nie mit einem Release quittiert wird). Exit ist
   **nicht** hinter dem bisherigen `WatchState.current == null`-Guard versteckt: auch auf dem
   "Verbinde..."-Screen muss Halten funktionieren.
-- **`onKey(keyEvent)`** (der gemeinsame Fallthrough-Handler für beide Tasten) — alles, was hier
-  ankommt und nicht auf die beiden oben gefilterten Tasten passt (im schlechtesten Fall: die
-  getarnte Wisch-Geste über den `onBack()`-Fallthrough), verpufft folgenlos.
 - **`onSwipe(swipeEvent)`** — no-op für alle Richtungen. Deckt den Fall ab, dass eine Wisch-Geste
   ganz regulär als `SwipeEvent` ankommt (nicht als getarntes `KEY_ESC`).
 
@@ -243,6 +258,8 @@ Konkret zu prüfende Ergebnisse auf echter Hardware:
 4. Langer Druck wird vom System nicht konsumiert/unterbrochen (kein "hängender" Zustand)
 5. Bildschirm-Tap → nichts passiert
 6. Oberer Knopf → weiterhin Pause/Weiter/Bestätigen
+7. Kein doppeltes Skip bei einem einzelnen unteren Tastendruck (Regressionscheck für die
+   `onKey()`/`onKeyReleased()`-Doppelabdeckung, s. Fix oben)
 
 Sollte sich zeigen, dass die getarnte Wisch-Geste doch über `onKeyPressed`/`onKeyReleased`
 ankommt, würde sie als kurzer Druck klassifiziert und Skip auslösen — das wäre dann ein Folge-Fix,
@@ -254,52 +271,69 @@ ein simulierter Tap nichts auslöst. Die Swipe-Kollision selbst nur auf echter H
 
 ## 4. Cold-Start-Icon-Refresh
 
-**Root Cause (zweimal korrigiert — Details unten):** Für das konkret gemeldete Symptom
-("grau→rot braucht Neustart", also der *allererste* erfolgreiche Verbindungsaufbau während einer
-Session) gilt: `GarminWorkoutSyncNotifier.build()` bricht bei `hasEverConnected() == false` **vor**
-der Zeile ab, die `ref.listen(garminProvider, ...)` aufruft (`garmin_workout_sync_notifier.dart:42`
-vor Zeile 56) — in genau diesem Zustand hält der Sync-Notifier `garminProvider` also **nicht** am
-Leben. Ob `garminProvider` (autoDispose) einen Settings-Besuch übersteht, hängt in diesem Fall
-tatsächlich davon ab, ob das Header-Icon sichtbar ist (`garminHeaderIconVisible`) und damit
-dauerhaft beobachtet — der ursprüngliche erste Entwurf hatte hier recht. Eine Zwischenfassung
-dieses Specs hatte das fälschlich verneint (siehe git-Historie) und stattdessen ausschließlich den
-Sync-Notifier als Ursache benannt, was nur für den *bereits einmal verbunden gewesenen* Fall zutrifft.
+**Root Cause:** `GarminHeaderIcon` beobachtet `garminProvider` (autoDispose), solange das
+Header-Icon sichtbar ist (`garminHeaderIconVisible`), und der Workout-Screen bleibt beim
+Settings-Besuch im Hintergrund gemountet (`ConfigScreen` wird nur darüber gepusht) — `garminProvider`
+übersteht den Settings-Besuch in diesem Fall also, wird aber **nicht neu abgefragt**: der einmalige
+Bluetooth-Check in `build()` lief nur beim allerersten Mal, das ist die bereits in `CLAUDE.md`
+dokumentierte "keine Live-Poll"-Entscheidung. Das Symptom ist also nicht fehlendes Am-Leben-Bleiben,
+sondern fehlendes erneutes Abfragen trotz Am-Leben-Bleiben. (`GarminWorkoutSyncNotifier` — separat
+geprüft — bricht bei `hasEverConnected() == false` vor seinem `ref.listen(garminProvider, ...)` ab
+und hält `garminProvider` in diesem Zustand ohnehin nicht zusätzlich am Leben; für die eigentliche
+Behebung dieses Bugs ist das nicht relevant, s. u. warum.)
 
-**Deshalb: robuster statt cleverer Fix.** Eine auf dieser Fallunterscheidung (wie hängen
-`garminProvider` und `garminWorkoutSyncProvider` in welchem `everConnected`-Zustand zusammen)
-basierende, "nur bei Bedarf"-invalidierende Lösung ist fehleranfällig — das war bereits der Fehler
-im vorherigen Anlauf (Flip-Erkennung, die im Standardfall nie ausgelöst hätte, weil `everConnected`
-schon vor der Prüfung kippt). Stattdessen: `workout_screen.dart::_openConfig()` invalidiert **nach
-jedem** Verlassen der Settings unconditional **beide** Provider:
+**Fix — bewusst nur `garminProvider` invalidieren, nicht auch `garminWorkoutSyncProvider`:**
 
 ```dart
 if (!mounted) return;
 ref.invalidate(garminProvider);
-ref.invalidate(garminWorkoutSyncProvider);
 ref.read(workoutProvider.notifier).updateSettings(ref.read(settingsProvider).requireValue);
 ```
 
-Das ersetzt die ursprünglich geplante separate `refreshConnectivity()`-Methode — die war nur nötig,
-um `invalidateSelf()` und den damit verbundenen Abriss des `watchAppStatus`-EventChannel-Abos zu
-vermeiden. Dieser Abriss ist beim Verlassen der Settings (seltener, bewusster Nutzer-Vorgang) ein
-akzeptabler, begrenzter Preis für Einfachheit und Korrektheit — anders als bei `openWatchApp()`
-(unverändert, bleibt non-invasiv), das im normalen Betrieb viel häufiger aufgerufen wird und dessen
-bestehendes Verhalten hier nicht angetastet wird.
+Ein früherer Entwurf dieses Fixes invalidierte zusätzlich `garminWorkoutSyncProvider`, um dessen
+`hasEverConnected()`-Guard bei einer ersten Verbindung während der laufenden Session neu zu
+bewerten. Das wurde verworfen: `garminProvider` und `garminWorkoutSyncProvider` teilen sich einen
+einzigen nativen EventChannel-Stream (`GarminService._rawEvents`, statisch gecacht,
+`garmin_service.dart:84`) mit genau zwei Abonnenten (`GarminNotifier._appRunningSub`,
+`GarminWorkoutSyncNotifier._commandSub`). `receiveBroadcastStream()` feuert das native `onCancel`
+erst, wenn der **letzte** Abonnent abbestellt — invalidiert man **beide** Provider gleichzeitig,
+fällt die Abonnentenzahl garantiert auf null, `MainActivity.kt` ruft
+`bridge.unregisterAppEventListener()` auf, und für die Dauer der beiden `build()`-Neuaufbauten
+(mehrere `await`s: Bluetooth-Berechtigung, eventually-consistent Geräteabfrage, `hasEverConnected()`,
+`equipmentCatalogProvider.future`) gehen **alle** Connect-IQ-Events verloren — nicht nur der
+Status, sondern auch jeder `cmd_*`-Tastendruck von der Uhr. Invalidiert man dagegen nur
+`garminProvider`, bleibt `GarminWorkoutSyncNotifier._commandSub` die ganze Zeit aktiv, die
+Abonnentenzahl fällt nie auf null, `onCancel` feuert nie — kein Event-Verlust.
+
+Die Kehrseite: der `hasEverConnected()`-Guard von `GarminWorkoutSyncNotifier` wird durch diesen Fix
+**nicht** neu bewertet. Verbindet sich der Nutzer während der laufenden Session zum allerersten Mal
+(vorher `hasEverConnected() == false`), bleibt der Sync-Notifier inaktiv, bis die App neu gestartet
+wird — ein schmalerer Rest-Fall als der ursprünglich gemeldete Bug (der ist behoben), bewusst nicht
+mitgelöst, um nicht das gerade beschriebene Event-Verlust-Risiko einzugehen. Dokumentiert als
+bekannte Einschränkung, kein stiller Kompromiss.
+
+**Warum das den gemeldeten Bug trotzdem behebt:** Der gemeldete Bug ist die Anzeige
+(grau/rot/grün), nicht der Sync-Mechanismus — `garminProvider`s `connected`/`everConnected`/
+`watchAppStatus`-State steuert direkt das Icon. Ein `ref.invalidate(garminProvider)` beim Verlassen
+der Settings erzwingt genau den fehlenden erneuten Bluetooth-Check. Der bereits vorhandene
+"Watch-App öffnen"-Button (`config_screen.dart:137`) löst denselben Recheck schon heute aus, wenn
+der Nutzer ihn antippt — dieser Fix deckt zusätzlich den Fall ab, in dem sich die Verbindung
+während des Settings-Besuchs ändert, ohne dass dieser Button gedrückt wurde.
 
 **Bekannte Rest-Einschränkung, bewusst akzeptiert (kein neues Problem):** Nach der Invalidierung
 startet `watchAppStatus` wieder bei `unknown`, bis die Uhr die nächste "opened"-Transition sendet
 — Connect IQ kennt nur Push-bei-Zustandswechsel, keine Abfrage des aktuellen Zustands. War die
 Watch-App zum Zeitpunkt der Invalidierung schon offen, bleibt das Icon bis zum nächsten
-Schließen/Öffnen der Watch-App auf der neutralen Farbe stehen. Das ist exakt dieselbe, bereits an
-anderer Stelle in `CLAUDE.md` dokumentierte und akzeptierte Einschränkung ("Cold-Start-Unknown ist
-real und akzeptiert, kein Bug") — hier taucht sie nur an einer weiteren Stelle auf, kein neu
-eingeführtes Verhalten.
+Schließen/Öffnen der Watch-App auf der neutralen Farbe stehen. Das ist dieselbe, bereits an anderer
+Stelle in `CLAUDE.md` dokumentierte und akzeptierte Einschränkung ("Cold-Start-Unknown ist real und
+akzeptiert, kein Bug") — hier taucht sie nur an einer weiteren Stelle auf. Riverpods
+`copyWithPrevious`-Verhalten sorgt dafür, dass die UI während des kurzen Rebuilds nicht auf
+grau/`unknown` zurückfällt, bevor der neue Wert da ist (kein sichtbares Flackern).
 
-**Testing:** Neuer Test (Widget-/Notifier-Test je nach bestehendem Muster in
-`garmin_notifier_test.dart` bzw. `garmin_workout_sync_notifier_test.dart`, falls vorhanden):
-`_openConfig()`-Rückkehr ruft `ref.invalidate()` für beide Provider auf. Bestehende Tests für
-`GarminWorkoutSyncNotifier` (Channel-Mock-Harness) unverändert nutzbar, da nur der
-Aufruf-Zeitpunkt/-Anlass neu ist, nicht die `build()`-Logik selbst.
+**Testing:** Neuer Test in `garmin_notifier_test.dart` bzw. als Widget-Test:
+`_openConfig()`-Rückkehr ruft `ref.invalidate(garminProvider)` auf, `garminWorkoutSyncProvider`
+bleibt unangetastet (Regressionscheck: `_commandSub`-Subscription-Objekt bleibt über den
+Settings-Besuch hinweg identisch / wird nicht neu erstellt).
 
 ## Verifikation
 
@@ -308,5 +342,6 @@ Aufruf-Zeitpunkt/-Anlass neu ist, nicht die `build()`-Logik selbst.
   Ressourcen-Laufzeitfehler (Punkt 2)
 - Punkt 3: `flutter test` unberührt; Simulator für Kurz/Lang-Unterscheidung an beiden Knöpfen und
   Tap-No-op; die eigentliche Swipe-Kollision und die exakte `KEY_*`-Konstante sind nur auf echter
-  Hardware zu verifizieren (sechs konkrete Prüfergebnisse, s. dort)
-- Punkt 4: vollständig Dart-seitig, regulärer `flutter test`
+  Hardware zu verifizieren (sieben konkrete Prüfergebnisse, s. dort)
+- Punkt 4: vollständig Dart-seitig, regulärer `flutter test`, inkl. Regressionscheck, dass
+  `garminWorkoutSyncProvider`/`_commandSub` beim Settings-Verlassen unangetastet bleibt
