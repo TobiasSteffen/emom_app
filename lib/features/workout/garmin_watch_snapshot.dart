@@ -52,6 +52,15 @@ _WatchLines _formatInterval(IntervalConfig iv, EquipmentCatalog catalog) {
   return _WatchLines(line1, line2);
 }
 
+String _equipmentIconFor(IntervalConfig iv, EquipmentCatalog catalog) {
+  if (iv.isPause) return '';
+  final eqType = catalog.findType(iv.equipmentTypeId);
+  if (eqType == null) return '';
+  final filename = eqType.iconAsset.split('/').last;
+  final dot = filename.lastIndexOf('.');
+  return dot == -1 ? filename : filename.substring(0, dot);
+}
+
 _WatchLines _lastNonPauseLines(WorkoutState s, EquipmentCatalog catalog) {
   for (var i = s.currentMinute; i >= 0; i--) {
     if (!s.intervals[i].isPause) return _formatInterval(s.intervals[i], catalog);
@@ -83,6 +92,7 @@ Map<String, dynamic> buildStateSnapshot(WorkoutState s, EquipmentCatalog catalog
     'line1': lines.line1,
     'line2': lines.line2,
     'isPause': iv.isPause,
+    'equipmentIcon': _equipmentIconFor(iv, catalog),
     'isTimed': s.currentIsTimed,
     'isRunning': s.isRunning,
     'reps': s.currentReps,

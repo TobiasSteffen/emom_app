@@ -170,6 +170,27 @@ void main() {
       expect(snap['totalReps'], 30);
     });
 
+    test('equipmentIcon ist der Dateiname ohne Pfad/Extension aus iconAsset', () {
+      final iv = _iv(equipmentTypeId: 'kettlebell');
+      final s = _state(intervals: [iv, _iv()]);
+      final snap = buildStateSnapshot(s, _catalog);
+      expect(snap['equipmentIcon'], 'kettlebell');
+    });
+
+    test('equipmentIcon ist leer bei Pause-Intervallen', () {
+      final iv = _iv(isPause: true, reps: 0);
+      final s = _state(intervals: [iv, _iv()]);
+      final snap = buildStateSnapshot(s, _catalog);
+      expect(snap['equipmentIcon'], '');
+    });
+
+    test('equipmentIcon ist leer, wenn equipmentTypeId nicht im Katalog ist', () {
+      final iv = _iv(equipmentTypeId: 'does_not_exist');
+      final s = _state(intervals: [iv, _iv()]);
+      final snap = buildStateSnapshot(s, _catalog);
+      expect(snap['equipmentIcon'], '');
+    });
+
     test('isTimed-Intervall: reps 0, duration ist das Ziel', () {
       final s = _state(
         intervals: [_iv(reps: 0, durationSeconds: 45), _iv()],
