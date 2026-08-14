@@ -49,6 +49,50 @@ class garmin_watch_appView extends WatchUi.View {
         dc.drawText(dc.getWidth() / 2, y, font, text, Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
     }
 
+    private function textElement(text as String, font, color as Number) as Dictionary {
+        return {:kind => "text", :value => text, :font => font, :color => color};
+    }
+
+    private function bitmapElement(bitmap, color as Number) as Dictionary {
+        return {:kind => "bitmap", :value => bitmap, :color => color};
+    }
+
+    // Zeichnet Elemente (Text oder Bitmap) buendig untereinander, ohne
+    // Ueberlappung, unabhaengig von den jeweiligen Schriftgroessen/Bitmap-
+    // Hoehen (siehe Design-Spec Abschnitt 1 -- Graphics.TEXT_JUSTIFY_TOP
+    // existiert in diesem SDK nicht, deshalb VCENTER + kumulierte
+    // dc.getFontHeight()/bitmap.getHeight()-Werte statt geschaetzter
+    // Pixel-Offsets). Gibt die Y-Position direkt unterhalb des letzten
+    // Elements zurueck, damit nachfolgende Elemente (z.B. die grosse
+    // Reps-Zahl) ihre Position daraus ableiten koennen statt sie zu raten.
+    private function drawStack(dc as Dc, elements as Array, startY as Number) as Number {
+        var cx = dc.getWidth() / 2;
+        var y = startY;
+        for (var i = 0; i < elements.size(); i++) {
+            var element = elements[i];
+            var kind = element.get(:kind) as String;
+            var h;
+            if (kind.equals("text")) {
+                h = dc.getFontHeight(element.get(:font));
+            } else {
+                h = element.get(:value).getHeight();
+            }
+            var centerY = y + h / 2;
+            if (kind.equals("text")) {
+                dc.setColor(element.get(:color) as Number, Graphics.COLOR_TRANSPARENT);
+                dc.drawText(cx, centerY, element.get(:font), element.get(:value) as String,
+                            Graphics.TEXT_JUSTIFY_CENTER | Graphics.TEXT_JUSTIFY_VCENTER);
+            } else {
+                var bitmap = element.get(:value);
+                var w = bitmap.getWidth();
+                dc.drawBitmap2(cx - w / 2, centerY - h / 2, bitmap,
+                               {:tintColor => element.get(:color) as Number});
+            }
+            y += h;
+        }
+        return y;
+    }
+
     private function phaseColorForMinute(minute as Number) as Number {
         // Muss mit lib/core/models/settings.dart::phaseColorForMinute in
         // Sync bleiben (siehe CLAUDE.md, Abschnitt "Phase color coding").
@@ -79,44 +123,59 @@ class garmin_watch_appView extends WatchUi.View {
         var totalMinutes = snapshot.get("totalMinutes") as Number;
         var minute = snapshot.get("minute") as Number;
         var degrees = totalMinutes > 0 ? (360.0 * minute / totalMinutes) : 0.0;
-        // drawArc() zeichnet laut SDK-Doku einen VOLLEN Kreis, wenn Start-
-        // und End-Winkel gleich sind -- bei Minute 0 (degrees == 0) waere
-        // das sonst ein Vollkreis statt gar keinem Fortschritt.
         if (degrees >= 1) {
             dc.drawArc(cx, cy, cx - 6, Graphics.ARC_CLOCKWISE, 90, 90 - degrees);
         }
 
-        drawCentered(dc, snapshot.get("line1") as String, cy - 55, Graphics.FONT_XTINY, Graphics.COLOR_WHITE);
-        drawCentered(dc, snapshot.get("line2") as String, cy - 38, Graphics.FONT_XTINY, Graphics.COLOR_WHITE);
+        var headerElements = [] as Array;
+        var line1 = snapshot.get("line1") as String;
+        var line2 = snapshot.get("line2") as String;
+        if (!line1.equals("")) {
+            headerElements.add(textElement(line1, Graphics.FONT_XTINY, Graphics.COLOR_WHITE));
+        }
+        if (!line2.equals("")) {
+            headerElements.add(textElement(line2, Graphics.FONT_XTINY, Graphics.COLOR_WHITE));
+        }
+        var headerEndY = drawStack(dc, headerElements, cy - 60);
 
         var isTimed = snapshot.get("isTimed") as Boolean;
+        var numberFont = Graphics.FONT_NUMBER_MEDIUM;
+        var numberY = headerEndY + dc.getFontHeight(numberFont) / 2 + 6;
         if (!isPause) {
             var big = isTimed ? snapshot.get("duration").toString() : snapshot.get("reps").toString();
-            drawCentered(dc, big, cy - 5, Graphics.FONT_NUMBER_MEDIUM, ringColor);
+            drawCentered(dc, big, numberY, numberFont, ringColor);
         }
 
-        // WatchState.localSecondsLeft statt snapshot["secondsLeft"] --
-        // der Snapshot ist nur der Stand zum Sendezeitpunkt, WatchState
-        // zaehlt seitdem lokal weiter (siehe WatchState.mc, Task 9).
-        drawCentered(dc, formatSeconds(WatchState.localSecondsLeft), cy + 35, Graphics.FONT_MEDIUM, Graphics.COLOR_WHITE);
+        var countdownFont = Graphics.FONT_MEDIUM;
+        var countdownY = numberY + dc.getFontHeight(numberFont) / 2 + dc.getFontHeight(countdownFont) / 2 + 6;
+        drawCentered(dc, formatSeconds(WatchState.localSecondsLeft), countdownY, countdownFont, Graphics.COLOR_WHITE);
 
         var nextText = snapshot.get("nextText") as String;
         if (!nextText.equals("")) {
-            drawCentered(dc, nextText, cy + 65, Graphics.FONT_XTINY, Graphics.COLOR_LT_GRAY);
+            var nextFont = Graphics.FONT_XTINY;
+            var nextY = countdownY + dc.getFontHeight(countdownFont) / 2 + dc.getFontHeight(nextFont) / 2 + 6;
+            drawCentered(dc, nextText, nextY, nextFont, Graphics.COLOR_LT_GRAY);
         }
     }
 
     private function drawConfirming(dc as Dc, snapshot as Dictionary) as Void {
         var cy = dc.getHeight() / 2;
-        drawCentered(dc, "NÄCHSTE ÜBUNG", cy - 30, Graphics.FONT_SMALL, Graphics.COLOR_ORANGE);
-        drawCentered(dc, snapshot.get("nextText") as String, cy + 10, Graphics.FONT_XTINY, Graphics.COLOR_WHITE);
+        var elements = [
+            textElement("NÄCHSTE ÜBUNG", Graphics.FONT_SMALL, Graphics.COLOR_ORANGE),
+            textElement(snapshot.get("nextText") as String, Graphics.FONT_XTINY, Graphics.COLOR_WHITE),
+        ] as Array;
+        drawStack(dc, elements, cy - 30);
     }
 
     private function drawFinished(dc as Dc, snapshot as Dictionary) as Void {
         var cy = dc.getHeight() / 2;
-        drawCentered(dc, "TRAINING BEENDET", cy - 40, Graphics.FONT_SMALL, Graphics.COLOR_ORANGE);
-        drawCentered(dc, snapshot.get("totalReps").toString(), cy, Graphics.FONT_NUMBER_MEDIUM, Graphics.COLOR_WHITE);
-        drawCentered(dc, (snapshot.get("line1") as String) + " · " + (snapshot.get("line2") as String), cy + 40, Graphics.FONT_XTINY, Graphics.COLOR_LT_GRAY);
+        var summary = (snapshot.get("line1") as String) + " · " + (snapshot.get("line2") as String);
+        var elements = [
+            textElement("TRAINING BEENDET", Graphics.FONT_SMALL, Graphics.COLOR_ORANGE),
+            textElement(snapshot.get("totalReps").toString(), Graphics.FONT_NUMBER_MEDIUM, Graphics.COLOR_WHITE),
+            textElement(summary, Graphics.FONT_XTINY, Graphics.COLOR_LT_GRAY),
+        ] as Array;
+        drawStack(dc, elements, cy - 60);
     }
 
     private function drawButtonHints(dc as Dc, screenState as String) as Void {
